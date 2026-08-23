@@ -1,4 +1,4 @@
-import { env } from "vite-hub/env";
+import { vitehubServerEnv } from "./vitehub.env";
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-07-24",
@@ -33,25 +33,7 @@ export default defineNuxtConfig({
   },
   vite: {
     env: {
-      server: {
-        openrouter: {
-          apiKey: env({
-            source: env.source("OPENROUTER_API_KEY"),
-          }),
-        },
-        telegram: {
-          allowedUserId: env({
-            source: env.source("TELEGRAM_ALLOWED_USER_ID"),
-          }),
-          botToken: env({
-            source: env.source("TELEGRAM_BOT_TOKEN"),
-          }),
-          webhookSecret: env({
-            optional: true,
-            source: env.source("TELEGRAM_WEBHOOK_SECRET_TOKEN"),
-          }),
-        },
-      },
+      server: vitehubServerEnv,
     },
   },
   devtools: { enabled: false },
@@ -59,6 +41,9 @@ export default defineNuxtConfig({
     cloudflare: {
       wrangler: {
         observability: { enabled: true },
+        preview_urls: false,
+        routes: [{ pattern: "calories.onmax.me", custom_domain: true }],
+        workers_dev: false,
       },
     },
   },

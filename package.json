@@ -10,14 +10,16 @@
   },
   "scripts": {
     "build": "node --env-file-if-exists=.env node_modules/nuxt/bin/nuxt.mjs build",
-    "deploy": "vp run build && wrangler deploy --config .output/server/wrangler.json",
+    "deploy": "pnpm run build && wrangler deploy --config .output/server/wrangler.json --keep-vars --strict",
     "db:generate": "node --env-file-if-exists=.env node_modules/vite-hub/dist/bin.js db generate",
     "db:migrate": "mkdir -p .vitehub/data/database && node --env-file-if-exists=.env node_modules/vite-hub/dist/bin.js db migrate",
-    "db:migrate:remote": "vp run build && wrangler d1 migrations apply DB --remote --config .output/server/wrangler.json",
+    "db:migrate:remote": "pnpm run build && wrangler d1 migrations apply DB --remote --config .output/server/wrangler.json",
     "dev": "node --env-file-if-exists=.env node_modules/nuxt/bin/nuxt.mjs dev --host 127.0.0.1 --port 3000",
     "postinstall": "vitehub types prepare && nuxt prepare",
     "preview": "node --env-file-if-exists=.env node_modules/nuxt/bin/nuxt.mjs preview",
-    "telegram:webhook": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels sync --agent calories --channel telegram --stage production",
+    "telegram:history": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels history --agent calories --channel telegram --stage production --url https://calories.onmax.me --output .backups/telegram-history",
+    "telegram:webhook": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels sync --agent calories --channel telegram --stage production --url https://calories.onmax.me",
+    "telegram:webhook:apply": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels sync --agent calories --channel telegram --stage production --url https://calories.onmax.me --apply --confirm-origin https://calories.onmax.me",
     "typecheck": "node --env-file-if-exists=.env node_modules/nuxt/bin/nuxt.mjs typecheck"
   },
   "dependencies": {

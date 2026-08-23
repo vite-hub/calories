@@ -5,6 +5,8 @@
 .patches
 .pnpm-store
 .pnpm_patches
+.swc
+.vercel
 .vitehub
 .wrangler
 dist

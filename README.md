@@ -46,7 +46,7 @@ pnpm install
 cp .env.example .env
 ```
 
-Add `OPENROUTER_API_KEY`, `TELEGRAM_BOT_TOKEN`, and your numeric `TELEGRAM_ALLOWED_USER_ID` to `.env`, then run:
+Add `OPENROUTER_API_KEY`, `TELEGRAM_TOKEN`, and your numeric `TELEGRAM_ALLOWED_USER_ID` to `.env`, then run:
 
 ```sh
 pnpm db:migrate
@@ -73,15 +73,34 @@ Not every ViteHub Capability has native output on every host. Check the [host su
 pnpm build
 ```
 
-The repository currently includes Cloudflare, D1, and R2 configuration as one working deployment example—not as ViteHub's default:
+The repository currently includes Cloudflare, D1, and R2 configuration as one working deployment example—not as ViteHub's default. The generated Wrangler configuration publishes the Worker only at `https://calories.onmax.me`:
 
 ```sh
 pnpm db:migrate:remote
-pnpm deploy
+pnpm run deploy
 ```
 
-After deploying anywhere, set `VITEHUB_DEPLOYMENT_URL` to the public HTTPS origin and register the Telegram webhook:
+Register the Telegram webhook after the deployment is live. Inspecting the plan is read-only; the second command applies it:
 
 ```sh
-pnpm telegram:webhook -- --apply --confirm-origin https://your-deployed-origin.example
+pnpm telegram:webhook
+pnpm telegram:webhook:apply
 ```
+
+Download the retained Telegram conversation and its attachments for recovery:
+
+```sh
+pnpm telegram:history
+```
+
+The archive is written to `.backups/telegram-history/`. Telegram retains a bounded history window, so export it before attempting to replay missed meals.
+
+## Agent session reader
+
+The read-only Agent invocation console is enabled for local development. Start the app and open `http://127.0.0.1:3000/_vitehub`:
+
+```sh
+pnpm dev
+```
+
+The console is loopback-only and is not included in the production build at `calories.onmax.me`.
