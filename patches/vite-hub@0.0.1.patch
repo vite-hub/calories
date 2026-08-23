@@ -1227,7 +1227,7 @@ index 3e5dfd860f5511dd0f39dc3ca56ec475cae1b2bd..fe4bcbe1896151f394801a80104f4f0b
 +//#endregion
 +export { defineCollection, table };
 diff --git a/dist/src-DFbLYi-e.js b/dist/src-DFbLYi-e.js
-index b17eb0d5485a9fde8b15db40f7555bcc06319476..f20f2efb10d622ba68e73efdbcc0a56d9ad8d450 100644
+index b17eb0d5485a9fde8b15db40f7555bcc06319476..09c7534de38eabc73cbd7e7d601841ee30f53d70 100644
 --- a/dist/src-DFbLYi-e.js
 +++ b/dist/src-DFbLYi-e.js
 @@ -934,6 +934,7 @@ function deploymentPresetFromNitro(value) {
@@ -1318,6 +1318,14 @@ index b17eb0d5485a9fde8b15db40f7555bcc06319476..f20f2efb10d622ba68e73efdbcc0a56d
  }
  function viteHubTypesPlugin() {
  	let projectRoot;
+@@ -1519,6 +1547,7 @@ function vitehub(options) {
+ 			providerImportAliases,
+ 			runtimeCapabilityImports: {
+ 				blob: blobEnabled ? `${generatedImportBase}/blob` : false,
++				db: options.database ? "vite-hub/database/drizzle" : false,
+ 				email: "vite-hub/email/server",
+ 				kv: `${generatedImportBase}/kv`
+ 			},
 diff --git a/package.json b/package.json
 index 311187d594efb627f0407db682342a9a8eb26960..5178ab478806dc178083efe534f4de17b43a0078 100644
 --- a/package.json
