@@ -66,7 +66,7 @@ const dashOffset = (radius: number, value: number) => circumference(radius) * (1
 
       <text class="ring-calorie-value" x="80" y="72">{{ calories.toLocaleString() }}</text>
       <text class="ring-unit-label" x="80" y="88">kcal</text>
-      <text class="ring-protein-value" x="80" y="108">{{ protein }}g protein</text>
+      <text class="ring-protein-value" x="80" y="110">{{ protein }}g protein</text>
     </svg>
   </figure>
 </template>

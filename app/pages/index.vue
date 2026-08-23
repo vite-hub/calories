@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import {
-  formatMealTime,
   formatUsageCostUsd,
-  getMealTitle,
   parseUsageCostUsd,
   type Meal,
 } from "~/utils/meal";
@@ -19,7 +17,6 @@ const {
   all: true,
   limit: 50,
 });
-const expandedDays = ref(new Set<string>());
 const settingsOpen = ref(false);
 const calorieGoal = ref(2_000);
 const proteinGoal = ref(150);
@@ -44,10 +41,26 @@ function dayLabel(value: string): string {
   }).format(date);
 }
 
-function dayId(day: { key: string; meals: Meal[] }): string {
-  return selectedMealId && day.meals.some((meal) => meal.id === selectedMealId)
-    ? `day-${selectedMealId}`
-    : `day-${day.key}`;
+function dayDateLabel(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+    year: new Date(value).getFullYear() === new Date().getFullYear() ? undefined : "numeric",
+  }).format(new Date(value));
+}
+
+function dayNavLabel(value: string): string {
+  return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" }).format(
+    new Date(value),
+  );
+}
+
+function goalDelta(value: number, goal: number, unit: string): string {
+  const difference = goal - value;
+  return difference >= 0
+    ? `${difference.toLocaleString()} ${unit} left`
+    : `${Math.abs(difference).toLocaleString()} ${unit} over`;
 }
 
 const days = computed(() => {
@@ -100,24 +113,13 @@ function saveGoals() {
   settingsOpen.value = false;
 }
 
-function toggleDay(key: string) {
-  const next = new Set(expandedDays.value);
-  if (next.has(key)) {
-    next.delete(key);
-  } else {
-    next.add(key);
-  }
-  expandedDays.value = next;
-}
-
 watch(meals, async (loadedMeals) => {
   if (!selectedMealId) return;
   const selectedMeal = loadedMeals.find((meal) => meal.id === selectedMealId);
   if (!selectedMeal) return;
 
-  expandedDays.value = new Set([...expandedDays.value, dayKey(selectedMeal.createdAt)]);
   await nextTick();
-  document.getElementById(`day-${selectedMealId}`)?.scrollIntoView({ block: "start" });
+  document.getElementById(`meal-${selectedMealId}`)?.scrollIntoView({ block: "center" });
 }, { immediate: true });
 
 onMounted(() => {
@@ -171,90 +173,101 @@ onMounted(() => {
       <button class="goal-save" type="submit">Save</button>
     </form>
 
-    <div class="daily-log">
-      <section
-        v-for="day in days"
-        :id="dayId(day)"
-        :key="day.key"
-        class="day-section"
-        :class="{ 'is-open': expandedDays.has(day.key) }"
-      >
-        <header class="day-heading">
-          <h2>{{ day.label }}</h2>
-          <button
-            class="day-toggle"
-            type="button"
-            :aria-expanded="expandedDays.has(day.key)"
-            :aria-label="`${expandedDays.has(day.key) ? 'Hide' : 'Show'} ${day.meals.length} meals from ${day.label}`"
-            @click="toggleDay(day.key)"
-          >
-            {{ day.meals.length }} {{ day.meals.length === 1 ? "meal" : "meals" }}
-            <UIcon
-              class="day-chevron"
-              :class="{ 'is-expanded': expandedDays.has(day.key) }"
-              name="i-lucide-chevron-down"
-              aria-hidden="true"
-            />
-          </button>
-        </header>
-
-        <div class="day-layout">
-          <div class="day-progress">
-            <div class="day-ring">
-              <NutritionRings
-                :calorie-goal="calorieGoal"
-                :calories="day.calories"
-                :protein="day.protein"
-                :protein-goal="proteinGoal"
-              />
-            </div>
-
-            <dl class="day-metrics tabular-nums">
-              <div>
-                <dt><i class="calorie-dot" />Calories</dt>
-                <dd><strong>{{ day.calories.toLocaleString() }}</strong> / {{ calorieGoal.toLocaleString() }} kcal</dd>
-              </div>
-              <div>
-                <dt><i class="protein-dot" />Protein</dt>
-                <dd><strong>{{ day.protein }}</strong> / {{ proteinGoal }} g</dd>
-              </div>
-              <div v-if="day.cost !== undefined" class="day-cost">
-                <dt>AI cost</dt>
-                <dd>{{ formatUsageCostUsd(day.cost) }}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div v-if="!expandedDays.has(day.key)" class="meal-preview">
-            <div v-for="meal in day.meals.slice(0, 3)" :key="meal.id" class="meal-preview-item">
-              <span class="meal-preview-photo"><MealPhoto :meal="meal" /></span>
-              <span class="meal-preview-copy">
-                <strong>{{ getMealTitle(meal) }}</strong>
-                <span class="meal-preview-details">
-                  <small>{{ formatMealTime(meal.createdAt) }}</small>
-                  <span class="meal-preview-macros tabular-nums">
-                    <span>{{ meal.totalCalories ?? 0 }} kcal</span>
-                    <span>{{ meal.totalProtein ?? 0 }} g protein</span>
-                  </span>
-                </span>
-              </span>
-            </div>
-            <span v-if="day.meals.length > 3" class="meal-preview-more">
-              +{{ day.meals.length - 3 }} more {{ day.meals.length - 3 === 1 ? "meal" : "meals" }}
-            </span>
-          </div>
-
-          <div v-else class="meal-list">
-            <MealAnalysis v-for="meal in day.meals" :key="meal.id" :meal="meal" />
-          </div>
+    <div class="dashboard-content">
+      <section class="dashboard-heading" aria-labelledby="dashboard-title">
+        <div>
+          <span class="dashboard-eyebrow">Nutrition overview</span>
+          <h1 id="dashboard-title">Meal history</h1>
+          <p>Calories and protein from your saved meals.</p>
         </div>
+
+        <nav v-if="days.length" class="date-nav" aria-label="Jump to a day">
+          <a
+            v-for="day in days.slice(0, 7)"
+            :key="day.key"
+            :href="`#day-${day.key}`"
+            :class="{ 'is-current': day.label === 'Today' }"
+          >
+            <span>{{ day.label }}</span>
+            <strong>{{ dayNavLabel(day.date) }}</strong>
+          </a>
+        </nav>
       </section>
 
-      <div v-if="loading || loadError" class="feed-sentinel" aria-live="polite">
-        <span v-if="loading">Loading meals…</span>
-        <UButton v-else color="error" variant="soft" @click="refresh">
-          Try again
-        </UButton>
+      <div class="daily-log">
+        <section
+          v-for="day in days"
+          :id="`day-${day.key}`"
+          :key="day.key"
+          class="day-section"
+        >
+          <header class="day-heading">
+            <div>
+              <span>{{ day.label }}</span>
+              <h2>{{ dayDateLabel(day.date) }}</h2>
+            </div>
+            <div class="day-heading-meta">
+              <span v-if="day.cost !== undefined">AI · {{ formatUsageCostUsd(day.cost) }}</span>
+              <UBadge color="neutral" size="sm" variant="soft">
+                {{ day.meals.length }} {{ day.meals.length === 1 ? "meal" : "meals" }}
+              </UBadge>
+            </div>
+          </header>
+
+          <div class="day-layout">
+            <UCard
+              as="aside"
+              class="day-summary-card"
+              variant="outline"
+              :ui="{ body: 'p-0 sm:p-0' }"
+            >
+              <div class="day-progress">
+                <NutritionRings
+                  :calorie-goal="calorieGoal"
+                  :calories="day.calories"
+                  :protein="day.protein"
+                  :protein-goal="proteinGoal"
+                />
+
+                <dl class="day-metrics tabular-nums">
+                  <div>
+                    <dt><i class="calorie-dot" />Calories</dt>
+                    <dd>
+                      <strong>{{ day.calories.toLocaleString() }}</strong>
+                      <span>of {{ calorieGoal.toLocaleString() }} kcal</span>
+                    </dd>
+                    <small>{{ goalDelta(day.calories, calorieGoal, "kcal") }}</small>
+                  </div>
+                  <div>
+                    <dt><i class="protein-dot" />Protein</dt>
+                    <dd>
+                      <strong>{{ day.protein }}</strong>
+                      <span>of {{ proteinGoal }} g</span>
+                    </dd>
+                    <small>{{ goalDelta(day.protein, proteinGoal, "g") }}</small>
+                  </div>
+                </dl>
+              </div>
+            </UCard>
+
+            <div class="meal-list">
+              <MealAnalysis
+                v-for="meal in day.meals"
+                :id="`meal-${meal.id}`"
+                :key="meal.id"
+                :class="{ 'is-selected': meal.id === selectedMealId }"
+                :meal="meal"
+              />
+            </div>
+          </div>
+        </section>
+
+        <div v-if="loading || loadError" class="feed-sentinel" aria-live="polite">
+          <span v-if="loading">Loading meals…</span>
+          <UButton v-else color="error" variant="soft" @click="refresh">
+            Try again
+          </UButton>
+        </div>
       </div>
     </div>
   </main>
