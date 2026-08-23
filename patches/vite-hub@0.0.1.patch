@@ -26,7 +26,7 @@ index 1605a9cc0b0da4b4575b5910a302f1d2b36f5181..2c4459e7fbf798f30c2415c1d59305b8
  export {};
 diff --git a/dist/console/runtime/pages/agents.vue b/dist/console/runtime/pages/agents.vue
 new file mode 100644
-index 0000000000000000000000000000000000000000..67428f1f977e5091f6371f6c5d1a51fc5510a477
+index 0000000000000000000000000000000000000000..d7f0427deb52fcb8ba8f1ffd79c93519c3eac4a8
 --- /dev/null
 +++ b/dist/console/runtime/pages/agents.vue
 @@ -0,0 +1,661 @@
@@ -975,7 +975,7 @@ index 894dca436c0e6da8d8136075776bd6b354ca66a7..38c2c69e4464ce06485e4680def741a0
 -export { databases, defineDrizzleCollection, useDatabase };
 +export { databases, useDatabase };
 diff --git a/dist/index.d.ts b/dist/index.d.ts
-index 1ac83a1fa70038edf0eb146f53e72fdca1db2d57..0b668aba21472fdf2da7116b8757c67e9d34d991 100644
+index 1ac83a1fa70038edf0eb146f53e72fdca1db2d57..8e882a2331146e009efe7bc520bb6a03c1da340b 100644
 --- a/dist/index.d.ts
 +++ b/dist/index.d.ts
 @@ -23,6 +23,7 @@ interface ViteHubOptions {
@@ -987,7 +987,7 @@ index 1ac83a1fa70038edf0eb146f53e72fdca1db2d57..0b668aba21472fdf2da7116b8757c67e
    email?: true | EmailVitePluginOptions;
    env?: false | EnvIntegrationOptions;
 diff --git a/dist/nuxt.js b/dist/nuxt.js
-index c57167f5d6ab0045864b1e993244a6403d8a68ec..5dc796ba37a7ef386e50013ef794a3dfd8e9de0b 100644
+index c57167f5d6ab0045864b1e993244a6403d8a68ec..b1a25ff0bb2981aa58a516dd2dea352bf1e32c6b 100644
 --- a/dist/nuxt.js
 +++ b/dist/nuxt.js
 @@ -8,6 +8,7 @@ import { hubDb } from "@vite-hub/database/nuxt";
@@ -998,7 +998,27 @@ index c57167f5d6ab0045864b1e993244a6403d8a68ec..5dc796ba37a7ef386e50013ef794a3df
  const agentVueComposables = [
  	"useAgent",
  	"useAgentInvocation",
-@@ -50,6 +51,28 @@ function addVueImports(nuxt, from, names) {
+@@ -26,6 +27,19 @@ function installEmailTemplateResolver(config, root) {
+ 	const plugins = rollupConfig.plugins ??= [];
+ 	if (!plugins.some((plugin) => plugin.name === "vite-hub/nuxt-email-templates")) plugins.push(emailTemplateResolver(root));
+ }
++function markdownTemplateResolver(plugin) {
++	return {
++		name: "vite-hub/nuxt-markdown-templates",
++		load: plugin.load,
++		resolveId: plugin.resolveId
++	};
++}
++function installMarkdownTemplateResolver(config, plugin) {
++	if (!plugin?.load || !plugin.resolveId) return;
++	const rollupConfig = config.rollupConfig ??= {};
++	const plugins = rollupConfig.plugins ??= [];
++	if (!plugins.some((candidate) => candidate.name === "vite-hub/nuxt-markdown-templates")) plugins.push(markdownTemplateResolver(plugin));
++}
+ function addTypeScriptDefaults(options, includes, excludes) {
+ 	const typescript = options.typescript ??= {};
+ 	const tsConfig = typescript.tsConfig ??= {};
+@@ -50,6 +64,28 @@ function addVueImports(nuxt, from, names) {
  		});
  	}
  }
@@ -1027,7 +1047,7 @@ index c57167f5d6ab0045864b1e993244a6403d8a68ec..5dc796ba37a7ef386e50013ef794a3df
  function isEnvDeclarationNamespace(value) {
  	return Boolean(value && typeof value === "object" && !Array.isArray(value) && value.kind !== "env-variable");
  }
-@@ -173,6 +195,7 @@ const viteHubNuxtModule = async function viteHubNuxtModule(inlineOptions, nuxt)
+@@ -173,6 +209,7 @@ const viteHubNuxtModule = async function viteHubNuxtModule(inlineOptions, nuxt)
  		...moduleOptions,
  		env: envOptions
  	};
@@ -1035,19 +1055,21 @@ index c57167f5d6ab0045864b1e993244a6403d8a68ec..5dc796ba37a7ef386e50013ef794a3df
  	const rootDir = nuxt.options.rootDir || process.cwd();
  	const viteRoot = resolve(rootDir, typeof nuxt.options.vite?.root === "string" ? nuxt.options.vite.root : rootDir);
  	const projectRoot = resolveViteHubProjectRoot(viteRoot);
-@@ -223,7 +246,7 @@ const viteHubNuxtModule = async function viteHubNuxtModule(inlineOptions, nuxt)
+@@ -223,7 +260,8 @@ const viteHubNuxtModule = async function viteHubNuxtModule(inlineOptions, nuxt)
  	}) ?? {};
  	const emailCleanupPlugin = replayPlugins.find((plugin) => plugin.name === "@vite-hub/email/optional-peer-resolver");
  	if (!emailPlugin) await emailCleanupPlugin?.api?.prepareTypes?.(projectRoot);
 -	await replayPlugins.find((plugin) => plugin.name === "vite-hub/types")?.api?.prepareTypes?.(projectRoot);
++	const markdownTemplatePlugin = replayPlugins.find((plugin) => plugin.name === "@vite-hub/markdown-template/vite");
 +	const collectionHandlers = await replayPlugins.find((plugin) => plugin.name === "vite-hub/types")?.api?.prepareTypes?.(projectRoot) ?? [];
  	viteConfig.define = {
  		...viteConfig.define,
  		__VITEHUB_APP_BASE_URL__: JSON.stringify(nuxt.options.app?.baseURL || "/")
-@@ -246,6 +269,8 @@ const viteHubNuxtModule = async function viteHubNuxtModule(inlineOptions, nuxt)
+@@ -246,6 +284,9 @@ const viteHubNuxtModule = async function viteHubNuxtModule(inlineOptions, nuxt)
  	};
  	nuxt.hook?.("nitro:config", async (config) => {
  		await applyNitroConfig(replayPlugins, config, nuxt);
++		installMarkdownTemplateResolver(config, markdownTemplatePlugin);
 +		const handlers = config.handlers ??= [];
 +		for (const handler of collectionHandlers) if (!handlers.some((candidate) => candidate.route === handler.route && (!candidate.method || candidate.method.toLowerCase() === handler.method))) handlers.push(handler);
  		if (emailPlugin && nuxt.options.dev) installEmailTemplateResolver(config, join(projectRoot, ".vitehub/email/templates"));
@@ -1297,7 +1319,7 @@ index b17eb0d5485a9fde8b15db40f7555bcc06319476..f20f2efb10d622ba68e73efdbcc0a56d
  function viteHubTypesPlugin() {
  	let projectRoot;
 diff --git a/package.json b/package.json
-index 311187d594efb627f0407db682342a9a8eb26960..4083364d8c30b66c61010a6a280d3de6a10eec8c 100644
+index 311187d594efb627f0407db682342a9a8eb26960..5178ab478806dc178083efe534f4de17b43a0078 100644
 --- a/package.json
 +++ b/package.json
 @@ -88,6 +88,8 @@
