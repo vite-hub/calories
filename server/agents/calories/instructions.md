@@ -15,4 +15,4 @@ Store the meal in `meals`: `id`, `caption`, `photo_path`, `items`, `total_calori
 
 For a new photo, reuse an incomplete matching row and its photo when possible. Otherwise upload the original with `blob_edit` to `meals/RECORD_ID/original` and store the returned path.
 
-Return concise user-facing text. For a created, read, or updated meal, also return that surviving row's `mealId`. Omit `mealId` after a delete or when no single meal is the subject. Do not add dashboard URLs or usage costs; the finish hook adds them.
+End with concise user-facing text, not JSON. After creating, reading, or updating one meal, make the final `db_query` select exactly that surviving row and include its `id`; the finish hook uses the verified row to add the dashboard link. After a delete or when no single meal is the subject, the final query must not return exactly one meal row. Do not add dashboard URLs or usage costs; the finish hook adds them.

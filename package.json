@@ -20,6 +20,7 @@
     "telegram:history": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels history --agent calories --channel telegram --stage production --url https://calories.onmax.me --output .backups/telegram-history",
     "telegram:webhook": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels sync --agent calories --channel telegram --stage production --url https://calories.onmax.me",
     "telegram:webhook:apply": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels sync --agent calories --channel telegram --stage production --url https://calories.onmax.me --apply --confirm-origin https://calories.onmax.me",
+    "test": "tsx --test server/**/*.test.ts",
     "typecheck": "node --env-file-if-exists=.env node_modules/nuxt/bin/nuxt.mjs typecheck"
   },
   "dependencies": {
@@ -33,7 +34,6 @@
     "nuxt": "npm:nuxt-nightly@5.0.0-29746924.1554961a",
     "ofetch": "2.0.0-alpha.3",
     "tailwindcss": "4.3.3",
-    "valibot": "1.4.2",
     "vite-hub": "https://pkg.pr.new/vite-hub/vitehub/vite-hub@b050e4bda5e75f1ccb99ac73cb24070a23157eb0",
     "vue-router": "5.2.0"
   },
@@ -42,6 +42,7 @@
     "@iconify-json/lucide": "1.2.113",
     "@types/node": "25.9.2",
     "nitro": "3.0.260610-beta",
+    "tsx": "4.23.12",
     "typescript": "6.0.3",
     "vite": "8.1.5",
     "vue-tsc": "3.2.6",

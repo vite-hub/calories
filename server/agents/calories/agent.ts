@@ -1,7 +1,6 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
 import { eq } from "drizzle-orm";
-import * as v from "valibot";
 import { defineAgent } from "vite-hub/agent";
 import {
   audioBytes,
@@ -16,6 +15,7 @@ import { useServerEnv } from "#vitehub/env/server";
 import { caloriesAgentInvocations } from "../../utils/agent-invocations";
 
 import renderReply from "./reply.template.md";
+import { verifiedMealId } from "./result";
 
 function openRouter() {
   return createOpenRouter({ apiKey: useServerEnv().openrouter.apiKey });
@@ -61,30 +61,38 @@ export default defineAgent({
   driver: {
     maxRetries: 0,
     model: () => openRouter()("z-ai/glm-5v-turbo"),
-    output: {
-      schema: v.object({
-        mealId: v.optional(v.string()),
-        text: v.string(),
-      }),
-    },
   },
   hooks: {
+    "agent:error"(event) {
+      console.error("[calories] Agent invocation failed", event.error);
+      const traceId = event.input.context?.["agent.invocation.traceId"];
+      const reference = typeof traceId === "string"
+        ? traceId
+        : event.invocation.run?.runId;
+
+      return event.reply([
+        "Sorry, I couldn't finish that reply. I may have saved the meal before the failure, so check the dashboard before retrying.",
+        "Dashboard: https://calories.onmax.me/",
+        ...(reference ? [`Reference: ${reference}`] : []),
+      ].join("\n"));
+    },
     async "agent:finish"(event) {
       const usageCost = event.invocation.usage?.cost?.display ?? "Cost unavailable";
+      const mealId = verifiedMealId(event.toolResults);
       const dashboardUrl = event.runtime?.request
         ? new URL("/", event.runtime.request.url)
         : undefined;
-      if (dashboardUrl && event.result?.mealId) {
-        dashboardUrl.searchParams.set("meal", event.result.mealId);
-        dashboardUrl.hash = `day-${event.result.mealId}`;
+      if (dashboardUrl && mealId) {
+        dashboardUrl.searchParams.set("meal", mealId);
+        dashboardUrl.hash = `day-${mealId}`;
       }
-      if (event.result?.mealId && usageCost !== "Cost unavailable") {
+      if (mealId && usageCost !== "Cost unavailable") {
         try {
           const { db, schema } = useDatabase("default");
           await db
             .update(schema.meals)
             .set({ usageCost })
-            .where(eq(schema.meals.id, event.result.mealId));
+            .where(eq(schema.meals.id, mealId));
         } catch (error) {
           console.error("[calories] Failed to record usage cost", error);
         }
@@ -92,7 +100,7 @@ export default defineAgent({
       return event.reply(await renderReply({
         cost: usageCost,
         dashboardUrl: dashboardUrl?.toString() ?? "",
-        text: event.result?.text ?? "Done.",
+        text: event.text?.trim() || "Done.",
       }));
     },
   },
