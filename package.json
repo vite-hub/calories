@@ -10,6 +10,8 @@
   },
   "scripts": {
     "build": "node --env-file-if-exists=.env node_modules/nuxt/bin/nuxt.mjs build",
+    "data:export": "tsx scripts/export-data.ts",
+    "data:export:database": "tsx scripts/export-data.ts --database-only",
     "deploy": "pnpm run build && wrangler deploy --config .output/server/wrangler.json --keep-vars --strict",
     "db:generate": "node --env-file-if-exists=.env node_modules/vite-hub/dist/bin.js db generate",
     "db:migrate": "mkdir -p .vitehub/data/database && node --env-file-if-exists=.env node_modules/vite-hub/dist/bin.js db migrate",

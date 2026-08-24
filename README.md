@@ -87,13 +87,15 @@ pnpm telegram:webhook
 pnpm telegram:webhook:apply
 ```
 
-Download the retained Telegram conversation and its attachments for recovery:
+Create one timestamped recovery bundle containing a production D1 export and the retained Telegram conversation with its attachments:
 
 ```sh
-pnpm telegram:history
+pnpm data:export
 ```
 
-The archive is written to `.backups/telegram-history/`. Telegram retains a bounded history window, so export it before attempting to replay missed meals.
+The bundle is written under `.backups/`. It requires the production Telegram values in `.env`. If those values are unavailable, back up the authoritative database on its own with `pnpm data:export:database`.
+
+Telegram retains a bounded history window, so export it before attempting recovery. The Bot API cannot replay a user's old message: compare the archive with D1, then resend only confirmed gaps through the configured private chat. This avoids duplicating a meal when a database write succeeded but the bot's final reply failed. `pnpm telegram:history` remains available when only the retained channel archive is needed.
 
 ## Agent session reader
 
