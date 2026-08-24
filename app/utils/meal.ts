@@ -1,7 +1,7 @@
-import type { CollectionItem } from "vite-hub/source";
+import type { CollectionClientItem } from "vite-hub/source";
 import type { meals } from "../../server/collections/meals";
 
-export type Meal = CollectionItem<typeof meals>;
+export type Meal = CollectionClientItem<typeof meals>;
 
 export function formatMealTime(value: string): string {
   return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(
