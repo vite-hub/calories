@@ -52,3 +52,14 @@ diff --git a/dist/console/runtime/pages/agents.vue b/dist/console/runtime/pages/
  
  import {
    CONSOLE_SESSION_LOOKUP_PAGE_LIMIT,
+diff --git a/dist/src-CGKFMS-9.js b/dist/src-CGKFMS-9.js
+--- a/dist/src-CGKFMS-9.js
++++ b/dist/src-CGKFMS-9.js
+@@ -1638,6 +1638,7 @@ function vitehub(options = {}) {
+ 			providerImportAliases,
+ 			runtimeCapabilityImports: {
+ 				blob: blobEnabled ? `${generatedImportBase}/blob` : false,
++				db: options.database ? "vite-hub/database/drizzle" : false,
+ 				email: "vite-hub/email/server",
+ 				kv: `${generatedImportBase}/kv`
+ 			},

@@ -29,6 +29,26 @@ const publicAttributeKeys = new Set([
   "vitehub.activity.kind",
 ]);
 
+const databaseCapabilityError = /Capability ["']db["'] requires the database primitive|@vite-hub\/database\/drizzle/;
+
+function publicInvocationError(error: unknown): { message: string; name: string } {
+  const candidate = error && typeof error === "object" ? error as { message?: unknown; name?: unknown } : {};
+  const message = typeof candidate.message === "string" ? candidate.message : String(error ?? "");
+  const name = typeof candidate.name === "string" ? candidate.name : "";
+
+  if (name === "Database unavailable" || databaseCapabilityError.test(message)) {
+    return {
+      message: "This deployment could not load its database adapter, so the request was not saved. Retry after the deployment has been updated.",
+      name: "Database unavailable",
+    };
+  }
+
+  return {
+    message: "The agent stopped before completing this request. Use the trace ID shown in this session to find the matching Worker logs.",
+    name: "Invocation failed",
+  };
+}
+
 function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry {
   const attributes: Record<string, boolean | number | string | null> = {};
   for (const [key, value] of Object.entries(entry.attributes ?? {})) {
@@ -36,6 +56,15 @@ function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry {
     if (typeof value === "string") attributes[key] = value.slice(0, 256);
     else if (typeof value === "number" && Number.isFinite(value)) attributes[key] = value;
     else if (typeof value === "boolean" || value === null) attributes[key] = value;
+  }
+
+  if (entry.type === "error" || entry.name.endsWith(".error")) {
+    const error = publicInvocationError({
+      message: entry.attributes?.["error.message"],
+      name: entry.attributes?.["error.name"],
+    });
+    attributes["error.message"] = error.message;
+    attributes["vitehub.activity.title"] = error.name;
   }
 
   return {
@@ -51,7 +80,7 @@ function publicRecord(record: AgentInvocationRecord): AgentInvocationRecord {
     ...(record.completedAt ? { completedAt: record.completedAt } : {}),
     createdAt: record.createdAt,
     cursor: record.cursor,
-    ...(record.error ? { error: { message: "Agent invocation failed." } } : {}),
+    ...(record.error ? { error: publicInvocationError(record.error) } : {}),
     ...(record.failedAt ? { failedAt: record.failedAt } : {}),
     id: record.id,
     observations: record.observations.map(publicObservation),
@@ -81,7 +110,8 @@ function createD1AgentInvocationStore(): AgentInvocationStore {
       .from(table)
       .where(eq(table.id, id))
       .limit(1);
-    return row ? asRecord(row.record, row.sequence) : undefined;
+    const record = row ? asRecord(row.record, row.sequence) : undefined;
+    return record ? publicRecord(record) : undefined;
   };
 
   return {
@@ -148,7 +178,7 @@ function createD1AgentInvocationStore(): AgentInvocationStore {
         invocations: page.flatMap((row) => {
           const record = asRecord(row.record, row.sequence);
           if (!record) return [];
-          const { observations: _observations, ...summary } = record;
+          const { observations: _observations, ...summary } = publicRecord(record);
           return [summary];
         }),
       };
@@ -172,7 +202,7 @@ function createD1AgentInvocationStore(): AgentInvocationStore {
 
       const updated = publicRecord(applyAgentInvocationStoreUpdate(record, {
         ...input,
-        ...(input.error ? { error: { message: "Agent invocation failed." } } : {}),
+        ...(input.error ? { error: publicInvocationError(input.error) } : {}),
         ...(input.observation ? { observation: publicObservation(input.observation) } : {}),
       }));
       const rows = await db.update(table)
