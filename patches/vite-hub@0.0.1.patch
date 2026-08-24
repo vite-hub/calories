@@ -28,3 +28,27 @@ index aca3d6866a2de3c074b721059a5c81436ad672e8..5856039bdc05a54304eb8e506bd3f58e
  	nuxt.options.vite ??= {};
  	const viteConfig = nuxt.options.vite;
  	if (envConfig && Object.values(envConfig).some(Boolean)) {
+diff --git a/dist/console/runtime/pages/index.vue b/dist/console/runtime/pages/index.vue
+--- a/dist/console/runtime/pages/index.vue
++++ b/dist/console/runtime/pages/index.vue
+@@ -1,5 +1,7 @@
+ <script setup lang="ts">
++import { navigateTo } from "#imports";
++
+ await navigateTo("/_vitehub/agents", { replace: true })
+ </script>
+ 
+ <template>
+diff --git a/dist/console/runtime/pages/agents.vue b/dist/console/runtime/pages/agents.vue
+--- a/dist/console/runtime/pages/agents.vue
++++ b/dist/console/runtime/pages/agents.vue
+@@ -1,7 +1,8 @@
+ <script setup lang="ts">
+ import { AgentInvocation, AgentInvocationInspector } from "@vite-hub/ui";
+ import { useAgentInvocation, useAgentInvocations } from "vite-hub/agent/vue";
+-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
++import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
++import { useHead, useRoute, useRouter, useRuntimeConfig } from "#imports";
+ 
+ import {
+   CONSOLE_SESSION_LOOKUP_PAGE_LIMIT,
