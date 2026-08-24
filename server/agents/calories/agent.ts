@@ -13,6 +13,7 @@ import {
 import { telegram } from "vite-hub/agent/channels";
 import { useDatabase } from "vite-hub/database/drizzle";
 import { useServerEnv } from "#vitehub/env/server";
+import { caloriesAgentInvocations } from "../../utils/agent-invocations";
 
 import renderReply from "./reply.template.md";
 
@@ -21,6 +22,7 @@ function openRouter() {
 }
 
 export default defineAgent({
+  invocations: caloriesAgentInvocations,
   capabilities: [
     blob({ mode: "write" }),
     databaseCapability({ mode: "write" }),

@@ -97,10 +97,10 @@ The archive is written to `.backups/telegram-history/`. Telegram retains a bound
 
 ## Agent session reader
 
-The read-only Agent invocation console is enabled for local development. Start the app and open `http://127.0.0.1:3000/_vitehub`:
+The ViteHub option is `console: true`. Calories keeps the merged console page in production and backs it with D1, so it is available at [`https://calories.onmax.me/_vitehub`](https://calories.onmax.me/_vitehub). Start the app to use the same page locally at `http://127.0.0.1:3000/_vitehub`:
 
 ```sh
 pnpm dev
 ```
 
-The console is loopback-only and is not included in the production build at `calories.onmax.me`.
+The production journal is metadata-only. It strips prompts, model text, tool inputs and outputs, channel and thread identifiers, annotations, and raw errors before persistence. The console and its API are read-only.

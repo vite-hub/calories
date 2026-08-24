@@ -4,6 +4,24 @@ import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export default defineDatabase({
   schema: {
+    agentInvocations: sqliteTable(
+      "agent_invocations",
+      {
+        sequence: integer("sequence").primaryKey({ autoIncrement: true }),
+        id: text("id").notNull().unique(),
+        status: text("status", {
+          enum: ["pending", "running", "completed", "failed", "cancelled"],
+        }).notNull(),
+        record: text("record", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+        claimId: text("claim_id"),
+        claimExpiresAt: integer("claim_expires_at"),
+        updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+      },
+      (table) => [
+        index("agent_invocations_status_idx").on(table.status),
+        index("agent_invocations_updated_idx").on(table.updatedAt),
+      ],
+    ),
     meals: sqliteTable(
       "meals",
       {
