@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { verifiedMealId } from "./result";
+import { verifiedMealId } from "../server/agents/calories/result";
 
 describe("verifiedMealId", () => {
   it("returns the id from the final single-row verification query", () => {

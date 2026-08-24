@@ -1,0 +1,225 @@
+diff --git a/dist/ai-sdk-Drvz6tJg.js b/dist/ai-sdk-Drvz6tJg.js
+index a493a0de4ff095bccd52d9454871e5d64fdf40b7..4bb29aec3bdcd110f37ef349135178bdd685df1c 100644
+--- a/dist/ai-sdk-Drvz6tJg.js
++++ b/dist/ai-sdk-Drvz6tJg.js
+@@ -920,6 +920,20 @@ function outputRepairPrompt(text, error, evidence = []) {
+ 		...evidence.length ? [`Completed tool results:\n${evidence.join("\n\n---\n\n")}`] : []
+ 	].join("\n\n");
+ }
++function toolCallRepairPrompt(toolCall, schema, error) {
++	return [
++		`Correct the invalid arguments for the tool "${toolCall.toolName}".`,
++		"Return only arguments that match the tool schema. Do not choose another tool.",
++		`Validation error: ${error.message}`,
++		`Invalid arguments: ${JSON.stringify(toolCall.input)}`,
++		`Tool schema: ${JSON.stringify(schema)}`
++	].join("\n\n");
++}
++function outputMaxAttempts(output) {
++	const maxAttempts = output?.maxAttempts ?? 3;
++	if (!Number.isInteger(maxAttempts) || maxAttempts < 1) throw new TypeError("[vitehub] Agent output maxAttempts must be a positive integer.");
++	return maxAttempts;
++}
+ async function createAgent(options, context, fallbackCapture) {
+ 	const aiSdk = await loadAiSdk();
+ 	const { ToolLoopAgent, isStepCount, jsonSchema } = aiSdk;
+@@ -1000,7 +1014,39 @@ async function createAgent(options, context, fallbackCapture) {
+ 		...withoutRepairConversationSettings(await prepareCall(input)),
+ 		...input.prompt === void 0 ? {} : { prompt: input.prompt }
+ 	}) : void 0;
+-	const repairAgent = context.output && context.nativeStructuredOutput !== false ? new ToolLoopAgent({
++	const toolRepairUsageCaptures = [];
++	const builtInRepairToolCall = Object.keys(toolSet).length ? async ({ error, inputSchema, toolCall, tools }) => {
++		if (toolCall.providerExecuted || !Object.hasOwn(tools, toolCall.toolName)) return null;
++		try {
++			const schema = await inputSchema({ toolName: toolCall.toolName });
++			const usageCapture = createUsageCapture();
++			toolRepairUsageCaptures.push(usageCapture);
++			const toolRepairAgent = new ToolLoopAgent({
++				...repairSettings,
++				instructions,
++				model: instrumentedModel,
++				output: aiSdk.Output.object({ schema: jsonSchema(schema) }),
++				...prepareRepairCall ? { prepareCall: prepareRepairCall } : {},
++				stopWhen: isStepCount(1)
++			});
++			const result = await toolRepairAgent.generate({
++				onEnd: usageCapture.onEnd,
++				onLanguageModelCallEnd: usageCapture.onLanguageModelCallEnd,
++				onStepEnd: usageCapture.onStepEnd,
++				prompt: toolCallRepairPrompt(toolCall, schema, error)
++			});
++			return {
++				...toolCall,
++				input: JSON.stringify(result.output)
++			};
++		} catch {
++			return null;
++		}
++	} : void 0;
++	const configuredRepairToolCall = commonSettings.repairToolCall ?? commonSettings.experimental_repairToolCall;
++	const repairToolCall = execution?.repairToolCall === false ? void 0 : hasRuntimeType(execution?.repairToolCall, "function") ? execution.repairToolCall : configuredRepairToolCall ?? builtInRepairToolCall;
++	const maxOutputAttempts = context.output && context.nativeStructuredOutput !== false ? outputMaxAttempts(context.output) : 1;
++	const repairAgent = maxOutputAttempts > 1 ? new ToolLoopAgent({
+ 		...repairSettings,
+ 		instructions,
+ 		model: instrumentedModel,
+@@ -1008,17 +1054,31 @@ async function createAgent(options, context, fallbackCapture) {
+ 		...prepareRepairCall ? { prepareCall: prepareRepairCall } : {},
+ 		stopWhen: isStepCount(1)
+ 	}) : void 0;
+-	const repairOutput = context.output && context.nativeStructuredOutput !== false ? async (failure, callInput) => {
+-		const { messages: _messages, options: _options, prompt: _prompt, ...repairCallInput } = callInput;
+-		try {
+-			return asUnknownBoundary(await repairAgent.generate({
+-				...repairCallInput,
+-				..."options" in callInput ? { options: callInput.options } : {},
+-				prompt: outputRepairPrompt(failure.text, failure.error, failure.evidence)
+-			}));
+-		} catch (repairError) {
+-			return await normalizeNativeAgentOutputError(context.output, repairError);
++	const repairOutput = repairAgent ? async (failure, callInput) => {
++		let latestFailure = failure;
++		for (let attempt = 1; attempt < maxOutputAttempts; attempt++) {
++			const resolvedCallInput = hasRuntimeType(callInput, "function") ? callInput() : callInput;
++			const { messages: _messages, options: _options, prompt: _prompt, ...repairCallInput } = resolvedCallInput;
++			let repairResult;
++			try {
++				repairResult = asUnknownBoundary(await repairAgent.generate({
++					...repairCallInput,
++					..."options" in resolvedCallInput ? { options: resolvedCallInput.options } : {},
++					prompt: outputRepairPrompt(latestFailure.text, latestFailure.error, latestFailure.evidence)
++				}));
++				await validateAgentOutput(context.output, repairResult);
++				return repairResult;
++			} catch (repairError) {
++				const repairedFailure = await nativeAgentOutputValidationFailure(context.output, repairError);
++				const code = repairError?.code;
++				if (!repairedFailure && code !== "AGENT_OUTPUT_INVALID_JSON" && code !== "AGENT_OUTPUT_SCHEMA_INVALID") return await normalizeNativeAgentOutputError(context.output, repairError);
++				latestFailure = {
++					...(repairedFailure ?? { error: repairError, text: repairResult?.text ?? latestFailure.text }),
++					evidence: latestFailure.evidence
++				};
++			}
+ 		}
++		throw latestFailure.error;
+ 	} : void 0;
+ 	return {
+ 		agent: new ToolLoopAgent({
+@@ -1026,11 +1086,14 @@ async function createAgent(options, context, fallbackCapture) {
+ 			instructions,
+ 			model: instrumentedModel,
+ 			...nativeOutput ? { output: nativeOutput } : {},
++			experimental_repairToolCall: void 0,
++			repairToolCall,
+ 			stopWhen: settings.stopWhen ?? isStepCount(stepLimit ?? 20),
+ 			...Object.keys(toolSet).length ? { tools: toolSet } : {}
+ 		}),
+ 		model: instrumentedModel,
+ 		repairOutput,
++		toolRepairUsageCaptures,
+ 		tools: Object.keys(toolSet).length ? toolSet : void 0
+ 	};
+ }
+@@ -1042,16 +1105,20 @@ function createAiSdkAdapter(options) {
+ 			const callInput = await getCallInput(context, execution?.attachments);
+ 			const fallback = getFallbackOptions(execution?.workspaceFallback);
+ 			const fallbackCapture = fallback.enabled || Boolean(context.output) ? createWorkspaceFallbackEvidenceCapture(fallback.enabled ? fallback.maxToolResults : 8) : void 0;
+-			const { agent, model, repairOutput, tools } = await createAgent(options, context, fallbackCapture);
++			const { agent, model, repairOutput, toolRepairUsageCaptures, tools } = await createAgent(options, context, fallbackCapture);
+ 			if (context.workspace && tools && "materialize_sources" in tools) await reportWorkspaceMaterialization(tools, context.toolStepReporter);
+ 			const usageCapture = createUsageCapture();
+-			const repairUsageCapture = createUsageCapture();
++			const repairUsageCaptures = [];
+ 			const fallbackUsageCapture = createUsageCapture();
+-			const repairCallInput = {
+-				...callInput,
+-				onEnd: repairUsageCapture.onEnd,
+-				onLanguageModelCallEnd: repairUsageCapture.onLanguageModelCallEnd,
+-				onStepEnd: repairUsageCapture.onStepEnd
++			const repairCallInput = () => {
++				const usageCapture = createUsageCapture();
++				repairUsageCaptures.push(usageCapture);
++				return {
++					...callInput,
++					onEnd: usageCapture.onEnd,
++					onLanguageModelCallEnd: usageCapture.onLanguageModelCallEnd,
++					onStepEnd: usageCapture.onStepEnd
++				};
+ 			};
+ 			const captureOriginalStep = async (event) => {
+ 				await usageCapture.onStepEnd(event);
+@@ -1067,25 +1134,22 @@ function createAiSdkAdapter(options) {
+ 			let originalGenerated;
+ 			let repaired = false;
+ 			const synthesizedOutput = async (synthesized, original, repairResult) => {
+-				const captures = [
+-					usageCapture,
+-					repairUsageCapture,
+-					fallbackUsageCapture
+-				];
++				const captures = [usageCapture, ...toolRepairUsageCaptures, ...repairUsageCaptures, fallbackUsageCapture];
+ 				let usageRecord;
+ 				if (fallbackUsageCapture.captured) usageRecord = await combinedUsageRecord([
+ 					{
+ 						capture: usageCapture,
+ 						result: originalGenerated ?? original
+ 					},
++					...toolRepairUsageCaptures.map((capture) => ({ capture })),
+ 					{
+ 						capture: fallbackUsageCapture,
+ 						result: synthesized.result
+ 					},
+-					...repairUsageCapture.captured ? [{
+-						capture: repairUsageCapture,
+-						result: repairResult
+-					}] : []
++					...repairUsageCaptures.map((capture, index) => ({
++						capture,
++						...index === repairUsageCaptures.length - 1 ? { result: repairResult } : {}
++					}))
+ 				], combinedCapturedUsage(captures));
+ 				const raw = withCapturedUsage(original, captures);
+ 				if (raw && hasRuntimeType(raw, "object") && usageRecord) Object.defineProperty(raw, "usageRecord", {
+@@ -1149,14 +1213,15 @@ function createAiSdkAdapter(options) {
+ 					text: generated.text
+ 				}, repairCallInput);
+ 			}
+-			const usageRecord = repairUsageCapture.captured ? await combinedUsageRecord([{
++			const auxiliaryUsageCaptures = [...toolRepairUsageCaptures, ...repairUsageCaptures];
++			const usageRecord = auxiliaryUsageCaptures.some((capture) => capture.captured) ? await combinedUsageRecord([{
+ 				capture: usageCapture,
+ 				result: originalGenerated
+-			}, {
+-				capture: repairUsageCapture,
+-				result: generated
+-			}], combinedCapturedUsage([usageCapture, repairUsageCapture])) : void 0;
+-			const result = withResolvedModelMetadata(withCapturedUsage(generated, [usageCapture, repairUsageCapture]), model);
++			}, ...auxiliaryUsageCaptures.map((capture, index) => ({
++				capture,
++				...index === auxiliaryUsageCaptures.length - 1 ? { result: generated } : {}
++			}))], combinedCapturedUsage([usageCapture, ...auxiliaryUsageCaptures])) : void 0;
++			const result = withResolvedModelMetadata(withCapturedUsage(generated, [usageCapture, ...auxiliaryUsageCaptures]), model);
+ 			if (usageRecord) Object.defineProperty(result, "usageRecord", {
+ 				configurable: true,
+ 				enumerable: true,
+diff --git a/dist/types-DBmG3aNn.d.ts b/dist/types-DBmG3aNn.d.ts
+index 806afb8f8e9c1dc70e4108c66bd14836ad573578..69b63ddf3eabb94e90f882a238750b5bd389cc82 100644
+--- a/dist/types-DBmG3aNn.d.ts
++++ b/dist/types-DBmG3aNn.d.ts
+@@ -1841,6 +1841,7 @@ interface AgentModelExecutionOptions<TRuntimeConfig extends AgentRuntimeConfig =
+   attachments?: AgentAttachmentExecutionOptions;
+   callSettings?: Record<string, unknown>;
+   instrumentation?: AgentModelExecutionInstrumentation<TRuntimeConfig, CALL_OPTIONS>;
++  repairToolCall?: boolean;
+   stepLimit?: number;
+   workspaceFallback?: boolean | {
+     enabled?: boolean;
+@@ -1908,6 +1909,7 @@ interface AgentDefinitionCliOptions {
+   capabilities?: boolean;
+ }
+ interface AgentOutputDefinition<TOutput = unknown> {
++  maxAttempts?: number;
+   schema: StandardSchemaV1<unknown, TOutput>;
+ }
+ interface AgentUIMessageStreamProjection {

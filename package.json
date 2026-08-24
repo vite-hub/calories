@@ -20,7 +20,7 @@
     "telegram:history": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels history --agent calories --channel telegram --stage production --url https://calories.onmax.me --output .backups/telegram-history",
     "telegram:webhook": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels sync --agent calories --channel telegram --stage production --url https://calories.onmax.me",
     "telegram:webhook:apply": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels sync --agent calories --channel telegram --stage production --url https://calories.onmax.me --apply --confirm-origin https://calories.onmax.me",
-    "test": "tsx --test server/**/*.test.ts",
+    "test": "tsx --test test/**/*.test.ts",
     "typecheck": "node --env-file-if-exists=.env node_modules/nuxt/bin/nuxt.mjs typecheck"
   },
   "dependencies": {
