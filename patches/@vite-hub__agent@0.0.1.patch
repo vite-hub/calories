@@ -1,7 +1,7 @@
-diff --git a/dist/ai-sdk-q3NlDXqp.js b/dist/ai-sdk-q3NlDXqp.js
-index 427c084baa5b4ad619d6b6a73a775c90078c4beb..2a0ec727cc561dc8421866f19373319436f4af45 100644
---- a/dist/ai-sdk-q3NlDXqp.js
-+++ b/dist/ai-sdk-q3NlDXqp.js
+diff --git a/dist/ai-sdk-BUgKJg2v.js b/dist/ai-sdk-BUgKJg2v.js
+index 27098e2cfc0fac42ac9925f4ab40641f00fcd89f..0f5bd8401a13f2873beb21d6b22525d4a854237f 100644
+--- a/dist/ai-sdk-BUgKJg2v.js
++++ b/dist/ai-sdk-BUgKJg2v.js
 @@ -920,6 +920,20 @@ function outputRepairPrompt(text, error, evidence = []) {
  		...evidence.length ? [`Completed tool results:\n${evidence.join("\n\n---\n\n")}`] : []
  	].join("\n\n");
@@ -203,11 +203,11 @@ index 427c084baa5b4ad619d6b6a73a775c90078c4beb..2a0ec727cc561dc8421866f193733194
  			if (usageRecord) Object.defineProperty(result, "usageRecord", {
  				configurable: true,
  				enumerable: true,
-diff --git a/dist/types--4m0c0eX.d.ts b/dist/types--4m0c0eX.d.ts
-index db6b50bbbcf09db44c1d9cdfc626e3ab8c898081..b50e79515779d2634afd23d1b3c313c7cb4092e5 100644
---- a/dist/types--4m0c0eX.d.ts
-+++ b/dist/types--4m0c0eX.d.ts
-@@ -1861,6 +1861,7 @@ interface AgentModelExecutionOptions<TRuntimeConfig extends AgentRuntimeConfig =
+diff --git a/dist/types-BxL1SSpe.d.ts b/dist/types-BxL1SSpe.d.ts
+index 7a345e484cf3232ba86dda8b33b2ad8a14870725..4f29a2a1899af529f22247e72346c606c567d9c7 100644
+--- a/dist/types-BxL1SSpe.d.ts
++++ b/dist/types-BxL1SSpe.d.ts
+@@ -1862,6 +1862,7 @@ interface AgentModelExecutionOptions<TRuntimeConfig extends AgentRuntimeConfig =
    attachments?: AgentAttachmentExecutionOptions;
    callSettings?: Record<string, unknown>;
    instrumentation?: AgentModelExecutionInstrumentation<TRuntimeConfig, CALL_OPTIONS>;
@@ -215,7 +215,7 @@ index db6b50bbbcf09db44c1d9cdfc626e3ab8c898081..b50e79515779d2634afd23d1b3c313c7
    stepLimit?: number;
    workspaceFallback?: boolean | {
      enabled?: boolean;
-@@ -1928,6 +1929,7 @@ interface AgentDefinitionCliOptions {
+@@ -1929,6 +1930,7 @@ interface AgentDefinitionCliOptions {
    capabilities?: boolean;
  }
  interface AgentOutputDefinition<TOutput = unknown> {
