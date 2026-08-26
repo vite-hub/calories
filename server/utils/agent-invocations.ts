@@ -16,20 +16,112 @@ const publicAttributeKeys = new Set([
   "channel.delivery.provider",
   "channel.effect.intent",
   "channel.effect.kind",
+  "finish.reason",
+  "input.hasMessages",
+  "input.hasPrompt",
+  "invocation.durationMs",
   "model.call.id",
+  "result.hasValue",
   "runtime.name",
   "step.id",
+  "tool.durationMs",
+  "tool.hasInput",
+  "tool.hasOutput",
   "tool.id",
   "tool.name",
   "tool.title",
+  "usage.hasCost",
   "usage.reasoningOutputTokens",
   "usage.reasoningTokens",
   "usage.totalTokens",
   "vitehub.action.name",
   "vitehub.activity.kind",
+  "vitehub.agent.configurationTruncated",
+  "vitehub.observation.truncated",
 ]);
 
+const publicToolTitles: Record<string, string> = {
+  blob_edit: "Updated photo storage",
+  db_exec: "Updated database",
+  db_query: "Queried database",
+  db_schema: "Inspected database schema",
+  transcribe: "Transcribed voice message",
+};
+
 const databaseCapabilityError = /Capability ["']db["'] requires the database primitive|@vite-hub\/database\/drizzle/;
+
+function record(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function publicNamedItems(value: unknown, key: string): Array<Record<string, string>> | undefined {
+  if (!Array.isArray(value)) return;
+  const items = value.flatMap((item) => {
+    const name = stringValue(record(item)?.[key]);
+    return name ? [{ [key]: name }] : [];
+  });
+  return items.length ? items : undefined;
+}
+
+function publicAgentConfiguration(value: unknown): Record<string, unknown> | undefined {
+  const configuration = record(value);
+  if (!configuration) return;
+
+  const agent = record(configuration.agent);
+  const driver = record(configuration.driver);
+  const model = record(driver?.model);
+  const runtime = record(configuration.runtime);
+  const workspace = record(configuration.workspace);
+  const publicAgent = agent && {
+    ...(stringValue(agent.name) ? { name: stringValue(agent.name) } : {}),
+    ...(stringValue(agent.version) ? { version: stringValue(agent.version) } : {}),
+  };
+  const publicModel = model && {
+    ...(stringValue(model.id) ? { id: stringValue(model.id) } : {}),
+    ...(stringValue(model.provider) ? { provider: stringValue(model.provider) } : {}),
+  };
+  const publicDriver = driver && {
+    ...(stringValue(driver.kind) ? { kind: stringValue(driver.kind) } : {}),
+    ...(publicModel && Object.keys(publicModel).length ? { model: publicModel } : {}),
+    ...(stringValue(driver.provider) ? { provider: stringValue(driver.provider) } : {}),
+  };
+  const publicRuntime = runtime && {
+    ...(stringValue(runtime.name) ? { name: stringValue(runtime.name) } : {}),
+  };
+  const publicWorkspace = workspace && {
+    ...(stringValue(workspace.mode) ? { mode: stringValue(workspace.mode) } : {}),
+    ...(stringValue(workspace.name) ? { name: stringValue(workspace.name) } : {}),
+  };
+  const capabilities = publicNamedItems(configuration.capabilities, "id");
+  const tools = publicNamedItems(configuration.tools, "name");
+  const result = {
+    ...(publicAgent && Object.keys(publicAgent).length ? { agent: publicAgent } : {}),
+    ...(capabilities ? { capabilities } : {}),
+    ...(publicDriver && Object.keys(publicDriver).length ? { driver: publicDriver } : {}),
+    ...(publicRuntime && Object.keys(publicRuntime).length ? { runtime: publicRuntime } : {}),
+    ...(tools ? { tools } : {}),
+    ...(publicWorkspace && Object.keys(publicWorkspace).length ? { workspace: publicWorkspace } : {}),
+  };
+  return Object.keys(result).length ? result : undefined;
+}
+
+function privateTriggerMessage() {
+  return [{
+    id: "calories-private-trigger",
+    parts: [{
+      id: "calories-private-trigger-text",
+      text: "Submitted a meal request on Telegram.",
+      type: "text",
+    }],
+    role: "user",
+  }];
+}
 
 function publicInvocationError(error: unknown): { message: string; name: string } {
   const candidate = error && typeof error === "object" ? error as { message?: unknown; name?: unknown } : {};
@@ -49,13 +141,32 @@ function publicInvocationError(error: unknown): { message: string; name: string 
   };
 }
 
-function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry {
-  const attributes: Record<string, boolean | number | string | null> = {};
+export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry {
+  const attributes: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(entry.attributes ?? {})) {
     if (!publicAttributeKeys.has(key)) continue;
     if (typeof value === "string") attributes[key] = value.slice(0, 256);
     else if (typeof value === "number" && Number.isFinite(value)) attributes[key] = value;
     else if (typeof value === "boolean" || value === null) attributes[key] = value;
+  }
+
+  const configuration = publicAgentConfiguration(entry.attributes?.["vitehub.agent.configuration"]);
+  if (configuration) attributes["vitehub.agent.configuration"] = configuration;
+
+  if (
+    entry.name === "agent.invocation.start"
+    && (entry.attributes?.["input.hasMessages"] === true || entry.attributes?.["input.hasPrompt"] === true)
+  ) {
+    attributes["input.messages"] = privateTriggerMessage();
+  }
+
+  if (entry.name === "agent.invocation.finish" && entry.attributes?.["result.hasValue"] === true) {
+    attributes["result.text"] = "Completed the meal request and replied on Telegram.";
+  }
+
+  const toolName = stringValue(entry.attributes?.["tool.name"]);
+  if (toolName && publicToolTitles[toolName]) {
+    attributes["vitehub.activity.title"] = publicToolTitles[toolName];
   }
 
   if (entry.type === "error" || entry.name.endsWith(".error")) {
@@ -74,6 +185,8 @@ function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry {
 }
 
 function publicRecord(record: AgentInvocationRecord): AgentInvocationRecord {
+  const observations = record.observations.map(publicObservation);
+  const configured = new Set<string>();
   return {
     agentName: record.agentName,
     ...(record.cancelledAt ? { cancelledAt: record.cancelledAt } : {}),
@@ -83,7 +196,14 @@ function publicRecord(record: AgentInvocationRecord): AgentInvocationRecord {
     ...(record.error ? { error: publicInvocationError(record.error) } : {}),
     ...(record.failedAt ? { failedAt: record.failedAt } : {}),
     id: record.id,
-    observations: record.observations.map(publicObservation),
+    observations: observations.filter((observation) => {
+      if (observation.name !== "vitehub.agent.configured") return true;
+      const signature = JSON.stringify(observation.attributes ?? {});
+      if (configured.has(signature)) return false;
+      configured.add(signature);
+      return true;
+    }),
+    ...(record.observationsTruncated ? { observationsTruncated: true } : {}),
     ...(record.startedAt ? { startedAt: record.startedAt } : {}),
     status: record.status,
     traceId: record.traceId,
