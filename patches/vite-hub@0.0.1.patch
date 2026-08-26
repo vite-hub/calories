@@ -1,65 +1,28 @@
 diff --git a/dist/nuxt.js b/dist/nuxt.js
-index aca3d6866a2de3c074b721059a5c81436ad672e8..5856039bdc05a54304eb8e506bd3f58ed886d7da 100644
+index f5ebdfdb72aaa54fd4e1d74e552618f92e4cdcfe..1b932bbe19effbbc26d124aa08f6430d38785de0 100644
 --- a/dist/nuxt.js
 +++ b/dist/nuxt.js
-@@ -149,7 +149,6 @@ async function installConsole(nuxt, projectRoot) {
+@@ -108,7 +108,6 @@ async function installConsole(nuxt, projectRoot, discoveryRoot, serverDirs) {
  		const module = Array.isArray(entry) ? entry[0] : entry;
  		return module === "@vite-hub/ui/nuxt" || module === "vite-hub/ui/nuxt" || module === uiModule;
  	})) await Reflect.apply(uiModule, void 0, [{}, nuxt]);
 -	installConsoleInvocations(projectRoot);
  	const hookPages = nuxt.hook;
  	hookPages?.("pages:extend", (pages) => {
- 		const additions = [{
-@@ -163,6 +162,8 @@ async function installConsole(nuxt, projectRoot) {
- 		}];
+ 		const additions = [
+@@ -135,6 +134,7 @@ async function installConsole(nuxt, projectRoot, discoveryRoot, serverDirs) {
+ 		];
  		for (const page of additions) if (!pages.some((candidate) => candidate.path === page.path)) pages.push(page);
  	});
 +	if (!nuxt.options.dev) return;
-+	installConsoleInvocations(projectRoot);
  	const nitro = nuxt.options.nitro ??= {};
  	const handlers = nitro.handlers ??= [];
- 	const additions = [{
-@@ -318,7 +319,7 @@ const viteHubNuxtModule = async function viteHubNuxtModule(inlineOptions, nuxt)
- 	const rootDir = nuxt.options.rootDir || process.cwd();
+ 	const additions = [
+@@ -304,7 +304,6 @@ const viteHubNuxtModule = async function viteHubNuxtModule(inlineOptions, nuxt)
  	const viteRoot = resolve(rootDir, typeof nuxt.options.vite?.root === "string" ? nuxt.options.vite.root : rootDir);
  	const projectRoot = resolveViteHubProjectRoot(viteRoot);
--	if (options.console && nuxt.options.dev) await installConsole(nuxt, projectRoot);
-+	if (options.console) await installConsole(nuxt, projectRoot);
+ 	if (options.console) {
+-		if (!nuxt.options.dev && plan.preset !== "node") throw new Error(`[vitehub] console: true currently requires preset: "node" for production because its fallback journal uses durable local SQLite. Disable Console for the ${JSON.stringify(plan.preset)} production build or deploy it with the Node preset.`);
+ 		await installConsole(nuxt, projectRoot, viteRoot, nuxt.options.serverDir ? [nuxt.options.serverDir] : void 0);
+ 	}
  	nuxt.options.vite ??= {};
- 	const viteConfig = nuxt.options.vite;
- 	if (envConfig && Object.values(envConfig).some(Boolean)) {
-diff --git a/dist/console/runtime/pages/index.vue b/dist/console/runtime/pages/index.vue
---- a/dist/console/runtime/pages/index.vue
-+++ b/dist/console/runtime/pages/index.vue
-@@ -1,5 +1,7 @@
- <script setup lang="ts">
-+import { navigateTo } from "#imports";
-+
- await navigateTo("/_vitehub/agents", { replace: true })
- </script>
- 
- <template>
-diff --git a/dist/console/runtime/pages/agents.vue b/dist/console/runtime/pages/agents.vue
---- a/dist/console/runtime/pages/agents.vue
-+++ b/dist/console/runtime/pages/agents.vue
-@@ -1,7 +1,8 @@
- <script setup lang="ts">
- import { AgentInvocation, AgentInvocationInspector } from "@vite-hub/ui";
- import { useAgentInvocation, useAgentInvocations } from "vite-hub/agent/vue";
--import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-+import { useHead, useRoute, useRouter, useRuntimeConfig } from "#imports";
- 
- import {
-   CONSOLE_SESSION_LOOKUP_PAGE_LIMIT,
-diff --git a/dist/src-CGKFMS-9.js b/dist/src-CGKFMS-9.js
---- a/dist/src-CGKFMS-9.js
-+++ b/dist/src-CGKFMS-9.js
-@@ -1638,6 +1638,7 @@ function vitehub(options = {}) {
- 			providerImportAliases,
- 			runtimeCapabilityImports: {
- 				blob: blobEnabled ? `${generatedImportBase}/blob` : false,
-+				db: options.database ? "vite-hub/database/drizzle" : false,
- 				email: "vite-hub/email/server",
- 				kv: `${generatedImportBase}/kv`
- 			},

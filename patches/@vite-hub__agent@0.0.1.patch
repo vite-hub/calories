@@ -1,7 +1,7 @@
-diff --git a/dist/ai-sdk-Drvz6tJg.js b/dist/ai-sdk-Drvz6tJg.js
-index a493a0de4ff095bccd52d9454871e5d64fdf40b7..4bb29aec3bdcd110f37ef349135178bdd685df1c 100644
---- a/dist/ai-sdk-Drvz6tJg.js
-+++ b/dist/ai-sdk-Drvz6tJg.js
+diff --git a/dist/ai-sdk-DispL0Bu.js b/dist/ai-sdk-DispL0Bu.js
+index 48c8a6becff51d238a954fdadb376037eddba3f4..198cbe3c7e7446519fb08f6fb9797b04770c8169 100644
+--- a/dist/ai-sdk-DispL0Bu.js
++++ b/dist/ai-sdk-DispL0Bu.js
 @@ -920,6 +920,20 @@ function outputRepairPrompt(text, error, evidence = []) {
  		...evidence.length ? [`Completed tool results:\n${evidence.join("\n\n---\n\n")}`] : []
  	].join("\n\n");
@@ -97,7 +97,7 @@ index a493a0de4ff095bccd52d9454871e5d64fdf40b7..4bb29aec3bdcd110f37ef349135178bd
 +				const code = repairError?.code;
 +				if (!repairedFailure && code !== "AGENT_OUTPUT_INVALID_JSON" && code !== "AGENT_OUTPUT_SCHEMA_INVALID") return await normalizeNativeAgentOutputError(context.output, repairError);
 +				latestFailure = {
-+					...(repairedFailure ?? { error: repairError, text: repairResult?.text ?? latestFailure.text }),
++					...repairedFailure ?? { error: repairError, text: repairResult?.text ?? latestFailure.text },
 +					evidence: latestFailure.evidence
 +				};
 +			}
@@ -203,11 +203,11 @@ index a493a0de4ff095bccd52d9454871e5d64fdf40b7..4bb29aec3bdcd110f37ef349135178bd
  			if (usageRecord) Object.defineProperty(result, "usageRecord", {
  				configurable: true,
  				enumerable: true,
-diff --git a/dist/types-DBmG3aNn.d.ts b/dist/types-DBmG3aNn.d.ts
-index 806afb8f8e9c1dc70e4108c66bd14836ad573578..69b63ddf3eabb94e90f882a238750b5bd389cc82 100644
---- a/dist/types-DBmG3aNn.d.ts
-+++ b/dist/types-DBmG3aNn.d.ts
-@@ -1841,6 +1841,7 @@ interface AgentModelExecutionOptions<TRuntimeConfig extends AgentRuntimeConfig =
+diff --git a/dist/types--4m0c0eX.d.ts b/dist/types--4m0c0eX.d.ts
+index db6b50bbbcf09db44c1d9cdfc626e3ab8c898081..b50e79515779d2634afd23d1b3c313c7cb4092e5 100644
+--- a/dist/types--4m0c0eX.d.ts
++++ b/dist/types--4m0c0eX.d.ts
+@@ -1861,6 +1861,7 @@ interface AgentModelExecutionOptions<TRuntimeConfig extends AgentRuntimeConfig =
    attachments?: AgentAttachmentExecutionOptions;
    callSettings?: Record<string, unknown>;
    instrumentation?: AgentModelExecutionInstrumentation<TRuntimeConfig, CALL_OPTIONS>;
@@ -215,7 +215,7 @@ index 806afb8f8e9c1dc70e4108c66bd14836ad573578..69b63ddf3eabb94e90f882a238750b5b
    stepLimit?: number;
    workspaceFallback?: boolean | {
      enabled?: boolean;
-@@ -1908,6 +1909,7 @@ interface AgentDefinitionCliOptions {
+@@ -1928,6 +1929,7 @@ interface AgentDefinitionCliOptions {
    capabilities?: boolean;
  }
  interface AgentOutputDefinition<TOutput = unknown> {
