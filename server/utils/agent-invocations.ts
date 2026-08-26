@@ -153,14 +153,22 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
   const configuration = publicAgentConfiguration(entry.attributes?.["vitehub.agent.configuration"]);
   if (configuration) attributes["vitehub.agent.configuration"] = configuration;
 
+  const isTelegramInvocation = entry.attributes?.["channel.delivery.provider"] === "telegram";
   if (
     entry.name === "agent.invocation.start"
-    && (entry.attributes?.["input.hasMessages"] === true || entry.attributes?.["input.hasPrompt"] === true)
+    && (
+      isTelegramInvocation
+      || entry.attributes?.["input.hasMessages"] === true
+      || entry.attributes?.["input.hasPrompt"] === true
+    )
   ) {
     attributes["input.messages"] = privateTriggerMessage();
   }
 
-  if (entry.name === "agent.invocation.finish" && entry.attributes?.["result.hasValue"] === true) {
+  if (
+    entry.name === "agent.invocation.finish"
+    && (isTelegramInvocation || entry.attributes?.["result.hasValue"] === true)
+  ) {
     attributes["result.text"] = "Completed the meal request and replied on Telegram.";
   }
 

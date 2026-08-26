@@ -61,6 +61,34 @@ describe("publicObservation", () => {
     assert.equal(JSON.stringify(observation).includes("Private meal details"), false);
   });
 
+  it("restores conversation cards for legacy Telegram traces", () => {
+    const start = publicObservation({
+      attributes: { "channel.delivery.provider": "telegram" },
+      name: "agent.invocation.start",
+      sequence: 2,
+      timestamp: "2026-08-26T10:19:58.587Z",
+      type: "run",
+    });
+    const finish = publicObservation({
+      attributes: { "channel.delivery.provider": "telegram" },
+      name: "agent.invocation.finish",
+      sequence: 25,
+      timestamp: "2026-08-26T10:20:25.290Z",
+      type: "run",
+    });
+
+    assert.deepEqual(start.attributes?.["input.messages"], [{
+      id: "calories-private-trigger",
+      parts: [{
+        id: "calories-private-trigger-text",
+        text: "Submitted a meal request on Telegram.",
+        type: "text",
+      }],
+      role: "user",
+    }]);
+    assert.equal(finish.attributes?.["result.text"], "Completed the meal request and replied on Telegram.");
+  });
+
   it("keeps a safe Agent configuration for the Console inspector", () => {
     const observation = publicObservation({
       attributes: {
