@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { publicObservation } from "../server/utils/agent-invocations";
+import { consoleSearchExcerpt } from "../server/api/_vitehub/console/search.get";
+import { publicObservation, publicRecord } from "../server/utils/agent-invocations";
 
 describe("publicObservation", () => {
   it("renders a private Telegram trigger without persisting its contents", () => {
@@ -129,5 +130,51 @@ describe("publicObservation", () => {
     });
     assert.equal(JSON.stringify(observation).includes("Private system instructions"), false);
     assert.equal(JSON.stringify(observation).includes("private-bucket"), false);
+  });
+});
+
+describe("public Console metadata", () => {
+  it("labels private invocations without exposing Telegram identities or meal text", () => {
+    const record = publicRecord({
+      agentName: "calories",
+      annotations: { privateMeal: "A private dinner" },
+      createdAt: "2026-08-26T10:19:58.587Z",
+      cursor: "1",
+      id: "invocation-1",
+      observations: [],
+      origin: "telegram:private-user",
+      status: "completed",
+      threadId: "private-chat-id",
+      traceId: "trace-1",
+      updatedAt: "2026-08-26T10:20:25.290Z",
+    });
+
+    assert.equal(record.title, "Meal request");
+    assert.equal(record.channelId, "telegram");
+    assert.equal(record.origin, "telegram");
+    assert.equal(record.threadId, undefined);
+    assert.equal(JSON.stringify(record).includes("private"), false);
+  });
+
+  it("searches only the sanitized Console record", () => {
+    const record = publicRecord({
+      agentName: "calories",
+      createdAt: "2026-08-26T10:19:58.587Z",
+      cursor: "1",
+      id: "invocation-1",
+      observations: [{
+        attributes: { "tool.name": "db_query" },
+        name: "agent.tool.finish",
+        sequence: 1,
+        timestamp: "2026-08-26T10:20:00.000Z",
+        type: "run",
+      }],
+      status: "completed",
+      traceId: "trace-1",
+      updatedAt: "2026-08-26T10:20:25.290Z",
+    });
+
+    assert.match(consoleSearchExcerpt(record, "db_query") ?? "", /db_query/);
+    assert.equal(consoleSearchExcerpt(record, "private dinner"), undefined);
   });
 });

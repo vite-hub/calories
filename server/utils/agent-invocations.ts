@@ -192,11 +192,14 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
   };
 }
 
-function publicRecord(record: AgentInvocationRecord): AgentInvocationRecord {
+type PublicAgentInvocationRecord = AgentInvocationRecord & { title: string };
+
+export function publicRecord(record: AgentInvocationRecord): PublicAgentInvocationRecord {
   const observations = record.observations.map(publicObservation);
   const configured = new Set<string>();
   return {
     agentName: record.agentName,
+    channelId: "telegram",
     ...(record.cancelledAt ? { cancelledAt: record.cancelledAt } : {}),
     ...(record.completedAt ? { completedAt: record.completedAt } : {}),
     createdAt: record.createdAt,
@@ -204,6 +207,7 @@ function publicRecord(record: AgentInvocationRecord): AgentInvocationRecord {
     ...(record.error ? { error: publicInvocationError(record.error) } : {}),
     ...(record.failedAt ? { failedAt: record.failedAt } : {}),
     id: record.id,
+    origin: "telegram",
     observations: observations.filter((observation) => {
       if (observation.name !== "vitehub.agent.configured") return true;
       const signature = JSON.stringify(observation.attributes ?? {});
@@ -214,6 +218,7 @@ function publicRecord(record: AgentInvocationRecord): AgentInvocationRecord {
     ...(record.observationsTruncated ? { observationsTruncated: true } : {}),
     ...(record.startedAt ? { startedAt: record.startedAt } : {}),
     status: record.status,
+    title: "Meal request",
     traceId: record.traceId,
     updatedAt: record.updatedAt,
   };
