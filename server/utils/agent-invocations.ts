@@ -14,6 +14,7 @@ import type { TraceEventLogEntry } from "vite-hub/runtime";
 const publicAttributeKeys = new Set([
   "approval.id",
   "channel.delivery.provider",
+  "channel.effect.content",
   "channel.effect.intent",
   "channel.effect.kind",
   "finish.reason",
@@ -145,7 +146,7 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
   const attributes: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(entry.attributes ?? {})) {
     if (!publicAttributeKeys.has(key)) continue;
-    if (typeof value === "string") attributes[key] = value.slice(0, 256);
+    if (typeof value === "string") attributes[key] = value.slice(0, key === "channel.effect.content" ? 4_096 : 256);
     else if (typeof value === "number" && Number.isFinite(value)) attributes[key] = value;
     else if (typeof value === "boolean" || value === null) attributes[key] = value;
   }
@@ -154,6 +155,13 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
   if (configuration) attributes["vitehub.agent.configuration"] = configuration;
 
   const isTelegramInvocation = entry.attributes?.["channel.delivery.provider"] === "telegram";
+  if (
+    isTelegramInvocation
+    && entry.attributes?.["channel.effect.kind"] === "reply"
+    && !stringValue(attributes["channel.effect.content"])
+  ) {
+    attributes["channel.effect.content"] = "Completed the meal request and replied on Telegram.";
+  }
   if (
     entry.name === "agent.invocation.start"
     && (

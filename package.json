@@ -29,14 +29,14 @@
     "@modelcontextprotocol/server": "2.0.0",
     "@nuxt/ui": "4.11.0",
     "@openrouter/ai-sdk-provider": "3.0.0",
-    "@vite-hub/ui": "https://pkg.pr.new/vite-hub/vitehub/@vite-hub/ui@a4904418288b5ca099f24fd65ee711bc6327d677",
+    "@vite-hub/ui": "https://pkg.pr.new/vite-hub/vitehub/@vite-hub/ui@8f77938d8229e4c7b9603ecdd5e545db4090f816",
     "ai": "7.0.34",
     "drizzle-orm": "0.45.2",
     "h3": "2.0.1-rc.25",
     "nuxt": "npm:nuxt-nightly@5.0.0-29746924.1554961a",
     "ofetch": "2.0.0-alpha.3",
     "tailwindcss": "4.3.3",
-    "vite-hub": "https://pkg.pr.new/vite-hub/vitehub/vite-hub@a4904418288b5ca099f24fd65ee711bc6327d677",
+    "vite-hub": "https://pkg.pr.new/vite-hub/vitehub/vite-hub@8f77938d8229e4c7b9603ecdd5e545db4090f816",
     "vue-router": "5.2.0"
   },
   "devDependencies": {

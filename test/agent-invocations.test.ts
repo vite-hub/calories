@@ -62,6 +62,40 @@ describe("publicObservation", () => {
     assert.equal(JSON.stringify(observation).includes("Private meal details"), false);
   });
 
+  it("keeps the outbound Telegram reply while removing channel identifiers", () => {
+    const observation = publicObservation({
+      attributes: {
+        "channel.delivery.provider": "telegram",
+        "channel.delivery.source.id": "private-chat-id",
+        "channel.effect.content": "Meal saved. 640 kcal and 42 g protein.",
+        "channel.effect.kind": "reply",
+      },
+      name: "agent.channel.delivery.effect",
+      sequence: 24,
+      timestamp: "2026-08-26T10:20:24.000Z",
+      type: "run",
+    });
+
+    assert.equal(observation.attributes?.["channel.effect.content"], "Meal saved. 640 kcal and 42 g protein.");
+    assert.equal(observation.attributes?.["channel.effect.kind"], "reply");
+    assert.equal(JSON.stringify(observation).includes("private-chat-id"), false);
+  });
+
+  it("provides a safe reply preview for traces recorded before reply content", () => {
+    const observation = publicObservation({
+      attributes: {
+        "channel.delivery.provider": "telegram",
+        "channel.effect.kind": "reply",
+      },
+      name: "agent.channel.delivery.effect",
+      sequence: 24,
+      timestamp: "2026-08-26T10:20:24.000Z",
+      type: "run",
+    });
+
+    assert.equal(observation.attributes?.["channel.effect.content"], "Completed the meal request and replied on Telegram.");
+  });
+
   it("restores conversation cards for legacy Telegram traces", () => {
     const start = publicObservation({
       attributes: { "channel.delivery.provider": "telegram" },

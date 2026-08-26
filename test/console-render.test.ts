@@ -48,11 +48,22 @@ test("the shared Console renders the private Calories session as a conversation"
     }),
     publicObservation({
       attributes: {
+        "channel.delivery.provider": "telegram",
+        "channel.effect.content": "Meal saved. 640 kcal and 42 g protein.",
+        "channel.effect.kind": "reply",
+      },
+      name: "agent.channel.delivery.effect",
+      sequence: 4,
+      timestamp: "2026-08-26T10:00:02.500Z",
+      type: "run",
+    }),
+    publicObservation({
+      attributes: {
         "invocation.durationMs": 3_000,
         "result.hasValue": true,
       },
       name: "agent.invocation.finish",
-      sequence: 4,
+      sequence: 5,
       timestamp: "2026-08-26T10:00:03.000Z",
       type: "run",
     }),
@@ -78,5 +89,8 @@ test("the shared Console renders the private Calories session as a conversation"
   assert.match(html, /Worked for 3s/);
   assert.match(html, /Queried database/);
   assert.match(html, /Completed the meal request and replied on Telegram\./);
+  assert.match(html, /Reply sent/);
+  assert.match(html, /Meal saved\. 640 kcal and 42 g protein\./);
+  assert.ok(html.indexOf("Completed the meal request") < html.indexOf("Reply sent"));
   assert.doesNotMatch(html, /db_query/);
 });
