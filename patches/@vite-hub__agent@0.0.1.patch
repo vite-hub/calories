@@ -223,3 +223,21 @@ index 6a8acd25de4d0b9ccc9ed97cdd96d1d4be7d470f..2213bf35de7c83a912e2ff02af5350c8
    schema: StandardSchemaV1<unknown, TOutput>;
  }
  interface AgentUIMessageStreamProjection {
+diff --git a/dist/provider-agent-D1SLQiL7.js b/dist/provider-agent-D1SLQiL7.js
+--- a/dist/provider-agent-D1SLQiL7.js
++++ b/dist/provider-agent-D1SLQiL7.js
+@@ -19,6 +19,5 @@ import { once } from "node:events";
+ import { createServer } from "node:http";
+ import { resolveWorkspaceAutoCommit } from "@vite-hub/workspace";
+-import { createProviderRuntime, createSqliteProviderRuntimeSessionStore } from "@t3tools/provider-runtime";
+ //#region src/internal/provider-cleanup-task.ts
+ const agentProviderCleanupTask = Symbol("vitehub.agent.providerCleanupTask");
+ //#endregion
+@@ -1903,6 +1902,7 @@ function createProviderAgentAdapter(options) {
+ 			await cleanupRoot();
+ 		};
+ 		if (options.sessionStorePath !== void 0 && (!hasRuntimeType(options.sessionStorePath, "string") || !options.sessionStorePath.trim())) throw new TypeError("[vitehub] driver.sessionStorePath must be a non-empty string.");
++		const { createProviderRuntime, createSqliteProviderRuntimeSessionStore } = await import("@t3tools/provider-runtime");
+ 		sessionStore = options.sessionStorePath && preservesProviderSession && sessionKey ? partitionProviderSessionStore(await waitForProviderOperation(providerSessionStore(options.sessionStorePath, createSqliteProviderRuntimeSessionStore), effectiveSignal), sessionKey) : void 0;
+ 		const durableResumeCursor = sessionStore ? await waitForProviderOperation(sessionStore.consume(), effectiveSignal, () => void 0, deferSessionConsume) : void 0;
+ 		const resumeCursor = pendingResumeCursor ?? durableResumeCursor;

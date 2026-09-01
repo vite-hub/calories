@@ -1,3 +1,32 @@
+diff --git a/dist/invocations-D6WerHyB.js b/dist/invocations-D6WerHyB.js
+index 1522cdfeeb20c4a0726f52901fa29723b2fa129d..6c0c3207e64be0ec0c360e50d7b45be7f4c3735f 100644
+--- a/dist/invocations-D6WerHyB.js
++++ b/dist/invocations-D6WerHyB.js
+@@ -286,13 +286,20 @@ function resolveConsoleDatabaseOptions(projectRoot) {
+ 	return { url: `${pathToFileURL(filePath).href}${query}` };
+ }
+ function createConsoleInvocations(projectRoot) {
+-	return defineAgentInvocations({
+-		metadataContent: consoleMetadataContent,
+-		store: createLibsqlAgentInvocationStore({
++	let store;
++	try {
++		store = createLibsqlAgentInvocationStore({
+ 			maxAgeMs: false,
+ 			maxRecords: false,
+ 			...resolveConsoleDatabaseOptions(projectRoot)
+-		})
++		});
++	} catch (error) {
++		if (!(error instanceof Error) || error.message !== "operation not permitted") throw error;
++		store = createMemoryAgentInvocationStore();
++	}
++	return defineAgentInvocations({
++		metadataContent: consoleMetadataContent,
++		store
+ 	});
+ }
+ function createConsoleFixtureInvocationsFromSnapshot(fixture) {
 diff --git a/dist/src-B4pj6Dx_.js b/dist/src-B4pj6Dx_.js
 index 2344b1139dfd99ea629e130ae59e4260694eb37c..223f8fdb3fd833ffd58768c7cf47088b9f912fcd 100644
 --- a/dist/src-B4pj6Dx_.js
@@ -12,3 +41,43 @@ index 2344b1139dfd99ea629e130ae59e4260694eb37c..223f8fdb3fd833ffd58768c7cf47088b
  	if (configured.exposure === "host-managed") return;
  	if (configured.access !== "auth") throw new TypeError("[vitehub] Console production access must use access: \"auth\" or exposure: \"host-managed\".");
  	if (!options.auth) throw new Error("[vitehub] console: { access: \"auth\" } requires a discovered ViteHub Auth Definition.");
+diff --git a/dist/agents-CohvvR2a.js b/dist/agents-CohvvR2a.js
+--- a/dist/agents-CohvvR2a.js
++++ b/dist/agents-CohvvR2a.js
+@@ -1,4 +1,5 @@
+-import { n as consoleInvocationsFallbackKey, p as resolveConsoleInvocations } from "./internal-DFtRVKA0.js";
++import { n as consoleInvocationsFallbackKey, o as installConsoleInvocationFallback, p as resolveConsoleInvocations } from "./internal-DFtRVKA0.js";
+ //#region src/console/runtime/server/agents.ts
+ const consoleAgentsKey = Symbol.for("vitehub.console.agents");
++const consoleInvocationsRootKey = Symbol.for("vitehub.console.invocations.root");
+ const consoleAssignedInvocations = /* @__PURE__ */ new WeakMap();
+@@ -10,18 +11,26 @@ function installConsoleAgents(agentNames, invocations) {
+ }
+ function installConsoleAgentDefinitions(entries, invocations) {
+-	return installConsoleAgents(entries.map(({ definition, fallbackName }) => {
++	let configuredInvocations;
++	const agentNames = entries.map(({ definition, fallbackName }) => {
+ 		const module = definition && typeof definition === "object" ? definition : void 0;
+ 		let agent = module;
+ 		if (module?.default && typeof module.default === "object") agent = module.default;
+ 		if (agent && Reflect.get(agent, consoleInvocationsFallbackKey) !== true) {
+ 			const assigned = consoleAssignedInvocations.get(agent);
+ 			if (agent.invocations === void 0 || agent.invocations === assigned) {
+ 				agent.invocations = invocations;
+ 				consoleAssignedInvocations.set(agent, invocations);
+-			} else if (assigned) consoleAssignedInvocations.delete(agent);
++			} else {
++				configuredInvocations ??= agent.invocations;
++				if (assigned) consoleAssignedInvocations.delete(agent);
++			}
+ 		}
+ 		return typeof agent?.name === "string" && agent.name.trim() ? agent.name : fallbackName;
+-	}), invocations);
++	});
++	const installedInvocations = configuredInvocations ?? invocations;
++	const projectRoot = globalThis[consoleInvocationsRootKey];
++	if (configuredInvocations && typeof projectRoot === "string") installConsoleInvocationFallback(installedInvocations, projectRoot, globalThis, `agent:${projectRoot}`);
++	return installConsoleAgents(agentNames, installedInvocations);
+ }
+ function getConsoleAgents() {
+ 	return resolveConsoleInvocations()?.[consoleAgentsKey] ?? [];
