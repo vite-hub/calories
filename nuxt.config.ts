@@ -28,7 +28,26 @@ export default defineNuxtConfig({
   },
   ssr: false,
   icon: {
-    clientBundle: { scan: true },
+    clientBundle: {
+      scan: {
+        globInclude: [
+          "app/**/*.{vue,jsx,tsx,md,mdc,mdx,yml,yaml}",
+          "layers/**/*.{vue,jsx,tsx,md,mdc,mdx,yml,yaml}",
+          "modules/**/*.{vue,jsx,tsx,md,mdc,mdx,yml,yaml}",
+          "node_modules/vite-hub/dist/console/runtime/**/*.{vue,js,ts}",
+        ],
+        globExclude: [
+          ".nuxt",
+          ".output",
+          ".vitehub",
+          "build",
+          "coverage",
+          "dist",
+          "test",
+          "tests",
+        ],
+      },
+    },
     provider: "none",
   },
   vite: {

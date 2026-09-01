@@ -70,6 +70,9 @@ importers:
       '@iconify-json/lucide':
         specifier: 1.2.113
         version: 1.2.113
+      '@iconify-json/ph':
+        specifier: 1.2.2
+        version: 1.2.2
       '@types/node':
         specifier: 25.9.2
         version: 25.9.2
