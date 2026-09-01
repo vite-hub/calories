@@ -209,7 +209,7 @@ function triggerMessage(value?: unknown) {
         return ["[Attachment omitted]"];
       })
     : [];
-  const text = parts.join("\n\n") || "Submitted a meal request on Telegram.";
+  const text = parts.join("\n\n") || "Message content was not retained for this older Telegram session.";
   return [{
     id: "calories-trigger",
     parts: [{
@@ -257,7 +257,7 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
     && entry.attributes?.["channel.effect.kind"] === "reply"
     && !stringValue(attributes["channel.effect.content"])
   ) {
-    attributes["channel.effect.content"] = "Completed the meal request and replied on Telegram.";
+    attributes["channel.effect.content"] = "Reply content was not retained for this older Telegram session.";
   }
   if (
     entry.name === "agent.invocation.start"

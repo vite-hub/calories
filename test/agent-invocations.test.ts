@@ -129,7 +129,7 @@ describe("publicObservation", () => {
       type: "run",
     });
 
-    assert.equal(observation.attributes?.["channel.effect.content"], "Completed the meal request and replied on Telegram.");
+    assert.equal(observation.attributes?.["channel.effect.content"], "Reply content was not retained for this older Telegram session.");
   });
 
   it("promotes workspace materialization to a safe ViteHub preparation event", () => {
@@ -217,7 +217,7 @@ describe("publicObservation", () => {
       id: "calories-trigger",
       parts: [{
         id: "calories-trigger-text",
-        text: "Submitted a meal request on Telegram.",
+        text: "Message content was not retained for this older Telegram session.",
         type: "text",
       }],
       role: "user",
