@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+@source "../../node_modules/vite-hub/dist/console/runtime";
 
 :root {
   color-scheme: light;
