@@ -53,7 +53,11 @@ export default defineAgent({
         delivery: "manual",
         fallbackStreamingPlaceholderText: null,
         lockScope: "channel",
-        triggerHistory: "none",
+        triggerHistory: {
+          maxAgeMs: 30 * 60 * 1_000,
+          maxMessages: 20,
+          source: "thread",
+        },
         timeout: 28_000,
       },
     }),

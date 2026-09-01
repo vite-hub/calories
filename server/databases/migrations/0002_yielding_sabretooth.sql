@@ -1,0 +1,1 @@
+ALTER TABLE `agent_invocations` ADD `claim_token` text;

@@ -37,7 +37,11 @@ const publicAttributeKeys = new Set([
   "usage.totalTokens",
   "vitehub.action.name",
   "vitehub.activity.kind",
+  "vitehub.activity.detail",
+  "vitehub.activity.group",
+  "vitehub.activity.title",
   "vitehub.agent.configurationTruncated",
+  "vitehub.inspect.target",
   "vitehub.observation.truncated",
 ]);
 
@@ -46,6 +50,7 @@ const publicToolTitles: Record<string, string> = {
   db_exec: "Updated database",
   db_query: "Queried database",
   db_schema: "Inspected database schema",
+  materialize_sources: "Materialized ViteHub workspace",
   transcribe: "Transcribed voice message",
 };
 
@@ -59,6 +64,77 @@ function record(value: unknown): Record<string, unknown> | undefined {
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function publicMaterializationPayload(value: unknown, direction: "input" | "output"): Record<string, unknown> {
+  const payload = record(value);
+  if (direction === "input") {
+    const sources = Array.isArray(payload?.sources)
+      ? payload.sources.flatMap((source) => stringValue(source) ? [stringValue(source)!] : [])
+      : [];
+    return {
+      path: stringValue(payload?.path) ?? "workspace root",
+      ...(sources.length ? { sources } : {}),
+    };
+  }
+
+  const sources = Array.isArray(payload?.sources)
+    ? payload.sources.flatMap((source) => {
+        const name = stringValue(record(source)?.source) ?? stringValue(source);
+        return name ? [name] : [];
+      })
+    : [];
+  return {
+    ...(finiteNumber(payload?.bytes) !== undefined ? { bytes: finiteNumber(payload?.bytes) } : {}),
+    ...(finiteNumber(payload?.directories) !== undefined ? { directories: finiteNumber(payload?.directories) } : {}),
+    ...(finiteNumber(payload?.durationMs) !== undefined ? { durationMs: finiteNumber(payload?.durationMs) } : {}),
+    ...(finiteNumber(payload?.files) !== undefined ? { files: finiteNumber(payload?.files) } : {}),
+    ...(sources.length ? { sources } : {}),
+    summary: stringValue(payload?.summary) ?? "ViteHub materialized the workspace sources.",
+  };
+}
+
+function publicToolPayload(
+  toolName: string,
+  value: unknown,
+  direction: "input" | "output",
+): Record<string, unknown> {
+  if (toolName === "materialize_sources") return publicMaterializationPayload(value, direction);
+
+  if (direction === "input") {
+    return {
+      summary: toolName === "transcribe"
+        ? "Private audio input omitted."
+        : toolName === "blob_edit"
+          ? "Private photo operation omitted."
+          : toolName.startsWith("db_")
+            ? "Private database request omitted."
+            : "Private tool input omitted.",
+    };
+  }
+
+  if (toolName === "db_query") {
+    const rows = Array.isArray(value) ? value.length : finiteNumber(record(value)?.rows);
+    if (rows !== undefined) {
+      return { rows, summary: `Returned ${rows} private row${rows === 1 ? "" : "s"}.` };
+    }
+  }
+  const payload = record(value);
+  const changes = finiteNumber(payload?.changes);
+  return {
+    ...(changes !== undefined ? { changes } : {}),
+    summary: toolName === "transcribe"
+      ? "Transcription completed; private text omitted."
+      : toolName === "blob_edit"
+        ? "Photo storage operation completed; private paths omitted."
+        : toolName.startsWith("db_")
+          ? "Database operation completed; private values omitted."
+          : "Tool completed; private output omitted.",
+  };
 }
 
 function publicNamedItems(value: unknown, key: string): Array<Record<string, string>> | undefined {
@@ -112,12 +188,33 @@ function publicAgentConfiguration(value: unknown): Record<string, unknown> | und
   return Object.keys(result).length ? result : undefined;
 }
 
-function privateTriggerMessage() {
+function triggerMessage(value?: unknown) {
+  const messages = Array.isArray(value) ? value : [];
+  let message: Record<string, unknown> | undefined;
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const candidate = record(messages[index]);
+    if (candidate?.role === "user") {
+      message = candidate;
+      break;
+    }
+  }
+  const parts = Array.isArray(message?.parts)
+    ? message.parts.flatMap((part) => {
+        const item = record(part);
+        if (typeof item?.text === "string" && item.text.trim()) return [item.text];
+        if (item?.type !== "file") return [];
+        const mediaType = stringValue(item.mediaType) ?? "";
+        if (mediaType.startsWith("image/")) return ["[Photo attached]"];
+        if (mediaType.startsWith("audio/")) return ["[Voice message]"];
+        return ["[Attachment omitted]"];
+      })
+    : [];
+  const text = parts.join("\n\n") || "Submitted a meal request on Telegram.";
   return [{
-    id: "calories-private-trigger",
+    id: "calories-trigger",
     parts: [{
-      id: "calories-private-trigger-text",
-      text: "Submitted a meal request on Telegram.",
+      id: "calories-trigger-text",
+      text,
       type: "text",
     }],
     role: "user",
@@ -170,7 +267,7 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
       || entry.attributes?.["input.hasPrompt"] === true
     )
   ) {
-    attributes["input.messages"] = privateTriggerMessage();
+    attributes["input.messages"] = triggerMessage(entry.attributes?.["input.messages"]);
   }
 
   if (
@@ -183,6 +280,20 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
   const toolName = stringValue(entry.attributes?.["tool.name"]);
   if (toolName && publicToolTitles[toolName]) {
     attributes["vitehub.activity.title"] = publicToolTitles[toolName];
+  }
+  if (toolName) {
+    if (entry.attributes?.["tool.input"] !== undefined || entry.attributes?.["tool.hasInput"] === true) {
+      attributes["tool.input"] = publicToolPayload(toolName, entry.attributes?.["tool.input"], "input");
+    }
+    if (entry.attributes?.["tool.output"] !== undefined || entry.attributes?.["tool.hasOutput"] === true) {
+      attributes["tool.output"] = publicToolPayload(toolName, entry.attributes?.["tool.output"], "output");
+    }
+  }
+  if (toolName === "materialize_sources") {
+    attributes["vitehub.activity.kind"] = "preparation";
+    const output = record(attributes["tool.output"]);
+    const detail = stringValue(output?.summary);
+    if (detail) attributes["vitehub.activity.detail"] = detail;
   }
 
   if (entry.type === "error" || entry.name.endsWith(".error")) {
@@ -203,7 +314,20 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
 type PublicAgentInvocationRecord = AgentInvocationRecord & { title: string };
 
 export function publicRecord(record: AgentInvocationRecord): PublicAgentInvocationRecord {
-  const observations = record.observations.map(publicObservation);
+  const sanitized = record.observations.map(publicObservation);
+  const hasReply = sanitized.some((observation) => (
+    observation.attributes?.["channel.effect.kind"] === "reply"
+    && stringValue(observation.attributes?.["channel.effect.content"])
+  ));
+  const observations = hasReply
+    ? sanitized.map((observation) => {
+        if (observation.name !== "agent.invocation.finish" || !observation.attributes?.["result.text"]) {
+          return observation;
+        }
+        const { "result.text": _resultText, ...attributes } = observation.attributes;
+        return { ...observation, attributes };
+      })
+    : sanitized;
   const configured = new Set<string>();
   return {
     agentName: record.agentName,
@@ -256,16 +380,24 @@ function createD1AgentInvocationStore(): AgentInvocationStore {
   };
 
   return {
-    async claim(id, claimId, leaseMs, force) {
+    async claim(id, claimId, leaseMs, options) {
       const { db, table } = database();
       const now = Date.now();
+      const claimToken = globalThis.crypto.randomUUID();
       const rows = await db.update(table)
-        .set({ claimExpiresAt: now + leaseMs, claimId })
+        .set({ claimExpiresAt: now + leaseMs, claimId, claimToken })
         .where(and(
           eq(table.id, id),
-          force
+          options?.replaceExisting
             ? undefined
-            : or(isNull(table.claimId), eq(table.claimId, claimId), lte(table.claimExpiresAt, now)),
+            : or(
+                isNull(table.claimId),
+                eq(table.claimId, claimId),
+                lte(table.claimExpiresAt, now),
+                options?.replaceClaimToken
+                  ? eq(table.claimToken, options.replaceClaimToken)
+                  : undefined,
+              ),
         ))
         .returning({ id: table.id });
       return rows.length > 0;
@@ -292,6 +424,15 @@ function createD1AgentInvocationStore(): AgentInvocationStore {
     },
 
     get,
+
+    async getClaimToken(id) {
+      const { db, table } = database();
+      const [row] = await db.select({ claimToken: table.claimToken })
+        .from(table)
+        .where(eq(table.id, id))
+        .limit(1);
+      return row?.claimToken ?? undefined;
+    },
 
     async list(options: AgentInvocationListOptions = {}) {
       const { db, table } = database();
@@ -328,7 +469,7 @@ function createD1AgentInvocationStore(): AgentInvocationStore {
     async release(id, claimId) {
       const { db, table } = database();
       await db.update(table)
-        .set({ claimExpiresAt: null, claimId: null })
+        .set({ claimExpiresAt: null, claimId: null, claimToken: null })
         .where(and(eq(table.id, id), eq(table.claimId, claimId)));
     },
 

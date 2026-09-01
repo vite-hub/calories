@@ -1,9 +1,9 @@
 overrides:
   "@chat-adapter/telegram": 4.38.1
-  "@vite-hub/ui": https://pkg.pr.new/vite-hub/vitehub/@vite-hub/ui@930ffa25b2c9de77eedc6f88cc192e497fd4a1ff
+  "@vite-hub/ui": https://pkg.pr.new/vite-hub/vitehub/@vite-hub/ui@a61d9cfb52b37e2f41ba71243f5ef25e71cdf0ca
   chat: 4.38.1
 patchedDependencies:
-  '@t3tools/provider-runtime@0.0.33': patches/@t3tools__provider-runtime@0.0.33.patch
   '@vite-hub/agent@0.0.1': patches/@vite-hub__agent@0.0.1.patch
-  '@vite-hub/source@0.0.1': patches/@vite-hub__source@0.0.1.patch
+  '@vite-hub/database@0.0.1': patches/@vite-hub__database@0.0.1.patch
+  '@vite-hub/workflow@0.0.1': patches/@vite-hub__workflow@0.0.1.patch
   vite-hub@0.0.1: patches/vite-hub@0.0.1.patch

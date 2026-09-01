@@ -15,6 +15,13 @@
       "when": 1787566784834,
       "tag": "0001_eminent_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788199017425,
+      "tag": "0002_yielding_sabretooth",
+      "breakpoints": true
     }
   ]
 }

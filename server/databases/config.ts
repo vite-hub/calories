@@ -14,6 +14,7 @@ export default defineDatabase({
         }).notNull(),
         record: text("record", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
         claimId: text("claim_id"),
+        claimToken: text("claim_token"),
         claimExpiresAt: integer("claim_expires_at"),
         updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
       },

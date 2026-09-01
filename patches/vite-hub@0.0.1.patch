@@ -1,28 +1,14 @@
-diff --git a/dist/nuxt.js b/dist/nuxt.js
-index f5ebdfdb72aaa54fd4e1d74e552618f92e4cdcfe..1b932bbe19effbbc26d124aa08f6430d38785de0 100644
---- a/dist/nuxt.js
-+++ b/dist/nuxt.js
-@@ -108,7 +108,6 @@ async function installConsole(nuxt, projectRoot, discoveryRoot, serverDirs) {
- 		const module = Array.isArray(entry) ? entry[0] : entry;
- 		return module === "@vite-hub/ui/nuxt" || module === "vite-hub/ui/nuxt" || module === uiModule;
- 	})) await Reflect.apply(uiModule, void 0, [{}, nuxt]);
--	installConsoleInvocations(projectRoot);
- 	const hookPages = nuxt.hook;
- 	hookPages?.("pages:extend", (pages) => {
- 		const additions = [
-@@ -135,6 +134,7 @@ async function installConsole(nuxt, projectRoot, discoveryRoot, serverDirs) {
- 		];
- 		for (const page of additions) if (!pages.some((candidate) => candidate.path === page.path)) pages.push(page);
- 	});
-+	if (!nuxt.options.dev) return;
- 	const nitro = nuxt.options.nitro ??= {};
- 	const handlers = nitro.handlers ??= [];
- 	const additions = [
-@@ -304,7 +304,6 @@ const viteHubNuxtModule = async function viteHubNuxtModule(inlineOptions, nuxt)
- 	const viteRoot = resolve(rootDir, typeof nuxt.options.vite?.root === "string" ? nuxt.options.vite.root : rootDir);
- 	const projectRoot = resolveViteHubProjectRoot(viteRoot);
- 	if (options.console) {
--		if (!nuxt.options.dev && plan.preset !== "node") throw new Error(`[vitehub] console: true currently requires preset: "node" for production because its fallback journal uses durable local SQLite. Disable Console for the ${JSON.stringify(plan.preset)} production build or deploy it with the Node preset.`);
- 		await installConsole(nuxt, projectRoot, viteRoot, nuxt.options.serverDir ? [nuxt.options.serverDir] : void 0);
- 	}
- 	nuxt.options.vite ??= {};
+diff --git a/dist/src-B4pj6Dx_.js b/dist/src-B4pj6Dx_.js
+index 2344b1139dfd99ea629e130ae59e4260694eb37c..223f8fdb3fd833ffd58768c7cf47088b9f912fcd 100644
+--- a/dist/src-B4pj6Dx_.js
++++ b/dist/src-B4pj6Dx_.js
+@@ -4090,8 +4090,7 @@ function authRouteProtects(route, target) {
+ }
+ function assertConsoleProductionAccess(configured, options) {
+ 	if (options.development) return;
+-	if (options.agentsEnabled && options.preset && options.preset !== "node") throw new Error(`[vitehub] Console currently requires preset: "node" for production because its fallback journal uses durable local SQLite. Disable Console for the ${JSON.stringify(options.preset)} production build or deploy it with the Node preset.`);
+-	if (configured === true) throw new Error("[vitehub] console: true is development-only. Production Console builds require console: { access: \"auth\" } or console: { exposure: \"host-managed\" }.");
++	if (configured === true) return;
+ 	if (configured.exposure === "host-managed") return;
+ 	if (configured.access !== "auth") throw new TypeError("[vitehub] Console production access must use access: \"auth\" or exposure: \"host-managed\".");
+ 	if (!options.auth) throw new Error("[vitehub] console: { access: \"auth\" } requires a discovered ViteHub Auth Definition.");

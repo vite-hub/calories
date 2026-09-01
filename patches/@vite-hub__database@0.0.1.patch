@@ -1,0 +1,68 @@
+diff --git a/dist/nuxt.js b/dist/nuxt.js
+index 607e1346dedffcb2e8f6230dcd963fd3119ddefd..0b371367fa069ad8b27f3aba99bb110bdd054980 100644
+--- a/dist/nuxt.js
++++ b/dist/nuxt.js
+@@ -1,7 +1,7 @@
+ import { t as isPlainObject } from "./object-DULWYS8e.js";
+ import { n as resolveDBViteConfig, r as writeFileIfChanged } from "./config-7XSOmmWV.js";
+ import { r as resolveConfigValue } from "./config-value-GbX6yaWX.js";
+-import { a as renderDatabaseRuntimeModule, c as resolveCloudflareD1Binding, d as resolveViteHubGeneratedRoot, f as resolveViteHubProjectRoot, i as hubDb$1, l as readProvisionStateSync, o as getDatabaseNuxtProvisionStateKey, s as mergeCloudflareD1Bindings, u as VITEHUB_GENERATED_ROOT } from "./vite-C-9Y2Hy1.js";
++import { a as renderDatabaseRuntimeModule, c as resolveCloudflareD1Binding, d as resolveViteHubGeneratedRoot, f as resolveViteHubProjectRoot, i as hubDb$1, l as readProvisionStateSync, o as getDatabaseNuxtProvisionStateKey, s as mergeCloudflareD1Bindings, u as VITEHUB_GENERATED_ROOT, v as renderDatabaseConfigExpression } from "./vite-C-9Y2Hy1.js";
+ import { resolve } from "node:path";
+ import { copyFile, mkdir, readdir, rm } from "node:fs/promises";
+ import { fileURLToPath, pathToFileURL } from "node:url";
+@@ -64,7 +64,11 @@ function hubDb(options = {}) {
+ 			}
+ 			if (!nuxtOptions.dev && (provider || d1)) mergeNitroHostedCondition(config);
+ 			if (nuxtOptions.dev) await installNitroLocalDatabaseRuntime(config, root, generatedRoot, resolvedOptions, serverDirs);
+-			if (!nuxtOptions.dev) mergeNitroDatabaseRuntimeAlias(config, root, provider ?? (d1 ? "cloudflare" : void 0));
++			if (!nuxtOptions.dev) {
++				const runtimeProvider = provider ?? (d1 ? "cloudflare" : void 0);
++				if (databaseConfig) await installNitroHostedDatabaseRuntime(root, runtimeProvider, databaseConfig);
++				mergeNitroDatabaseRuntimeAlias(config, root, runtimeProvider);
++			}
+ 			if (!nuxtOptions.dev && provider === "cloudflare") {
+ 				await installNitroCloudflareEnvBridge(config, root);
+ 				if (sourceMigrationsDir) installNitroCloudflareMigrations(config, resolve(root, sourceMigrationsDir));
+@@ -129,6 +133,31 @@ async function installNitroLocalDatabaseRuntime(config, root, generatedRoot, opt
+ 	if (alias) alias[databaseDrizzleImport] = file;
+ 	else config.alias = { [databaseDrizzleImport]: file };
+ }
++async function installNitroHostedDatabaseRuntime(root, provider, runtime) {
++	if (provider !== "cloudflare" && provider !== "vercel" || !runtime.definitions.length) return;
++	const imports = runtime.definitions.flatMap((definition, index) => [
++		`import definition_${index} from ${JSON.stringify(pathToFileURL(definition.handler).href)}`,
++		`import schema_${index} from ${JSON.stringify(pathToFileURL(runtime.generatedSchemaFilesByDatabase[definition.name]).href)}`
++	]);
++	const entries = runtime.definitions.map((definition, index) => [
++		`  ${JSON.stringify(definition.name)}: {`,
++		`    db: createHostedDrizzleDb(${renderDatabaseConfigExpression(definition.name, runtime, `definition_${index}`)}, schema_${index}),`,
++		`    schema: schema_${index},`,
++		"  },"
++	].join("\n"));
++	await Promise.all([
++		writeFileIfChanged(resolve(root, `.vitehub/database/${provider}-runtime.mjs`), renderDatabaseRuntimeModule({
++			createAgentDatabaseImport: pathToFileURL(resolve(databaseRuntimeDir, "agent.js")).href,
++			databaseEntries: entries,
++			imports: [
++				`import { createHostedDrizzleDb } from ${JSON.stringify(pathToFileURL(resolve(databaseRuntimeDir, "hosted.js")).href)}`,
++				"",
++				...imports
++			]
++		})),
++		writeFileIfChanged(resolve(root, ".vitehub/database/definition-defaults.mjs"), `export default ${JSON.stringify(runtime.definitionDefaults)}\n`)
++	]);
++}
+ function resolveNuxtContentModuleDependencies(options, nuxt) {
+ 	const nuxtOptions = nuxt.options;
+ 	const resolvedOptions = resolveDatabaseNuxtOptions(options, void 0, nuxtOptions);
+diff --git a/dist/vite-C-9Y2Hy1.js b/dist/vite-C-9Y2Hy1.js
+index ecfdd7d6e5bd0e22d5ccb4885932baf70eb787d2..e140bc356f1446c007a7813faeacc32337cb65c9 100644
+--- a/dist/vite-C-9Y2Hy1.js
++++ b/dist/vite-C-9Y2Hy1.js
+@@ -3086,4 +3086,4 @@ function hubDb(options) {
+ 	};
+ }
+ //#endregion
+-export { renderDatabaseRuntimeModule as a, resolveCloudflareD1Binding as c, resolveViteHubGeneratedRoot as d, resolveViteHubProjectRoot as f, hubDb as i, readProvisionStateSync as l, DB_VIRTUAL_SCHEMA_ID as n, getDatabaseNuxtProvisionStateKey as o, DB_VITE_PLUGIN_NAME as r, mergeCloudflareD1Bindings as s, DB_VIRTUAL_DATABASES_ID as t, VITEHUB_GENERATED_ROOT as u };
++export { renderDatabaseRuntimeModule as a, resolveCloudflareD1Binding as c, resolveViteHubGeneratedRoot as d, resolveViteHubProjectRoot as f, hubDb as i, readProvisionStateSync as l, DB_VIRTUAL_SCHEMA_ID as n, getDatabaseNuxtProvisionStateKey as o, DB_VITE_PLUGIN_NAME as r, mergeCloudflareD1Bindings as s, DB_VIRTUAL_DATABASES_ID as t, VITEHUB_GENERATED_ROOT as u, renderDatabaseConfigExpression as v };

@@ -113,9 +113,9 @@ function saveGoals() {
   settingsOpen.value = false;
 }
 
-watch(meals, async (loadedMeals) => {
+watch(meals, async (loadedMeals: Meal[]) => {
   if (!selectedMealId) return;
-  const selectedMeal = loadedMeals.find((meal) => meal.id === selectedMealId);
+  const selectedMeal = loadedMeals.find((meal: Meal) => meal.id === selectedMealId);
   if (!selectedMeal) return;
 
   await nextTick();
