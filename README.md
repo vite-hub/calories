@@ -105,4 +105,4 @@ The ViteHub option is `console: true`. Calories keeps the merged console page in
 pnpm dev
 ```
 
-The production journal retains the newest inbound Telegram text and the bounded outbound reply so the read-only console can show the conversation. It strips original photo and audio bytes, intermediate model text, private tool values, channel and thread identifiers, annotations, and raw errors before persistence. The console and its API are read-only.
+The production journal retains up to 20 recent user and assistant messages from the configured 30-minute Telegram history window, plus the delivered reply, so the read-only console can show the conversation in order. It strips original photo and audio bytes, intermediate model text, private tool values, channel and thread identifiers, annotations, and raw errors before persistence. The console and its API are read-only.

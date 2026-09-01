@@ -16,10 +16,20 @@ test("the shared Console renders the private Calories session as a conversation"
       attributes: {
         "channel.delivery.provider": "telegram",
         "input.hasMessages": true,
-        "input.messages": [{
-          parts: [{ text: "Two eggs and toast", type: "text" }],
-          role: "user",
-        }],
+        "input.messages": [
+          {
+            parts: [{ text: "Breakfast was oatmeal", type: "text" }],
+            role: "user",
+          },
+          {
+            parts: [{ text: "Logged breakfast: 320 kcal and 14 g protein.", type: "text" }],
+            role: "assistant",
+          },
+          {
+            parts: [{ text: "Two eggs and toast", type: "text" }],
+            role: "user",
+          },
+        ],
       },
       name: "agent.invocation.start",
       sequence: 1,
@@ -126,6 +136,8 @@ test("the shared Console renders the private Calories session as a conversation"
     ]),
   }));
 
+  assert.match(html, /Breakfast was oatmeal/);
+  assert.match(html, /Logged breakfast: 320 kcal and 14 g protein\./);
   assert.match(html, /Two eggs and toast/);
   assert.match(html, /Session prepared/);
   assert.match(html, /Materialized ViteHub workspace/);
@@ -138,6 +150,8 @@ test("the shared Console renders the private Calories session as a conversation"
   assert.match(html, />ViteHub</);
   assert.match(html, /Reply sent/);
   assert.match(html, /Meal saved\. 640 kcal and 42 g protein\./);
+  assert.ok(html.indexOf("Breakfast was oatmeal") < html.indexOf("Logged breakfast"));
+  assert.ok(html.indexOf("Logged breakfast") < html.indexOf("Two eggs and toast"));
   assert.ok(html.indexOf("Two eggs and toast") < html.indexOf("Reply sent"));
   assert.doesNotMatch(html, /Completed the meal request and replied on Telegram\./);
   assert.doesNotMatch(html, /db_query/);

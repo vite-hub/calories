@@ -5,24 +5,36 @@ import { consoleSearchExcerpt } from "../server/api/_vitehub/console/search.get"
 import { publicObservation, publicRecord } from "../server/utils/agent-invocations";
 
 describe("publicObservation", () => {
-  it("keeps the newest Telegram message text without persisting media or identifiers", () => {
+  it("keeps recent Telegram conversation history without persisting media or identifiers", () => {
     const observation = publicObservation({
       attributes: {
         "channel.delivery.provider": "telegram",
         "input.hasMessages": true,
-        "input.messages": [{
-          id: "private-message-id",
-          parts: [
-            { text: "Two eggs and toast", type: "text" },
-            {
-              data: "data:image/jpeg;base64,private-image-data",
-              filename: "dinner.jpg",
-              mediaType: "image/jpeg",
-              type: "file",
-            },
-          ],
-          role: "user",
-        }],
+        "input.messages": [
+          {
+            id: "private-earlier-message-id",
+            parts: [{ text: "Breakfast was oatmeal", type: "text" }],
+            role: "user",
+          },
+          {
+            id: "private-reply-id",
+            parts: [{ text: "Logged breakfast: 320 kcal and 14 g protein.", type: "text" }],
+            role: "assistant",
+          },
+          {
+            id: "private-message-id",
+            parts: [
+              { text: "Two eggs and toast", type: "text" },
+              {
+                data: "data:image/jpeg;base64,private-image-data",
+                filename: "dinner.jpg",
+                mediaType: "image/jpeg",
+                type: "file",
+              },
+            ],
+            role: "user",
+          },
+        ],
       },
       name: "agent.invocation.start",
       sequence: 2,
@@ -30,17 +42,38 @@ describe("publicObservation", () => {
       type: "run",
     });
 
-    assert.deepEqual(observation.attributes?.["input.messages"], [{
-      id: "calories-trigger",
-      parts: [{
-        id: "calories-trigger-text",
-        text: "Two eggs and toast\n\n[Photo attached]",
-        type: "text",
-      }],
-      role: "user",
-    }]);
+    assert.deepEqual(observation.attributes?.["input.messages"], [
+      {
+        id: "calories-message-0",
+        parts: [{
+          id: "calories-message-0-text",
+          text: "Breakfast was oatmeal",
+          type: "text",
+        }],
+        role: "user",
+      },
+      {
+        id: "calories-message-1",
+        parts: [{
+          id: "calories-message-1-text",
+          text: "Logged breakfast: 320 kcal and 14 g protein.",
+          type: "text",
+        }],
+        role: "assistant",
+      },
+      {
+        id: "calories-message-2",
+        parts: [{
+          id: "calories-message-2-text",
+          text: "Two eggs and toast\n\n[Photo attached]",
+          type: "text",
+        }],
+        role: "user",
+      },
+    ]);
     assert.equal(observation.attributes?.["input.hasMessages"], true);
     assert.equal(JSON.stringify(observation).includes("private-message-id"), false);
+    assert.equal(JSON.stringify(observation).includes("private-reply-id"), false);
     assert.equal(JSON.stringify(observation).includes("private-image-data"), false);
     assert.equal(JSON.stringify(observation).includes("dinner.jpg"), false);
   });

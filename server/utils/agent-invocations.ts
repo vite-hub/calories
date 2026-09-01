@@ -188,37 +188,50 @@ function publicAgentConfiguration(value: unknown): Record<string, unknown> | und
   return Object.keys(result).length ? result : undefined;
 }
 
-function triggerMessage(value?: unknown) {
+function triggerMessages(value?: unknown) {
   const messages = Array.isArray(value) ? value : [];
-  let message: Record<string, unknown> | undefined;
-  for (let index = messages.length - 1; index >= 0; index--) {
-    const candidate = record(messages[index]);
-    if (candidate?.role === "user") {
-      message = candidate;
-      break;
-    }
+  const retained = messages.flatMap((candidate) => {
+    const message = record(candidate);
+    if (!message) return [];
+    const role = message.role;
+    if (role !== "user" && role !== "assistant") return [];
+
+    const parts = Array.isArray(message.parts)
+      ? message.parts.flatMap((part) => {
+          const item = record(part);
+          if (typeof item?.text === "string" && item.text.trim()) return [item.text.trim()];
+          if (item?.type !== "file") return [];
+          const mediaType = stringValue(item.mediaType) ?? "";
+          if (mediaType.startsWith("image/")) return ["[Photo attached]"];
+          if (mediaType.startsWith("audio/")) return ["[Voice message]"];
+          return ["[Attachment omitted]"];
+        })
+      : [];
+    const text = parts.join("\n\n").slice(0, 4_096);
+    return text ? [{ role, text }] : [];
+  }).slice(-20);
+
+  if (!retained.length) {
+    return [{
+      id: "calories-trigger",
+      parts: [{
+        id: "calories-trigger-text",
+        text: "Message content was not retained for this older Telegram session.",
+        type: "text",
+      }],
+      role: "user",
+    }];
   }
-  const parts = Array.isArray(message?.parts)
-    ? message.parts.flatMap((part) => {
-        const item = record(part);
-        if (typeof item?.text === "string" && item.text.trim()) return [item.text];
-        if (item?.type !== "file") return [];
-        const mediaType = stringValue(item.mediaType) ?? "";
-        if (mediaType.startsWith("image/")) return ["[Photo attached]"];
-        if (mediaType.startsWith("audio/")) return ["[Voice message]"];
-        return ["[Attachment omitted]"];
-      })
-    : [];
-  const text = parts.join("\n\n") || "Message content was not retained for this older Telegram session.";
-  return [{
-    id: "calories-trigger",
+
+  return retained.map((message, index) => ({
+    id: `calories-message-${index}`,
     parts: [{
-      id: "calories-trigger-text",
-      text,
+      id: `calories-message-${index}-text`,
+      text: message.text,
       type: "text",
     }],
-    role: "user",
-  }];
+    role: message.role,
+  }));
 }
 
 function publicInvocationError(error: unknown): { message: string; name: string } {
@@ -267,7 +280,7 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
       || entry.attributes?.["input.hasPrompt"] === true
     )
   ) {
-    attributes["input.messages"] = triggerMessage(entry.attributes?.["input.messages"]);
+    attributes["input.messages"] = triggerMessages(entry.attributes?.["input.messages"]);
   }
 
   if (
