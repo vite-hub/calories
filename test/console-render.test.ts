@@ -139,6 +139,8 @@ test("the shared Console renders the private Calories session as a conversation"
   assert.match(html, /Breakfast was oatmeal/);
   assert.match(html, /Logged breakfast: 320 kcal and 14 g protein\./);
   assert.match(html, /Two eggs and toast/);
+  assert.match(html, /class="vh-invocation-message__label">You/);
+  assert.match(html, /class="vh-invocation-message__label">Assistant/);
   assert.match(html, /Session prepared/);
   assert.match(html, /Materialized ViteHub workspace/);
   assert.match(html, /Materialized repository \(12 files\)\./);
@@ -150,6 +152,7 @@ test("the shared Console renders the private Calories session as a conversation"
   assert.match(html, />ViteHub</);
   assert.match(html, /Reply sent/);
   assert.match(html, /Meal saved\. 640 kcal and 42 g protein\./);
+  assert.match(html, /class="vh-invocation-delivery__body vh-invocation-message" data-role="assistant"/);
   assert.ok(html.indexOf("Breakfast was oatmeal") < html.indexOf("Logged breakfast"));
   assert.ok(html.indexOf("Logged breakfast") < html.indexOf("Two eggs and toast"));
   assert.ok(html.indexOf("Two eggs and toast") < html.indexOf("Reply sent"));

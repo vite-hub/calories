@@ -1,0 +1,147 @@
+diff --git a/dist/index.js b/dist/index.js
+index 88ec5a5ae251655e49e641233cb5a2c055bd95b9..f1b54601b4bbd05744aed9de7051806776a5ed6f 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -10901,18 +10901,19 @@ const messageRoleLabels = {
+ 	assistant: "Assistant",
+ 	system: "System",
+ 	tool: "Tool",
+-	user: "User"
++	user: "You"
+ };
+ function renderMessage(activity, expanded, toggleExpanded) {
+ 	const body = activity.body ?? "";
+ 	const collapsible = activity.role === "user" && (body.length > 720 || body.split(/\r?\n/).length > 12);
+ 	const isExpanded = expanded.has(activity.id);
++	const role = activity.role ?? "assistant";
+ 	return h("li", {
+ 		class: "vh-invocation-message",
+-		"data-role": activity.role,
++		"data-role": role,
+ 		key: activity.id
+ 	}, [
+-		h("span", { class: "vh-visually-hidden" }, `${messageRoleLabels[activity.role ?? "assistant"]} message`),
++		h("span", { class: "vh-invocation-message__label" }, messageRoleLabels[role]),
+ 		h("div", {
+ 			class: "vh-invocation-message__content",
+ 			"data-collapsed": collapsible && !isExpanded ? "true" : void 0
+@@ -11081,7 +11082,13 @@ function renderEvent(activity, inspect) {
+ 			onClick: () => inspect(inspectTarget),
+ 			type: "button"
+ 		}, `Inspect ${inspectTarget}`) : null
+-	]) : null]), deliveryBody ? h("div", { class: "vh-invocation-delivery__body" }, [markdown(deliveryBody, "vh-invocation-event__markdown")]) : null]);
++	]) : null]), deliveryBody ? h("div", {
++		class: "vh-invocation-delivery__body vh-invocation-message",
++		"data-role": "assistant"
++	}, [
++		h("span", { class: "vh-invocation-message__label" }, "Assistant"),
++		h("div", { class: "vh-invocation-message__content" }, [markdown(deliveryBody, "vh-invocation-message__body")])
++	]) : null]);
+ }
+ function renderEventPayload(label, value) {
+ 	if (value === void 0) return null;
+diff --git a/dist/styles.css b/dist/styles.css
+index de0af2aa954d8ed95f03d1908366083c1f98a733..2830d00cf3539bd0a83d2642080ac823118e839f 100644
+--- a/dist/styles.css
++++ b/dist/styles.css
+@@ -687,19 +687,35 @@
+ }
+ 
+ .vh-invocation-message {
++  --vh-invocation-message-bg: color-mix(in oklab, var(--vh-ui-bg-elevated) 34%, transparent);
++  background: var(--vh-invocation-message-bg);
++  border: 1px solid var(--vh-ui-border);
++  border-radius: 1rem;
++  display: flex;
++  flex-direction: column;
++  gap: 0.35rem;
++  margin-block: 0.5rem 1rem;
++  max-width: 82%;
+   min-width: 0;
++  padding: 0.75rem 0.875rem;
+ }
+ 
+ .vh-invocation-message[data-role="assistant"] {
+-  padding: 0.125rem 0.25rem 0.5rem;
++  border-start-start-radius: 0.375rem;
++  margin-inline-end: auto;
+ }
+ 
+ .vh-invocation-message[data-role="user"] {
+-  background: var(--vh-ui-bg-elevated);
+-  border-radius: 1rem;
+-  margin-block: 0.5rem 1rem;
+-  margin-inline-start: 20%;
+-  padding: 0.75rem;
++  --vh-invocation-message-bg: var(--vh-ui-bg-elevated);
++  border-end-end-radius: 0.375rem;
++  margin-inline-start: auto;
++}
++
++.vh-invocation-message__label {
++  color: var(--vh-ui-dimmed);
++  font-size: 0.6875rem;
++  font-weight: 600;
++  line-height: 1;
+ }
+ 
+ .vh-invocation-message__body {
+@@ -718,7 +734,7 @@
+ }
+ 
+ .vh-invocation-message__content[data-collapsed="true"]::after {
+-  background: linear-gradient(to bottom, transparent, var(--vh-ui-bg-elevated));
++  background: linear-gradient(to bottom, transparent, var(--vh-invocation-message-bg));
+   bottom: 0;
+   content: "";
+   height: 3.5rem;
+@@ -1451,15 +1467,12 @@ details.vh-invocation-event > .vh-invocation-event__summary:hover {
+ }
+ 
+ .vh-invocation-delivery__body {
+-  color: var(--vh-ui-text);
+-  margin: 0.125rem 0 0 2rem;
+-  max-width: 42rem;
+-  padding-block-end: 0.75rem;
++  margin: 0.35rem 0 1rem 2rem;
++  max-width: min(42rem, calc(82% - 2rem));
+ }
+ 
+-.vh-invocation-delivery__body .vh-invocation-event__markdown {
+-  font-size: 0.875rem;
+-  line-height: 1.625;
++.vh-invocation-delivery__body .vh-invocation-message__body {
++  margin: 0;
+ }
+ 
+ .vh-invocation-event__body,
+@@ -2158,8 +2171,12 @@ summary.vh-invocation-inspector__group-heading:focus-visible,
+     padding: 1.5rem 1rem 3rem;
+   }
+ 
+-  .vh-invocation-message[data-role="user"] {
+-    margin-inline-start: 1rem;
++  .vh-invocation-message {
++    max-width: calc(100% - 1rem);
++  }
++
++  .vh-invocation-delivery__body {
++    max-width: calc(100% - 3rem);
+   }
+ }
+ 
+@@ -2168,8 +2185,12 @@ summary.vh-invocation-inspector__group-heading:focus-visible,
+     padding: 1.5rem 1rem 3rem;
+   }
+ 
+-  .vh-invocation-message[data-role="user"] {
+-    margin-inline-start: 1rem;
++  .vh-invocation-message {
++    max-width: calc(100% - 1rem);
++  }
++
++  .vh-invocation-delivery__body {
++    max-width: calc(100% - 3rem);
+   }
+ }
+ 
