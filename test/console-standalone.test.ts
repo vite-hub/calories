@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -8,11 +8,12 @@ const require = createRequire(import.meta.url);
 const viteHubRoot = dirname(require.resolve("vite-hub/package.json"));
 
 test("the Console ships as an isolated standalone document", async () => {
-  const [nuxtModule, page, messageStyles, invocationEnhancer] = await Promise.all([
+  const [nuxtModule, page, messageStyles, invocationEnhancer, brandFiles] = await Promise.all([
     readFile(join(viteHubRoot, "dist/nuxt.js"), "utf8"),
     readFile(join(viteHubRoot, "dist/console/runtime/server/page.get.js"), "utf8"),
     readFile(join(viteHubRoot, "dist/console/runtime/public/console/console-message-overrides.css"), "utf8"),
     readFile(join(viteHubRoot, "dist/console/runtime/public/console/console-invocation-overrides.js"), "utf8"),
+    readdir(join(viteHubRoot, "dist/console/runtime/public/console/brands")),
   ]);
 
   assert.match(nuxtModule, /server\/page\.get\.js/);
@@ -52,4 +53,15 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(invocationEnhancer, /Copy session link/);
   assert.match(invocationEnhancer, /refresh\.hidden = completed/);
   assert.match(invocationEnhancer, /session-inspector__instruction-fallback/);
+  assert.match(invocationEnhancer, /OpenAI/);
+  assert.match(invocationEnhancer, /Anthropic/);
+  assert.match(invocationEnhancer, /Google/);
+  assert.match(invocationEnhancer, /DeepSeek/);
+  assert.match(invocationEnhancer, /Amazon Bedrock/);
+  assert.match(invocationEnhancer, /modelMaker/);
+  assert.match(invocationEnhancer, /\/_vitehub\/assets\/brands/);
+
+  for (const brand of ["openai", "anthropic", "google", "meta", "mistral", "xai", "deepseek", "cohere", "qwen", "zai", "openrouter", "aws", "azure", "groq"]) {
+    assert.ok(brandFiles.includes(`${brand}.svg`), `missing ${brand} Console logo`);
+  }
 });
