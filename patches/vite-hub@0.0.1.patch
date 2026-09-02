@@ -1,3 +1,174 @@
+diff --git a/dist/agents-CohvvR2a.js b/dist/agents-CohvvR2a.js
+index 20063ce08c9a093d0c3893ba985eb0bc040beedf..f94690be56b16e77dd5eac74410c5c38c8904744 100644
+--- a/dist/agents-CohvvR2a.js
++++ b/dist/agents-CohvvR2a.js
+@@ -1,6 +1,7 @@
+-import { n as consoleInvocationsFallbackKey, p as resolveConsoleInvocations } from "./internal-DFtRVKA0.js";
++import { n as consoleInvocationsFallbackKey, o as installConsoleInvocationFallback, p as resolveConsoleInvocations } from "./internal-DFtRVKA0.js";
+ //#region src/console/runtime/server/agents.ts
+ const consoleAgentsKey = Symbol.for("vitehub.console.agents");
++const consoleInvocationsRootKey = Symbol.for("vitehub.console.invocations.root");
+ const consoleAssignedInvocations = /* @__PURE__ */ new WeakMap();
+ function installConsoleAgents(agentNames, invocations) {
+ 	const agents = [...new Set(agentNames.map((name) => name.trim()).filter(Boolean))].sort();
+@@ -9,7 +10,8 @@ function installConsoleAgents(agentNames, invocations) {
+ 	return agents;
+ }
+ function installConsoleAgentDefinitions(entries, invocations) {
+-	return installConsoleAgents(entries.map(({ definition, fallbackName }) => {
++	let configuredInvocations;
++	const agentNames = entries.map(({ definition, fallbackName }) => {
+ 		const module = definition && typeof definition === "object" ? definition : void 0;
+ 		let agent = module;
+ 		if (module?.default && typeof module.default === "object") agent = module.default;
+@@ -18,10 +20,17 @@ function installConsoleAgentDefinitions(entries, invocations) {
+ 			if (agent.invocations === void 0 || agent.invocations === assigned) {
+ 				agent.invocations = invocations;
+ 				consoleAssignedInvocations.set(agent, invocations);
+-			} else if (assigned) consoleAssignedInvocations.delete(agent);
++			} else {
++				configuredInvocations ??= agent.invocations;
++				if (assigned) consoleAssignedInvocations.delete(agent);
++			}
+ 		}
+ 		return typeof agent?.name === "string" && agent.name.trim() ? agent.name : fallbackName;
+-	}), invocations);
++	});
++	const installedInvocations = configuredInvocations ?? invocations;
++	const projectRoot = globalThis[consoleInvocationsRootKey];
++	if (configuredInvocations && typeof projectRoot === "string") installConsoleInvocationFallback(installedInvocations, projectRoot, globalThis, `agent:${projectRoot}`);
++	return installConsoleAgents(agentNames, installedInvocations);
+ }
+ function getConsoleAgents() {
+ 	return resolveConsoleInvocations()?.[consoleAgentsKey] ?? [];
+diff --git a/dist/console/runtime/public/console/console-message-overrides.css b/dist/console/runtime/public/console/console-message-overrides.css
+new file mode 100644
+index 0000000000000000000000000000000000000000..765e71732413e9bb0c423cee501c3c07b91fc546
+--- /dev/null
++++ b/dist/console/runtime/public/console/console-message-overrides.css
+@@ -0,0 +1,110 @@
++.vh-invocation-message {
++  --vh-invocation-message-bg: color-mix(in oklab, var(--vh-ui-bg-elevated) 34%, transparent);
++  background: var(--vh-invocation-message-bg);
++  border: 1px solid var(--vh-ui-border);
++  border-radius: 1rem;
++  display: flex;
++  flex-direction: column;
++  gap: 0.35rem;
++  margin-block: 0.5rem 1rem;
++  max-width: 82%;
++  min-width: 0;
++  padding: 0.75rem 0.875rem;
++}
++
++.vh-invocation-message[data-role="assistant"] {
++  border-start-start-radius: 0.375rem;
++  margin-inline-end: auto;
++}
++
++.vh-invocation-message[data-role="user"] {
++  --vh-invocation-message-bg: var(--vh-ui-bg-elevated);
++  border-end-end-radius: 0.375rem;
++  margin-inline-start: auto;
++}
++
++.vh-invocation-message > .vh-visually-hidden:first-child {
++  clip: auto;
++  clip-path: none;
++  color: var(--vh-ui-dimmed);
++  font-size: 0;
++  font-weight: 600;
++  height: auto;
++  line-height: 1;
++  overflow: visible;
++  position: static;
++  white-space: normal;
++  width: auto;
++}
++
++.vh-invocation-message > .vh-visually-hidden:first-child::after {
++  font-size: 0.6875rem;
++}
++
++.vh-invocation-message[data-role="user"] > .vh-visually-hidden:first-child::after {
++  content: "You";
++}
++
++.vh-invocation-message[data-role="assistant"] > .vh-visually-hidden:first-child::after {
++  content: "Assistant";
++}
++
++.vh-invocation-message[data-role="system"] > .vh-visually-hidden:first-child::after {
++  content: "System";
++}
++
++.vh-invocation-message[data-role="tool"] > .vh-visually-hidden:first-child::after {
++  content: "Tool";
++}
++
++.vh-invocation-message__content[data-collapsed="true"]::after {
++  background: linear-gradient(to bottom, transparent, var(--vh-invocation-message-bg));
++}
++
++.vh-invocation-delivery__body {
++  --vh-invocation-message-bg: color-mix(in oklab, var(--vh-ui-bg-elevated) 34%, transparent);
++  background: var(--vh-invocation-message-bg);
++  border: 1px solid var(--vh-ui-border);
++  border-radius: 0.375rem 1rem 1rem 1rem;
++  color: var(--vh-ui-text);
++  display: flex;
++  flex-direction: column;
++  gap: 0.35rem;
++  margin: 0.35rem 0 1rem 2rem;
++  max-width: min(42rem, calc(82% - 2rem));
++  padding: 0.75rem 0.875rem;
++}
++
++.vh-invocation-delivery__body::before {
++  color: var(--vh-ui-dimmed);
++  content: "Assistant";
++  font-size: 0.6875rem;
++  font-weight: 600;
++  line-height: 1;
++}
++
++.vh-invocation-delivery__body .vh-invocation-event__markdown {
++  font-size: 0.875rem;
++  line-height: 1.625;
++  padding: 0;
++}
++
++@container (max-width: 600px) {
++  .vh-invocation-message {
++    max-width: calc(100% - 1rem);
++  }
++
++  .vh-invocation-delivery__body {
++    max-width: calc(100% - 3rem);
++  }
++}
++
++@media (max-width: 600px) {
++  .vh-invocation-message {
++    max-width: calc(100% - 1rem);
++  }
++
++  .vh-invocation-delivery__body {
++    max-width: calc(100% - 3rem);
++  }
++}
+diff --git a/dist/console/runtime/server/page.get.js b/dist/console/runtime/server/page.get.js
+index a2a673da1f42f2343a057e549016532d272a67e6..badb7cf753476cb1fc5e22b2712e70e81e326861 100644
+--- a/dist/console/runtime/server/page.get.js
++++ b/dist/console/runtime/server/page.get.js
+@@ -11,6 +11,7 @@ const page = `<!doctype html>
+     <meta name="robots" content="noindex, nofollow">
+     <title>ViteHub Console</title>
+     <link rel="stylesheet" href="/_vitehub/assets/console-Db9lYBMf.css">
++    <link rel="stylesheet" href="/_vitehub/assets/console-message-overrides.css">
+   </head>
+   <body>
+     <div id="app"></div>
 diff --git a/dist/invocations-D6WerHyB.js b/dist/invocations-D6WerHyB.js
 index 1522cdfeeb20c4a0726f52901fa29723b2fa129d..6c0c3207e64be0ec0c360e50d7b45be7f4c3735f 100644
 --- a/dist/invocations-D6WerHyB.js
@@ -27,6 +198,143 @@ index 1522cdfeeb20c4a0726f52901fa29723b2fa129d..6c0c3207e64be0ec0c360e50d7b45be7
  	});
  }
  function createConsoleFixtureInvocationsFromSnapshot(fixture) {
+diff --git a/dist/nuxt.js b/dist/nuxt.js
+index 236b4b32b7c59abf3cf1adf4c649f21ec24ff0a9..bde9b899cfcf45f010bd3421f920489599df62b6 100644
+--- a/dist/nuxt.js
++++ b/dist/nuxt.js
+@@ -21,6 +21,7 @@ import { hubDb } from "@vite-hub/database/nuxt";
+ //#region src/nuxt.ts
+ const databaseRuntimeState = fileURLToPath(new URL("./_internal/database/runtime/state", import.meta.url));
+ const consoleRuntimeRoot = fileURLToPath(new URL("./console/runtime", import.meta.url));
++const consolePublicRoot = join(consoleRuntimeRoot, "public/console");
+ function configuredProjectRoot(root, value) {
+ 	return value && typeof value === "object" && "projectRoot" in value && typeof value.projectRoot === "string" ? resolve(root, value.projectRoot) : void 0;
+ }
+@@ -238,11 +239,6 @@ function reconcileConsoleDefinitionsHandler(nitro, enabled) {
+ 	});
+ }
+ async function installConsole(nuxt, projectRoot, discoveryRoot, workflowDiscoveryRoot, queueDiscoveryRoot, sections, blobStores, kvStores, fixture, serverDirs, installInvocations = true, writeGeneratedPlugin = true, invocationRootState, canDiscoverDefinitions = () => true, discoveryOptions = {}) {
+-	const uiModule = (await import("@vite-hub/ui/nuxt")).default;
+-	if (!(nuxt.options.modules ?? []).some((entry) => {
+-		const module = Array.isArray(entry) ? entry[0] : entry;
+-		return module === "@vite-hub/ui/nuxt" || module === "vite-hub/ui/nuxt" || module === uiModule;
+-	})) await Reflect.apply(uiModule, void 0, [{}, nuxt]);
+ 	const plugin = resolveGeneratedConsolePlugin(projectRoot, fixture, invocationRootState);
+ 	installConsoleSections(projectRoot, sections);
+ 	installConsoleProjectName(projectRoot, resolveConsoleProjectNameFromRoot(projectRoot));
+@@ -255,84 +251,6 @@ async function installConsole(nuxt, projectRoot, discoveryRoot, workflowDiscover
+ 			"x-robots-tag": "noindex, nofollow"
+ 		};
+ 	}
+-	const hookPages = nuxt.hook;
+-	hookPages?.("pages:extend", (pages) => {
+-		const additions = [
+-			{
+-				file: join(consoleRuntimeRoot, "pages/index.vue"),
+-				name: "vitehub-console",
+-				path: "/_vitehub"
+-			},
+-			...sections.includes("agents") ? [
+-				{
+-					file: join(consoleRuntimeRoot, "pages/agents.vue"),
+-					name: "vitehub-console-agents",
+-					path: "/_vitehub/agents"
+-				},
+-				{
+-					file: join(consoleRuntimeRoot, "pages/agents.vue"),
+-					name: "vitehub-console-agent",
+-					path: "/_vitehub/agents/:agent"
+-				},
+-				{
+-					file: join(consoleRuntimeRoot, "pages/agents.vue"),
+-					name: "vitehub-console-invocation",
+-					path: "/_vitehub/agents/:agent/invocations/:invocation"
+-				}
+-			] : [],
+-			...sections.includes("usage") ? [{
+-				file: join(consoleRuntimeRoot, "pages/agents.vue"),
+-				name: "vitehub-console-usage",
+-				path: "/_vitehub/usage"
+-			}] : [],
+-			...sections.includes("blob") ? [{
+-				file: join(consoleRuntimeRoot, "pages/blob.vue"),
+-				name: "vitehub-console-blob",
+-				path: "/_vitehub/blob"
+-			}] : [],
+-			...sections.includes("kv") ? [{
+-				file: join(consoleRuntimeRoot, "pages/kv.vue"),
+-				name: "vitehub-console-kv",
+-				path: "/_vitehub/kv"
+-			}] : [],
+-			...sections.includes("databases") ? [{
+-				file: join(consoleRuntimeRoot, "pages/databases.vue"),
+-				name: "vitehub-console-databases",
+-				path: "/_vitehub/databases"
+-			}] : [],
+-			...sections.includes("workflows") ? [{
+-				file: join(consoleRuntimeRoot, "pages/workflows.vue"),
+-				name: "vitehub-console-workflows",
+-				path: "/_vitehub/workflows"
+-			}] : [],
+-			...sections.includes("workspaces") ? [{
+-				file: join(consoleRuntimeRoot, "pages/workspaces.vue"),
+-				name: "vitehub-console-workspaces",
+-				path: "/_vitehub/workspaces"
+-			}] : [],
+-			...sections.includes("sandboxes") ? [{
+-				file: join(consoleRuntimeRoot, "pages/sandboxes.vue"),
+-				name: "vitehub-console-sandboxes",
+-				path: "/_vitehub/sandboxes"
+-			}] : [],
+-			...sections.includes("rate-limits") ? [{
+-				file: join(consoleRuntimeRoot, "pages/rate-limits.vue"),
+-				name: "vitehub-console-rate-limits",
+-				path: "/_vitehub/rate-limits"
+-			}] : [],
+-			...sections.includes("queues") ? [{
+-				file: join(consoleRuntimeRoot, "pages/queues.vue"),
+-				name: "vitehub-console-queues",
+-				path: "/_vitehub/queues"
+-			}] : [],
+-			...sections.includes("schedules") ? [{
+-				file: join(consoleRuntimeRoot, "pages/schedules.vue"),
+-				name: "vitehub-console-schedules",
+-				path: "/_vitehub/schedules"
+-			}] : []
+-		];
+-		for (const page of additions) if (!pages.some((candidate) => candidate.path === page.path)) pages.push(page);
+-	});
+ 	const nitro = nuxt.options.nitro ??= {};
+ 	const handlers = nitro.handlers ??= [];
+ 	const additions = [
+@@ -373,11 +291,26 @@ async function installConsole(nuxt, projectRoot, discoveryRoot, workflowDiscover
+ 		...sections.includes("usage") ? [{
+ 			handler: join(consoleRuntimeRoot, "server/usage.get.js"),
+ 			route: "/api/_vitehub/console/usage"
+-		}] : []
++		}] : [],
++		{
++			handler: join(consoleRuntimeRoot, "server/page.get.js"),
++			route: "/_vitehub"
++		},
++		{
++			handler: join(consoleRuntimeRoot, "server/page.get.js"),
++			route: "/_vitehub/**"
++		}
+ 	];
+ 	for (const handler of additions) if (!handlers.some((candidate) => candidate.route === handler.route)) handlers.push(handler);
+ 	const plugins = (nitro.plugins ??= []).filter((candidate) => !generatedConsolePluginRegistration(candidate));
+ 	nitro.plugins = plugins;
++	const publicAssets = Array.isArray(nitro.publicAssets) ? nitro.publicAssets.filter((asset) => asset?.baseURL !== "/_vitehub/assets") : [];
++	publicAssets.push({
++		baseURL: "/_vitehub/assets",
++		dir: consolePublicRoot,
++		fallthrough: false
++	});
++	nitro.publicAssets = publicAssets;
+ 	const refreshAgentDefinitions = serializeConsoleRefresh(async () => {
+ 		const discoverySections = canDiscoverDefinitions() ? sections : sections.filter((section) => !consoleDefinitionSectionIds.some((definitionSection) => definitionSection === section));
+ 		const catalog = await discoverConsoleBuildCatalog({
 diff --git a/dist/src-B4pj6Dx_.js b/dist/src-B4pj6Dx_.js
 index 2344b1139dfd99ea629e130ae59e4260694eb37c..223f8fdb3fd833ffd58768c7cf47088b9f912fcd 100644
 --- a/dist/src-B4pj6Dx_.js
@@ -41,43 +349,3 @@ index 2344b1139dfd99ea629e130ae59e4260694eb37c..223f8fdb3fd833ffd58768c7cf47088b
  	if (configured.exposure === "host-managed") return;
  	if (configured.access !== "auth") throw new TypeError("[vitehub] Console production access must use access: \"auth\" or exposure: \"host-managed\".");
  	if (!options.auth) throw new Error("[vitehub] console: { access: \"auth\" } requires a discovered ViteHub Auth Definition.");
-diff --git a/dist/agents-CohvvR2a.js b/dist/agents-CohvvR2a.js
---- a/dist/agents-CohvvR2a.js
-+++ b/dist/agents-CohvvR2a.js
-@@ -1,4 +1,5 @@
--import { n as consoleInvocationsFallbackKey, p as resolveConsoleInvocations } from "./internal-DFtRVKA0.js";
-+import { n as consoleInvocationsFallbackKey, o as installConsoleInvocationFallback, p as resolveConsoleInvocations } from "./internal-DFtRVKA0.js";
- //#region src/console/runtime/server/agents.ts
- const consoleAgentsKey = Symbol.for("vitehub.console.agents");
-+const consoleInvocationsRootKey = Symbol.for("vitehub.console.invocations.root");
- const consoleAssignedInvocations = /* @__PURE__ */ new WeakMap();
-@@ -10,18 +11,26 @@ function installConsoleAgents(agentNames, invocations) {
- }
- function installConsoleAgentDefinitions(entries, invocations) {
--	return installConsoleAgents(entries.map(({ definition, fallbackName }) => {
-+	let configuredInvocations;
-+	const agentNames = entries.map(({ definition, fallbackName }) => {
- 		const module = definition && typeof definition === "object" ? definition : void 0;
- 		let agent = module;
- 		if (module?.default && typeof module.default === "object") agent = module.default;
- 		if (agent && Reflect.get(agent, consoleInvocationsFallbackKey) !== true) {
- 			const assigned = consoleAssignedInvocations.get(agent);
- 			if (agent.invocations === void 0 || agent.invocations === assigned) {
- 				agent.invocations = invocations;
- 				consoleAssignedInvocations.set(agent, invocations);
--			} else if (assigned) consoleAssignedInvocations.delete(agent);
-+			} else {
-+				configuredInvocations ??= agent.invocations;
-+				if (assigned) consoleAssignedInvocations.delete(agent);
-+			}
- 		}
- 		return typeof agent?.name === "string" && agent.name.trim() ? agent.name : fallbackName;
--	}), invocations);
-+	});
-+	const installedInvocations = configuredInvocations ?? invocations;
-+	const projectRoot = globalThis[consoleInvocationsRootKey];
-+	if (configuredInvocations && typeof projectRoot === "string") installConsoleInvocationFallback(installedInvocations, projectRoot, globalThis, `agent:${projectRoot}`);
-+	return installConsoleAgents(agentNames, installedInvocations);
- }
- function getConsoleAgents() {
- 	return resolveConsoleInvocations()?.[consoleAgentsKey] ?? [];
