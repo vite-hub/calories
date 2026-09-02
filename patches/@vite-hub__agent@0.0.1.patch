@@ -253,3 +253,16 @@ diff --git a/dist/provider-agent-D1SLQiL7.js b/dist/provider-agent-D1SLQiL7.js
  		sessionStore = options.sessionStorePath && preservesProviderSession && sessionKey ? partitionProviderSessionStore(await waitForProviderOperation(providerSessionStore(options.sessionStorePath, createSqliteProviderRuntimeSessionStore), effectiveSignal), sessionKey) : void 0;
  		const durableResumeCursor = sessionStore ? await waitForProviderOperation(sessionStore.consume(), effectiveSignal, () => void 0, deferSessionConsume) : void 0;
  		const resumeCursor = pendingResumeCursor ?? durableResumeCursor;
+diff --git a/dist/channel-delivery-CWRb4-Rs.js b/dist/channel-delivery-CWRb4-Rs.js
+--- a/dist/channel-delivery-CWRb4-Rs.js
++++ b/dist/channel-delivery-CWRb4-Rs.js
+@@ -242,7 +242,8 @@ async function resumeAgentChannelDeliveryWorkflowOwnership(agent, context, bind
+ 	return await workflowOwnershipResolver?.(agent, context, binding);
+ }
+ async function resumeWorkflowAgentChannelDelivery(agent, context, binding) {
+-	return activeAgentChannelDelivery(binding.deliveryId) || await workflowResolver?.(agent, context, binding);
++	const persisted = await workflowResolver?.(agent, context, binding);
++	return persisted || activeAgentChannelDelivery(binding.deliveryId);
+ }
+ async function openAgentChannelDelivery(state, input) {
+ 	const candidate = {

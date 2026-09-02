@@ -2,6 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
 import { eq } from "drizzle-orm";
 import { defineAgent } from "vite-hub/agent";
+import type { AgentChatStateResolver } from "vite-hub/agent/capabilities";
 import {
   audioBytes,
   blob,
@@ -10,6 +11,11 @@ import {
   transcribe,
 } from "vite-hub/agent/capabilities";
 import { telegram } from "vite-hub/agent/channels";
+import {
+  createCloudflareAgentState,
+  getActiveCloudflareEnv,
+  type ViteHubAgentStateDurableObjectNamespace,
+} from "vite-hub/agent/cloudflare";
 import { useDatabase } from "vite-hub/database/drizzle";
 import { useServerEnv } from "#vitehub/env/server";
 import { caloriesAgentInvocations } from "../../utils/agent-invocations";
@@ -20,6 +26,16 @@ import { verifiedMealId } from "./result";
 function openRouter() {
   return createOpenRouter({ apiKey: useServerEnv().openrouter.apiKey });
 }
+
+const cloudflareChatState = Object.assign(
+  () => {
+    const namespace = getActiveCloudflareEnv()?.CHAT_STATE as
+      | ViteHubAgentStateDurableObjectNamespace
+      | undefined;
+    return namespace ? createCloudflareAgentState({ namespace }) : undefined;
+  },
+  { workflowCustody: true as const },
+) as AgentChatStateResolver;
 
 export default defineAgent({
   invocations: caloriesAgentInvocations,
@@ -53,6 +69,7 @@ export default defineAgent({
         delivery: "manual",
         fallbackStreamingPlaceholderText: null,
         lockScope: "channel",
+        state: cloudflareChatState,
         triggerHistory: {
           maxAgeMs: 30 * 60 * 1_000,
           maxMessages: 20,

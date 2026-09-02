@@ -55,6 +55,8 @@ const publicToolTitles: Record<string, string> = {
 };
 
 const databaseCapabilityError = /Capability ["']db["'] requires the database primitive|@vite-hub\/database\/drizzle/;
+const cloudflareRuntimeError = /^The Workers runtime canceled this request because /;
+const genericInvocationError = "The agent stopped before completing this request. Use the trace ID shown in this session to find the matching Worker logs.";
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -258,9 +260,22 @@ function publicInvocationError(error: unknown): { message: string; name: string 
     };
   }
 
+  const safeMessage = cloudflareRuntimeError.test(message) ? message
+    .replace(/\b(?:data|blob):[^\s"'<>]+/gi, "[data omitted]")
+    .replace(/\bhttps?:\/\/[^\s"'<>]+/gi, "[URL omitted]")
+    .replace(
+      /\b(authorization|api[ _-]?key|token|secret|password)\b\s*[:=]\s*(?:bearer\s+)?(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+      "$1: [redacted]",
+    )
+    .replace(/\bbearer\s+[^\s,;]+/gi, "Bearer [redacted]")
+    .replace(/\b\d{6,}:[A-Za-z0-9_-]{16,}\b/g, "[credential redacted]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 512) : "";
+
   return {
-    message: "The agent stopped before completing this request. Use the trace ID shown in this session to find the matching Worker logs.",
-    name: "Invocation failed",
+    message: safeMessage || genericInvocationError,
+    name: name && name !== "Error" ? name.slice(0, 80) : "Invocation failed",
   };
 }
 

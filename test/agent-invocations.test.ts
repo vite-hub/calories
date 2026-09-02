@@ -308,6 +308,61 @@ describe("publicObservation", () => {
 });
 
 describe("public Console metadata", () => {
+  it("retains the Cloudflare hung-Worker diagnosis while redacting credentials and URLs", () => {
+    const privateError = "The Workers runtime canceled this request because it detected that the Worker had hung and would never generate a response. Refer to https://developers.cloudflare.com/workers/observability/errors/ with Authorization: Bearer private-openrouter-token";
+    const record = publicRecord({
+      agentName: "calories",
+      createdAt: "2026-09-02T09:41:07.627Z",
+      cursor: "193",
+      error: {
+        message: privateError,
+        name: "Error",
+      },
+      failedAt: "2026-09-02T09:41:10.670Z",
+      id: "invocation-1",
+      observations: [],
+      status: "failed",
+      traceId: "trace-1",
+      updatedAt: "2026-09-02T09:41:10.670Z",
+    });
+
+    assert.equal(record.error?.name, "Invocation failed");
+    assert.match(record.error?.message ?? "", /Worker had hung and would never generate a response/);
+    assert.match(record.error?.message ?? "", /\[URL omitted\]/);
+    assert.equal(JSON.stringify(record).includes("private-openrouter-token"), false);
+
+    const observation = publicObservation({
+      attributes: { "error.message": privateError, "error.name": "Error" },
+      name: "agent.invocation.error",
+      sequence: 1,
+      timestamp: "2026-09-02T09:41:10.670Z",
+      type: "error",
+    });
+    assert.match(String(observation.attributes?.["error.message"]), /Worker had hung and would never generate a response/);
+    assert.equal(JSON.stringify(observation).includes("private-openrouter-token"), false);
+  });
+
+  it("does not expose arbitrary application errors in the public Console", () => {
+    const record = publicRecord({
+      agentName: "calories",
+      createdAt: "2026-09-02T09:41:07.627Z",
+      cursor: "194",
+      error: {
+        message: "Failed to save private meal named Maxi's secret lunch",
+        name: "MealSaveError",
+      },
+      failedAt: "2026-09-02T09:41:10.670Z",
+      id: "invocation-2",
+      observations: [],
+      status: "failed",
+      traceId: "trace-2",
+      updatedAt: "2026-09-02T09:41:10.670Z",
+    });
+
+    assert.equal(record.error?.message, "The agent stopped before completing this request. Use the trace ID shown in this session to find the matching Worker logs.");
+    assert.equal(JSON.stringify(record).includes("secret lunch"), false);
+  });
+
   it("labels private invocations without exposing Telegram identities or meal text", () => {
     const record = publicRecord({
       agentName: "calories",
