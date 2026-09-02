@@ -43,10 +43,39 @@ index 20063ce08c9a093d0c3893ba985eb0bc040beedf..f94690be56b16e77dd5eac74410c5c38
  	return resolveConsoleInvocations()?.[consoleAgentsKey] ?? [];
 diff --git a/dist/console/runtime/public/console/console-message-overrides.css b/dist/console/runtime/public/console/console-message-overrides.css
 new file mode 100644
-index 0000000000000000000000000000000000000000..765e71732413e9bb0c423cee501c3c07b91fc546
+index 0000000000000000000000000000000000000000..b9024913e385c28fa6b5bb0c81912b7289fcd0bf
 --- /dev/null
 +++ b/dist/console/runtime/public/console/console-message-overrides.css
-@@ -0,0 +1,110 @@
+@@ -0,0 +1,146 @@
++.vitehub-console__sessions div:has(> button[disabled][aria-haspopup="menu"]) {
++  display: none;
++}
++
++.vitehub-console__sessions button:has(> [data-slot="trailing"] kbd) {
++  border: 1px solid var(--vh-ui-border);
++}
++
++.vitehub-console__sessions button:has(> [data-slot="trailing"] kbd) > [data-slot="trailing"] {
++  opacity: 0;
++  pointer-events: none;
++  transform: translateX(0.25rem);
++  transition:
++    opacity 150ms ease,
++    transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
++}
++
++@media (hover: hover) and (pointer: fine) {
++  .vitehub-console__sessions button:has(> [data-slot="trailing"] kbd):hover > [data-slot="trailing"] {
++    opacity: 0.75;
++    transform: translateX(0);
++  }
++}
++
++.vitehub-console__sessions button:has(> [data-slot="trailing"] kbd):focus-visible > [data-slot="trailing"] {
++  opacity: 0.75;
++  transform: translateX(0);
++}
++
 +.vh-invocation-message {
 +  --vh-invocation-message-bg: color-mix(in oklab, var(--vh-ui-bg-elevated) 34%, transparent);
 +  background: var(--vh-invocation-message-bg);
@@ -155,6 +184,13 @@ index 0000000000000000000000000000000000000000..765e71732413e9bb0c423cee501c3c07
 +
 +  .vh-invocation-delivery__body {
 +    max-width: calc(100% - 3rem);
++  }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .vitehub-console__sessions button:has(> [data-slot="trailing"] kbd) > [data-slot="trailing"] {
++    transform: none;
++    transition: opacity 150ms ease;
 +  }
 +}
 diff --git a/dist/console/runtime/server/page.get.js b/dist/console/runtime/server/page.get.js

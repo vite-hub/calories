@@ -28,4 +28,8 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(messageStyles, /content: "You"/);
   assert.match(messageStyles, /content: "Assistant"/);
   assert.match(messageStyles, /\.vh-invocation-delivery__body/);
+  assert.match(messageStyles, /button\[disabled\]\[aria-haspopup="menu"\]/);
+  assert.match(messageStyles, /button:has\(> \[data-slot="trailing"\] kbd\)/);
+  assert.match(messageStyles, /@media \(hover: hover\) and \(pointer: fine\)/);
+  assert.match(messageStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
