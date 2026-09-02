@@ -42,6 +42,8 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(messageStyles, /\.vh-invocation-identifiers/);
   assert.match(messageStyles, /\.vh-invocation-brand__logo\.vh-sidebar-model__logo/);
   assert.match(messageStyles, /\.vh-invocation-brand__glyph/);
+  assert.match(messageStyles, /\.vh-vitehub-effect__details/);
+  assert.match(messageStyles, /grid-template-columns: 4\.8rem minmax\(0, 1fr\)/);
   assert.match(messageStyles, /object-fit: contain/);
 
   assert.match(invocationEnhancer, /OpenRouter/);
@@ -71,6 +73,9 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(invocationEnhancer, /modelMaker/);
   assert.match(invocationEnhancer, /\/_vitehub\/assets\/brands/);
   assert.match(invocationEnhancer, /document\.createElement\("img"\)/);
+  assert.match(invocationEnhancer, /effectConfiguration/);
+  assert.match(invocationEnhancer, /aria-expanded/);
+  assert.match(invocationEnhancer, /show details/);
   assert.doesNotMatch(invocationEnhancer, /--vh-brand-icon/);
   assert.doesNotMatch(invocationEnhancer, /Partial setup/);
 

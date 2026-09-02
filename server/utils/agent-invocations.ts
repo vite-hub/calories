@@ -43,6 +43,7 @@ const publicAttributeKeys = new Set([
   "vitehub.agent.configurationTruncated",
   "vitehub.inspect.target",
   "vitehub.observation.truncated",
+  "vitehub.session.title",
 ]);
 
 const publicToolTitles: Record<string, string> = {
@@ -361,6 +362,34 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
 
 type PublicAgentInvocationRecord = AgentInvocationRecord & { title: string };
 
+function consoleInvocationTitle(
+  status: AgentInvocationRecord["status"],
+  observations: readonly TraceEventLogEntry[],
+): string {
+  const title = [...observations].reverse().find((observation) => (
+    observation.name === "agent.title.recorded"
+    && stringValue(observation.attributes?.["vitehub.session.title"])
+  ))?.attributes?.["vitehub.session.title"];
+  const explicitTitle = stringValue(title);
+  if (explicitTitle) return explicitTitle.replace(/\s+/g, " ").slice(0, 120);
+
+  if (status === "pending" || status === "running") return "Working…";
+
+  const deliveredReply = [...observations].reverse().find((observation) => (
+    observation.attributes?.["channel.effect.kind"] === "reply"
+    && stringValue(observation.attributes?.["channel.effect.content"])
+  ))?.attributes?.["channel.effect.content"];
+  const finalResult = [...observations].reverse().find((observation) => (
+    stringValue(observation.attributes?.["result.text"])
+  ))?.attributes?.["result.text"];
+  const terminalTitle = stringValue(deliveredReply) ?? stringValue(finalResult);
+  if (terminalTitle) return terminalTitle.replace(/\s+/g, " ").slice(0, 120);
+
+  if (status === "failed") return "Failed session";
+  if (status === "cancelled") return "Cancelled session";
+  return "Completed session";
+}
+
 export function publicRecord(record: AgentInvocationRecord): PublicAgentInvocationRecord {
   const sanitized = record.observations.map(publicObservation);
   const hasReply = sanitized.some((observation) => (
@@ -398,7 +427,7 @@ export function publicRecord(record: AgentInvocationRecord): PublicAgentInvocati
     ...(record.observationsTruncated ? { observationsTruncated: true } : {}),
     ...(record.startedAt ? { startedAt: record.startedAt } : {}),
     status: record.status,
-    title: "Meal request",
+    title: consoleInvocationTitle(record.status, observations),
     traceId: record.traceId,
     updatedAt: record.updatedAt,
   };

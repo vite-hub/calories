@@ -261,10 +261,10 @@ index 0000000000000000000000000000000000000000..1a47fd72e471ca129c8b5f12236f623c
 +<svg fill="currentColor" fill-rule="evenodd" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><title>Z.ai</title><path d="M12.105 2L9.927 4.953H.653L2.83 2h9.276zM23.254 19.048L21.078 22h-9.242l2.174-2.952h9.244zM24 2L9.264 22H0L14.736 2H24z"></path></svg>
 diff --git a/dist/console/runtime/public/console/console-invocation-overrides.js b/dist/console/runtime/public/console/console-invocation-overrides.js
 new file mode 100644
-index 0000000000000000000000000000000000000000..d8d3aa0e55a41c8e2a4b2da6190e2ea4ef29f6e9
+index 0000000000000000000000000000000000000000..16c92cc3e2023a0d0aa36449313286372aa3f129
 --- /dev/null
 +++ b/dist/console/runtime/public/console/console-invocation-overrides.js
-@@ -0,0 +1,682 @@
+@@ -0,0 +1,751 @@
 +(() => {
 +  const descriptions = {
 +    blob_edit: "Put or delete Blob objects from an attachment, workspace file, or provided body.",
@@ -396,6 +396,17 @@ index 0000000000000000000000000000000000000000..d8d3aa0e55a41c8e2a4b2da6190e2ea4
 +    svg.setAttribute("viewBox", "0 0 20 18");
 +    const path = document.createElementNS(svg.namespaceURI, "path");
 +    path.setAttribute("d", "M19.734 8.156 15.576.844A1.66 1.66 0 0 0 14.135 0H5.819C5.226 0 4.677.32 4.38.844L.222 8.156a1.71 1.71 0 0 0 0 1.688l4.158 7.312c.297.523.846.844 1.439.844h8.316c.593 0 1.142-.32 1.438-.844l4.158-7.312c.3-.523.3-1.165.003-1.688Z");
++    svg.append(path);
++    return svg;
++  }
++
++  function disclosureMark() {
++    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
++    svg.setAttribute("aria-hidden", "true");
++    svg.setAttribute("class", "vh-vitehub-effect__chevron");
++    svg.setAttribute("viewBox", "0 0 24 24");
++    const path = document.createElementNS(svg.namespaceURI, "path");
++    path.setAttribute("d", "m8 10 4 4 4-4");
 +    svg.append(path);
 +    return svg;
 +  }
@@ -756,28 +767,86 @@ index 0000000000000000000000000000000000000000..d8d3aa0e55a41c8e2a4b2da6190e2ea4
 +    }
 +  }
 +
++  function effectConfiguration(activity) {
++    const sequence = Number(activity.dataset.activityId?.split(":").at(-1));
++    if (!Number.isFinite(sequence)) return;
++    return (detail?.observations ?? []).find((observation) => observation?.sequence === sequence)
++      ?.attributes?.["vitehub.agent.configuration"];
++  }
++
++  function appendEffectDetail(list, label, values) {
++    const available = values.filter((value) => typeof value === "string" && value);
++    if (!available.length) return;
++    const row = element("div", "vh-vitehub-effect__row");
++    const value = element("dd");
++    value.append(...available.map((item) => element("code", "", item)));
++    row.append(element("dt", "", label), value);
++    list.append(row);
++  }
++
++  function effectDetails(activity) {
++    const config = effectConfiguration(activity);
++    if (!config || typeof config !== "object") return;
++    const list = element("dl", "vh-vitehub-effect__details");
++    const model = config.driver?.model;
++    if (model?.id) {
++      appendEffectDetail(list, "Model", [model.id]);
++      appendEffectDetail(list, "Provider", [brand(model.provider)?.label]);
++    } else {
++      appendEffectDetail(list, "Driver", [config.driver?.kind]);
++    }
++    appendEffectDetail(list, "Capabilities", (config.capabilities ?? []).map((capability) => capability?.id));
++    appendEffectDetail(list, "Tools", (config.tools ?? []).map((tool) => tool?.name));
++    return list.childElementCount ? list : undefined;
++  }
++
 +  function enhanceEffects() {
 +    for (const activity of document.querySelectorAll(".vh-invocation-activity[data-kind=\"system\"]")) {
-+      if (activity.dataset.vhEffect === "true") continue;
-+      const summary = activity.querySelector(".vh-invocation-event__summary");
++      let summary = activity.querySelector(".vh-invocation-event__summary");
 +      const title = summary?.querySelector(".vh-invocation-event__title");
-+      if (!summary || title?.textContent?.trim() !== "Agent configured") continue;
-+      const suffix = summary.querySelector(".vh-invocation-event__suffix");
-+      const parts = suffix?.textContent?.split("·").map((part) => part.trim()).filter(Boolean) ?? [];
-+      const capabilities = parts.find((part) => /capabilit(?:y|ies)$/i.test(part));
-+      const tools = parts.find((part) => /tools?$/i.test(part));
-+      const configuredModel = parts.find((part) => part !== capabilities && part !== tools);
-+      const counts = [capabilities, tools].filter(Boolean);
-+      const effectDetail = counts.length > 1 ? `${counts[0]} and ${counts[1]}` : counts[0];
-+      const label = configuredModel
-+        ? `Configured ${modelName(configuredModel)}${effectDetail ? ` with ${effectDetail}` : ""}`
-+        : `Configured${effectDetail ? ` ${effectDetail}` : " agent"}`;
-+      title.textContent = label;
-+      suffix?.remove();
-+      summary.querySelector(".vh-invocation-event__icon")?.replaceChildren(viteHubMark());
-+      activity.classList.add("vh-vitehub-effect");
-+      activity.dataset.vhEffect = "true";
-+      summary.setAttribute("aria-label", label);
++      if (!summary || (activity.dataset.vhEffect !== "true" && title?.textContent?.trim() !== "Agent configured")) continue;
++      if (activity.dataset.vhEffect !== "true") {
++        const suffix = summary.querySelector(".vh-invocation-event__suffix");
++        const parts = suffix?.textContent?.split("·").map((part) => part.trim()).filter(Boolean) ?? [];
++        const capabilities = parts.find((part) => /capabilit(?:y|ies)$/i.test(part));
++        const tools = parts.find((part) => /tools?$/i.test(part));
++        const configuredModel = parts.find((part) => part !== capabilities && part !== tools);
++        const counts = [capabilities, tools].filter(Boolean);
++        const effectDetail = counts.length > 1 ? `${counts[0]} and ${counts[1]}` : counts[0];
++        const label = configuredModel
++          ? `Configured ${modelName(configuredModel)}${effectDetail ? ` with ${effectDetail}` : ""}`
++          : `Configured${effectDetail ? ` ${effectDetail}` : " agent"}`;
++        title.textContent = label;
++        suffix?.remove();
++        summary.querySelector(".vh-invocation-event__icon")?.replaceChildren(viteHubMark());
++        activity.classList.add("vh-vitehub-effect");
++        activity.dataset.vhEffect = "true";
++        summary.setAttribute("aria-label", label);
++      }
++      if (summary.dataset.vhDisclosure === "true") continue;
++      const details = effectDetails(activity);
++      if (!details) continue;
++      const label = summary.querySelector(".vh-invocation-event__title")?.textContent?.trim() ?? "Configuration";
++      const id = `vitehub-effect-${activity.dataset.activityId?.replace(/[^a-z0-9_-]/gi, "-") ?? "details"}`;
++      details.id = id;
++      details.hidden = true;
++      const trigger = summary.cloneNode(true);
++      trigger.dataset.vhDisclosure = "true";
++      trigger.setAttribute("aria-controls", id);
++      trigger.setAttribute("aria-expanded", "false");
++      trigger.setAttribute("aria-label", `${label}, show details`);
++      trigger.append(disclosureMark());
++      summary.replaceWith(trigger);
++      summary = trigger;
++      summary.parentElement.append(details);
++      summary.addEventListener("click", (event) => {
++        event.preventDefault();
++        event.stopImmediatePropagation();
++        const expanded = summary.getAttribute("aria-expanded") !== "true";
++        summary.setAttribute("aria-expanded", String(expanded));
++        summary.setAttribute("aria-label", `${label}, ${expanded ? "hide" : "show"} details`);
++        details.hidden = !expanded;
++      }, { capture: true });
 +    }
 +  }
 +
@@ -949,10 +1018,10 @@ index 0000000000000000000000000000000000000000..d8d3aa0e55a41c8e2a4b2da6190e2ea4
 +})();
 diff --git a/dist/console/runtime/public/console/console-message-overrides.css b/dist/console/runtime/public/console/console-message-overrides.css
 new file mode 100644
-index 0000000000000000000000000000000000000000..10a94bfd3e5262595eb200d687d44444b0e39d74
+index 0000000000000000000000000000000000000000..4908cb5ae90511cc63aaf546b2ac8c3f76246af6
 --- /dev/null
 +++ b/dist/console/runtime/public/console/console-message-overrides.css
-@@ -0,0 +1,794 @@
+@@ -0,0 +1,850 @@
 +.vitehub-console,
 +.vitehub-console > * {
 +  max-width: none;
@@ -1083,14 +1152,14 @@ index 0000000000000000000000000000000000000000..10a94bfd3e5262595eb200d687d44444
 +  background: transparent !important;
 +  border: 0 !important;
 +  border-radius: 0 !important;
-+  margin-block: 0.65rem !important;
++  margin-block: 0.38rem !important;
 +  padding: 0 !important;
 +}
 +
 +.vh-vitehub-effect .vh-invocation-event__summary {
 +  color: var(--vh-ui-muted);
-+  gap: 0.55rem;
-+  min-height: 1.5rem;
++  gap: 0.4rem;
++  min-height: 1.25rem;
 +  padding: 0;
 +}
 +
@@ -1101,22 +1170,78 @@ index 0000000000000000000000000000000000000000..10a94bfd3e5262595eb200d687d44444
 +}
 +
 +.vh-vitehub-effect .vh-invocation-event__icon {
-+  flex-basis: 1rem;
-+  height: 1rem;
-+  width: 1rem;
++  flex-basis: 0.82rem;
++  height: 0.82rem;
++  width: 0.82rem;
 +}
 +
 +.vh-vitehub-effect .vh-vitehub-mark {
 +  fill: currentColor;
-+  height: 0.78rem;
++  height: 0.64rem;
 +  opacity: 0.7;
 +  stroke: none;
-+  width: 0.86rem;
++  width: 0.71rem;
 +}
 +
 +.vh-vitehub-effect .vh-invocation-event__title {
-+  font-size: 0.8125rem;
++  font-size: 0.75rem;
 +  font-weight: 450;
++}
++
++.vh-vitehub-effect__chevron {
++  fill: none;
++  height: 0.72rem;
++  margin-inline-start: 0.08rem;
++  stroke: currentColor;
++  stroke-linecap: round;
++  stroke-linejoin: round;
++  stroke-width: 1.7;
++  transition: transform 150ms ease;
++  width: 0.72rem;
++}
++
++.vh-vitehub-effect [aria-expanded="true"] .vh-vitehub-effect__chevron {
++  transform: rotate(180deg);
++}
++
++.vh-vitehub-effect__details {
++  display: grid;
++  gap: 0.24rem;
++  margin: 0.3rem 0 0.45rem 1.22rem;
++}
++
++.vh-vitehub-effect__details[hidden] {
++  display: none;
++}
++
++.vh-vitehub-effect__row {
++  align-items: baseline;
++  display: grid;
++  gap: 0.5rem;
++  grid-template-columns: 4.8rem minmax(0, 1fr);
++}
++
++.vh-vitehub-effect__row dt {
++  color: var(--vh-ui-dimmed);
++  font-size: 0.6875rem;
++}
++
++.vh-vitehub-effect__row dd {
++  align-items: center;
++  color: var(--vh-ui-muted);
++  display: flex;
++  flex-wrap: wrap;
++  font-size: 0.6875rem;
++  gap: 0.2rem 0.48rem;
++  margin: 0;
++  min-width: 0;
++}
++
++.vh-vitehub-effect__row code {
++  color: inherit;
++  font-family: var(--font-mono, ui-monospace, monospace);
++  font-size: 0.65rem;
++  overflow-wrap: anywhere;
 +}
 +
 +[data-slot="invocation"] .vh-vitehub-effect[data-selected="true"] {

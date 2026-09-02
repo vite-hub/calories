@@ -115,6 +115,18 @@ describe("publicObservation", () => {
     assert.equal(JSON.stringify(observation).includes("private-chat-id"), false);
   });
 
+  it("keeps a generated session title for the Console", () => {
+    const observation = publicObservation({
+      attributes: { "vitehub.session.title": "Eggs and toast breakfast" },
+      name: "agent.title.recorded",
+      sequence: 4,
+      timestamp: "2026-08-26T10:20:00.000Z",
+      type: "run",
+    });
+
+    assert.equal(observation.attributes?.["vitehub.session.title"], "Eggs and toast breakfast");
+  });
+
   it("uses the delivered reply instead of a duplicate completion message", () => {
     const record = publicRecord({
       agentName: "calories",
@@ -401,11 +413,74 @@ describe("public Console metadata", () => {
       updatedAt: "2026-08-26T10:20:25.290Z",
     });
 
-    assert.equal(record.title, "Meal request");
+    assert.equal(record.title, "Completed session");
     assert.equal(record.channelId, "telegram");
     assert.equal(record.origin, "telegram");
     assert.equal(record.threadId, undefined);
     assert.equal(JSON.stringify(record).includes("private"), false);
+  });
+
+  it("prefers a generated title over the delivered reply", () => {
+    const record = publicRecord({
+      agentName: "calories",
+      completedAt: "2026-08-26T10:20:25.290Z",
+      createdAt: "2026-08-26T10:19:58.587Z",
+      cursor: "1",
+      id: "invocation-title",
+      observations: [
+        {
+          attributes: { "vitehub.session.title": "Eggs and toast breakfast" },
+          name: "agent.title.recorded",
+          sequence: 1,
+          timestamp: "2026-08-26T10:20:00.000Z",
+          type: "run",
+        },
+        {
+          attributes: {
+            "channel.delivery.provider": "telegram",
+            "channel.effect.content": "Meal saved. 640 kcal and 42 g protein.",
+            "channel.effect.kind": "reply",
+          },
+          name: "agent.channel.delivery.effect",
+          sequence: 2,
+          timestamp: "2026-08-26T10:20:24.000Z",
+          type: "run",
+        },
+      ],
+      status: "completed",
+      traceId: "trace-title",
+      updatedAt: "2026-08-26T10:20:25.290Z",
+    });
+
+    assert.equal(record.title, "Eggs and toast breakfast");
+  });
+
+  it("uses a neutral title while running and the delivered reply after completion", () => {
+    const base = {
+      agentName: "calories",
+      createdAt: "2026-08-26T10:19:58.587Z",
+      cursor: "1",
+      id: "invocation-fallback",
+      observations: [{
+        attributes: {
+          "channel.delivery.provider": "telegram",
+          "channel.effect.content": "Meal saved. 640 kcal and 42 g protein.",
+          "channel.effect.kind": "reply",
+        },
+        name: "agent.channel.delivery.effect",
+        sequence: 1,
+        timestamp: "2026-08-26T10:20:24.000Z",
+        type: "run" as const,
+      }],
+      traceId: "trace-fallback",
+      updatedAt: "2026-08-26T10:20:25.290Z",
+    };
+
+    assert.equal(publicRecord({ ...base, status: "running" }).title, "Working…");
+    assert.equal(
+      publicRecord({ ...base, completedAt: base.updatedAt, status: "completed" }).title,
+      "Meal saved. 640 kcal and 42 g protein.",
+    );
   });
 
   it("searches retained message text but not private tool payloads", () => {
