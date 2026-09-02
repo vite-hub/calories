@@ -43,10 +43,10 @@ index 20063ce08c9a093d0c3893ba985eb0bc040beedf..f94690be56b16e77dd5eac74410c5c38
  	return resolveConsoleInvocations()?.[consoleAgentsKey] ?? [];
 diff --git a/dist/console/runtime/public/console/console-invocation-overrides.js b/dist/console/runtime/public/console/console-invocation-overrides.js
 new file mode 100644
-index 0000000000000000000000000000000000000000..c2fda273cec3ad9c3158a5e5cedb71e8ed25fe68
+index 0000000000000000000000000000000000000000..a2fba6114e589f96ee679f3fad70016f6e3fa24d
 --- /dev/null
 +++ b/dist/console/runtime/public/console/console-invocation-overrides.js
-@@ -0,0 +1,204 @@
+@@ -0,0 +1,375 @@
 +(() => {
 +  const descriptions = {
 +    blob_edit: "Put or delete Blob objects from an attachment, workspace file, or provided body.",
@@ -76,6 +76,71 @@ index 0000000000000000000000000000000000000000..c2fda273cec3ad9c3158a5e5cedb71e8
 +    if (className) node.className = className;
 +    if (text !== undefined) node.textContent = text;
 +    return node;
++  }
++
++  function telegramMark(className = "") {
++    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
++    svg.setAttribute("aria-hidden", "true");
++    svg.setAttribute("class", `vh-channel__logo ${className}`.trim());
++    svg.setAttribute("viewBox", "0 0 24 24");
++    const path = document.createElementNS(svg.namespaceURI, "path");
++    path.setAttribute("d", "M21.6 3.1 18.4 20c-.24 1.2-.87 1.5-1.77.94l-4.88-3.6-2.35 2.27c-.26.26-.48.48-.98.48l.35-4.97 9.04-8.17c.39-.35-.09-.55-.61-.2L6.03 13.8l-4.81-1.5c-1.05-.33-1.07-1.05.22-1.55L20.25 3.5c.87-.32 1.63.2 1.35-.4Z");
++    svg.append(path);
++    return svg;
++  }
++
++  function channelMeta(label) {
++    const meta = element("span", "vh-channel");
++    meta.append(element("strong", "", label), element("span", "vh-channel__separator", "via"), telegramMark(), element("span", "", "Telegram"));
++    return meta;
++  }
++
++  function copyIcon() {
++    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
++    svg.setAttribute("aria-hidden", "true");
++    svg.setAttribute("viewBox", "0 0 24 24");
++    const rect = document.createElementNS(svg.namespaceURI, "rect");
++    rect.setAttribute("x", "8");
++    rect.setAttribute("y", "8");
++    rect.setAttribute("width", "12");
++    rect.setAttribute("height", "12");
++    rect.setAttribute("rx", "2");
++    const path = document.createElementNS(svg.namespaceURI, "path");
++    path.setAttribute("d", "M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2");
++    svg.append(rect, path);
++    return svg;
++  }
++
++  function showToast(message) {
++    let toast = document.querySelector(".vh-console-toast");
++    if (!toast) {
++      toast = element("div", "vh-console-toast");
++      toast.setAttribute("role", "status");
++      toast.setAttribute("aria-live", "polite");
++      document.body.append(toast);
++    }
++    toast.textContent = message;
++    toast.dataset.visible = "true";
++    window.clearTimeout(showToast.timer);
++    showToast.timer = window.setTimeout(() => {
++      toast.dataset.visible = "false";
++    }, 1800);
++  }
++
++  async function copyCurrentUrl() {
++    try {
++      await navigator.clipboard.writeText(window.location.href);
++    } catch {
++      const field = element("textarea");
++      field.value = window.location.href;
++      field.style.position = "fixed";
++      field.style.opacity = "0";
++      document.body.append(field);
++      field.select();
++      document.execCommand("copy");
++      field.remove();
++    }
++    showToast("Link copied");
 +  }
 +
 +  function configuration() {
@@ -174,6 +239,7 @@ index 0000000000000000000000000000000000000000..c2fda273cec3ad9c3158a5e5cedb71e8
 +    if (group.dataset.vhExecution === version) return;
 +    group.dataset.vhExecution = version;
 +    group.classList.add("vh-invocation-inspector__group--execution");
++    group.querySelector(":scope > .vh-invocation-inspector__group-heading")?.remove();
 +    group.querySelector(":scope > dl")?.remove();
 +    group.querySelector(":scope > .vh-invocation-execution")?.remove();
 +    const maker = brand(model.id.includes("/") ? model.id.split("/")[0] : undefined);
@@ -202,8 +268,22 @@ index 0000000000000000000000000000000000000000..c2fda273cec3ad9c3158a5e5cedb71e8
 +    if (group.dataset.vhTools === signature) return;
 +    group.dataset.vhTools = signature;
 +    const used = rows.filter((tool) => (counts.get(tool.name) ?? 0) > 0).length;
-+    const summary = group.querySelector(":scope > .vh-invocation-inspector__group-heading small");
-+    if (summary) summary.textContent = `${used} of ${rows.length} used`;
++    group.classList.add("vh-invocation-inspector__group--runtime");
++    const heading = group.querySelector(":scope > .vh-invocation-inspector__group-heading");
++    const title = heading?.querySelector("strong");
++    const summary = heading?.querySelector("small");
++    if (title) title.textContent = "Capabilities & tools";
++    if (summary) summary.textContent = `${used} used`;
++    group.querySelector(":scope > .vh-runtime-capabilities")?.remove();
++    const capabilities = element("div", "vh-runtime-capabilities");
++    capabilities.append(element("span", "", "Capabilities"));
++    const capabilityList = element("ul");
++    for (const capability of configuration().capabilities ?? []) {
++      const name = typeof capability === "string" ? capability : capability?.id;
++      if (name) capabilityList.append(element("li", "", name));
++    }
++    capabilities.append(capabilityList);
++    group.append(capabilities);
 +    group.querySelector(":scope > ul, :scope > ol")?.remove();
 +    const list = element("ol", "vh-invocation-tool-list");
 +    for (const tool of rows) {
@@ -212,7 +292,7 @@ index 0000000000000000000000000000000000000000..c2fda273cec3ad9c3158a5e5cedb71e8
 +      item.dataset.used = count ? "true" : "false";
 +      const heading = element("div", "vh-invocation-tool-list__heading");
 +      heading.append(element("code", "", tool.name));
-+      const badge = element("span", "vh-invocation-tool-list__count", count || "—");
++      const badge = element("span", "vh-invocation-tool-list__count", count ? `${count} call${count === 1 ? "" : "s"}` : "Not used");
 +      badge.setAttribute("aria-label", count ? `${count} call${count === 1 ? "" : "s"}` : "Not used");
 +      heading.append(badge);
 +      const description = tool.description ?? descriptions[tool.name];
@@ -227,17 +307,108 @@ index 0000000000000000000000000000000000000000..c2fda273cec3ad9c3158a5e5cedb71e8
 +    group.append(list);
 +  }
 +
++  function enhanceThread() {
++    for (const list of document.querySelectorAll(".vh-invocation-activities")) {
++      const work = list.querySelector(":scope > .vh-invocation-work");
++      if (work) {
++        let anchor = work;
++        for (const delivery of list.querySelectorAll(":scope > .vh-invocation-activity[data-kind=\"delivery\"]")) {
++          if (anchor.nextElementSibling !== delivery) anchor.after(delivery);
++          anchor = delivery;
++        }
++      }
++      for (const message of list.querySelectorAll(":scope > .vh-invocation-message")) {
++        if (message.querySelector(":scope > .vh-channel")) continue;
++        const role = message.dataset.role === "user" ? "User" : message.dataset.role === "assistant" ? "Assistant" : undefined;
++        if (role) message.prepend(channelMeta(role));
++      }
++      for (const delivery of list.querySelectorAll(":scope > .vh-invocation-activity[data-kind=\"delivery\"]")) {
++        const body = delivery.querySelector(".vh-invocation-delivery__body");
++        if (body && !body.querySelector(":scope > .vh-channel")) body.prepend(channelMeta("Assistant"));
++      }
++    }
++  }
++
++  function enhanceSidebar() {
++    for (const item of document.querySelectorAll(".vh-invocation-list__item")) {
++      if (item.querySelector(".vh-invocation-list__branch")?.textContent?.trim().toLowerCase() !== "telegram") continue;
++      const harness = item.querySelector(".vh-invocation-list__harness");
++      if (!harness || harness.dataset.channel === "telegram") continue;
++      harness.dataset.channel = "telegram";
++      const channel = element("span", "vh-sidebar-channel");
++      channel.title = "Telegram";
++      channel.append(telegramMark(), element("span", "vh-visually-hidden", "Telegram"));
++      harness.replaceChildren(channel);
++    }
++  }
++
++  function enhanceHeader() {
++    const panel = document.querySelector("#vitehub-console-v2-panel-agent-session");
++    const actions = panel?.querySelector(".vitehub-console__session-navbar [data-slot=\"right\"]");
++    if (!actions) return;
++    const completed = Boolean(panel.querySelector("[data-slot=\"invocation\"][data-status=\"completed\"]"));
++    const refresh = actions.querySelector("button[aria-label=\"Refresh session\"]");
++    if (refresh) refresh.hidden = completed;
++    if (!actions.querySelector(".vh-copy-link")) {
++      const button = element("button", "vh-copy-link");
++      button.type = "button";
++      button.setAttribute("aria-label", "Copy session link");
++      button.title = "Copy link";
++      button.append(copyIcon());
++      button.addEventListener("click", copyCurrentUrl);
++      actions.insertBefore(button, actions.querySelector("button[data-slot=\"session-details-toggle\"]"));
++    }
++  }
++
++  function simplifyInspector(inspector) {
++    const metrics = inspector.querySelector(".vh-invocation-inspector__metrics");
++    if (metrics && !metrics.dataset.compact) {
++      metrics.dataset.compact = "true";
++      for (const metric of metrics.querySelectorAll(":scope > div")) {
++        const label = metric.querySelector("dt");
++        const value = metric.querySelector("dd");
++        const count = Number(value?.textContent ?? 0);
++        if (label) label.textContent = `${label.textContent?.trim().replace(/s$/i, "").toLowerCase()}${count === 1 ? "" : "s"}`;
++      }
++    }
++    const notice = inspector.querySelector(".vh-invocation-inspector__notice");
++    if (notice && notice.dataset.compact !== "true") {
++      notice.dataset.compact = "true";
++      const title = notice.querySelector("strong");
++      const copy = notice.querySelector("p");
++      if (title) title.textContent = "Partial setup";
++      if (copy) copy.textContent = "Some values weren't recorded.";
++    }
++    const setup = inspector.querySelector(".vh-invocation-inspector__groups")?.parentElement;
++    setup?.querySelector(":scope > h4")?.remove();
++    for (const group of inspector.querySelectorAll(".vh-invocation-inspector__group")) {
++      const title = group.querySelector(":scope > .vh-invocation-inspector__group-heading strong")?.textContent;
++      if (title === "Capabilities") group.remove();
++    }
++    inspector.querySelector(".session-inspector__instruction-fallback")?.remove();
++    const identifiers = [...inspector.querySelectorAll(":scope .vh-invocation-inspector__content > section")]
++      .find((section) => section.querySelector(":scope > h4")?.textContent?.trim() === "Identifiers");
++    if (identifiers) {
++      identifiers.classList.add("vh-invocation-identifiers");
++      identifiers.querySelector(":scope > h4")?.remove();
++    }
++  }
++
 +  function enhance() {
 +    scheduled = false;
++    enhanceThread();
++    enhanceSidebar();
++    enhanceHeader();
 +    const config = configuration();
 +    if (!detail || !config || !Array.isArray(config.tools)) return;
 +    for (const inspector of document.querySelectorAll(".vh-invocation-inspector")) {
++      simplifyInspector(inspector);
 +      const groups = inspector.querySelector(".vh-invocation-inspector__groups");
 +      if (!groups) continue;
 +      for (const group of groups.querySelectorAll(":scope > .vh-invocation-inspector__group")) {
 +        const title = group.querySelector(":scope > .vh-invocation-inspector__group-heading strong")?.textContent;
-+        if (title === "Execution") enhanceExecution(group, config);
-+        if (title === "Tools") enhanceTools(group, config.tools);
++        if (title === "Execution" || group.classList.contains("vh-invocation-inspector__group--execution")) enhanceExecution(group, config);
++        if (title === "Tools" || title === "Capabilities & tools") enhanceTools(group, config.tools);
 +      }
 +    }
 +  }
@@ -253,12 +424,62 @@ index 0000000000000000000000000000000000000000..c2fda273cec3ad9c3158a5e5cedb71e8
 +})();
 diff --git a/dist/console/runtime/public/console/console-message-overrides.css b/dist/console/runtime/public/console/console-message-overrides.css
 new file mode 100644
-index 0000000000000000000000000000000000000000..3378c6c949ded3acdfa3994f88311ab1808c4fb0
+index 0000000000000000000000000000000000000000..00f4121e8f799b70ebe840169f50a6650b09ca34
 --- /dev/null
 +++ b/dist/console/runtime/public/console/console-message-overrides.css
-@@ -0,0 +1,340 @@
+@@ -0,0 +1,531 @@
++.vitehub-console,
++.vitehub-console > * {
++  max-width: none;
++}
++
++html,
++body,
++#app,
++.vitehub-console {
++  margin: 0;
++  width: 100%;
++}
++
 +.vitehub-console__sessions div:has(> button[disabled][aria-haspopup="menu"]) {
 +  display: none;
++}
++
++.vh-sidebar-channel,
++.vh-channel {
++  align-items: center;
++  display: inline-flex;
++}
++
++.vh-sidebar-channel {
++  color: #229ed9;
++}
++
++.vh-channel__logo {
++  fill: currentColor;
++  height: 0.85rem;
++  width: 0.85rem;
++}
++
++.vh-channel {
++  color: var(--vh-ui-dimmed);
++  font-size: 0.6875rem;
++  gap: 0.28rem;
++  line-height: 1;
++}
++
++.vh-channel strong {
++  color: var(--vh-ui-muted);
++  font-weight: 600;
++}
++
++.vh-channel .vh-channel__logo {
++  color: #229ed9;
++  margin-inline-start: 0.1rem;
++}
++
++.vh-channel__separator {
++  opacity: 0.72;
 +}
 +
 +.vitehub-console__sessions button:has(> [data-slot="trailing"] kbd) {
@@ -312,37 +533,7 @@ index 0000000000000000000000000000000000000000..3378c6c949ded3acdfa3994f88311ab1
 +}
 +
 +.vh-invocation-message > .vh-visually-hidden:first-child {
-+  clip: auto;
-+  clip-path: none;
-+  color: var(--vh-ui-dimmed);
-+  font-size: 0;
-+  font-weight: 600;
-+  height: auto;
-+  line-height: 1;
-+  overflow: visible;
-+  position: static;
-+  white-space: normal;
-+  width: auto;
-+}
-+
-+.vh-invocation-message > .vh-visually-hidden:first-child::after {
-+  font-size: 0.6875rem;
-+}
-+
-+.vh-invocation-message[data-role="user"] > .vh-visually-hidden:first-child::after {
-+  content: "You";
-+}
-+
-+.vh-invocation-message[data-role="assistant"] > .vh-visually-hidden:first-child::after {
-+  content: "Assistant";
-+}
-+
-+.vh-invocation-message[data-role="system"] > .vh-visually-hidden:first-child::after {
-+  content: "System";
-+}
-+
-+.vh-invocation-message[data-role="tool"] > .vh-visually-hidden:first-child::after {
-+  content: "Tool";
++  display: none;
 +}
 +
 +.vh-invocation-message__content[data-collapsed="true"]::after {
@@ -364,11 +555,74 @@ index 0000000000000000000000000000000000000000..3378c6c949ded3acdfa3994f88311ab1
 +}
 +
 +.vh-invocation-delivery__body::before {
-+  color: var(--vh-ui-dimmed);
-+  content: "Assistant";
-+  font-size: 0.6875rem;
++  display: none;
++}
++
++.vh-invocation-work + .vh-invocation-activity[data-kind="delivery"] {
++  margin-block-start: 0.25rem;
++}
++
++.vh-copy-link {
++  align-items: center;
++  background: transparent;
++  border: 0;
++  border-radius: 0.375rem;
++  color: var(--vh-ui-muted);
++  cursor: pointer;
++  display: inline-flex;
++  justify-content: center;
++  padding: 0.375rem;
++  transition: background-color 140ms ease, color 140ms ease, transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
++}
++
++.vh-copy-link svg {
++  fill: none;
++  height: 1rem;
++  stroke: currentColor;
++  stroke-linecap: round;
++  stroke-linejoin: round;
++  stroke-width: 2;
++  width: 1rem;
++}
++
++.vh-copy-link:active {
++  transform: scale(0.96);
++}
++
++.vh-copy-link:focus-visible {
++  outline: 2px solid var(--vh-ui-text);
++  outline-offset: 2px;
++}
++
++@media (hover: hover) and (pointer: fine) {
++  .vh-copy-link:hover {
++    background: var(--vh-ui-bg-elevated);
++    color: var(--vh-ui-text);
++  }
++}
++
++.vh-console-toast {
++  background: var(--vh-ui-text);
++  border: 1px solid color-mix(in oklab, var(--vh-ui-text) 72%, var(--vh-ui-border));
++  border-radius: 999px;
++  bottom: 1.25rem;
++  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.14);
++  color: var(--vh-ui-bg);
++  font-size: 0.75rem;
 +  font-weight: 600;
-+  line-height: 1;
++  left: 50%;
++  opacity: 0;
++  padding: 0.5rem 0.75rem;
++  pointer-events: none;
++  position: fixed;
++  transform: translate(-50%, 0.4rem) scale(0.98);
++  transition: opacity 160ms ease, transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
++  z-index: 100;
++}
++
++.vh-console-toast[data-visible="true"] {
++  opacity: 1;
++  transform: translate(-50%, 0) scale(1);
 +}
 +
 +.vh-invocation-delivery__body .vh-invocation-event__markdown {
@@ -405,27 +659,69 @@ index 0000000000000000000000000000000000000000..3378c6c949ded3acdfa3994f88311ab1
 +}
 +
 +.vh-invocation-inspector__metrics {
-+  border-block: 1px solid var(--vh-ui-border);
-+  gap: 0;
++  align-items: center;
++  border: 0;
++  display: flex;
++  gap: 0.9rem;
 +}
 +
 +.vh-invocation-inspector__metrics > div {
++  align-items: baseline;
 +  background: transparent;
 +  border: 0;
 +  border-radius: 0;
-+  padding: 0.6rem 0.65rem;
++  display: inline-flex;
++  gap: 0.28rem;
++  padding: 0;
 +}
 +
 +.vh-invocation-inspector__metrics > div + div {
-+  border-inline-start: 1px solid var(--vh-ui-border);
++  border: 0;
++}
++
++.vh-invocation-inspector__metrics > div + div::before {
++  color: var(--vh-ui-dimmed);
++  content: "·";
++  margin-inline-end: 0.6rem;
++}
++
++.vh-invocation-inspector__metrics dt {
++  color: var(--vh-ui-dimmed);
++  font-size: 0.6875rem;
++  order: 2;
++}
++
++.vh-invocation-inspector__metrics dd {
++  color: var(--vh-ui-text);
++  font-size: 0.8125rem;
++  font-variant-numeric: tabular-nums;
++  font-weight: 650;
++  order: 1;
 +}
 +
 +.vh-invocation-inspector__notice {
-+  background: color-mix(in oklab, var(--ui-warning, #a16207) 7%, transparent);
++  align-items: baseline;
++  background: transparent;
 +  border: 0;
-+  border-inline-start: 2px solid color-mix(in oklab, currentColor 55%, transparent);
++  border-block: 1px solid color-mix(in oklab, var(--vh-ui-border) 75%, transparent);
 +  border-radius: 0;
-+  padding: 0.6rem 0.7rem;
++  color: var(--vh-ui-dimmed);
++  display: flex;
++  gap: 0.4rem;
++  padding: 0.55rem 0;
++}
++
++.vh-invocation-inspector__notice strong,
++.vh-invocation-inspector__notice p {
++  color: inherit;
++  font-size: 0.6875rem;
++  font-weight: 450;
++  margin: 0;
++}
++
++.vh-invocation-inspector__notice strong {
++  color: var(--vh-ui-muted);
++  font-weight: 620;
 +}
 +
 +.vh-invocation-inspector__groups {
@@ -447,18 +743,16 @@ index 0000000000000000000000000000000000000000..3378c6c949ded3acdfa3994f88311ab1
 +}
 +
 +.vh-invocation-inspector__group--execution {
-+  background:
-+    radial-gradient(circle at 95% 0%, color-mix(in oklab, var(--ui-primary, #2563eb) 9%, transparent), transparent 48%),
-+    color-mix(in oklab, var(--vh-ui-bg-elevated) 54%, transparent);
-+  border: 1px solid color-mix(in oklab, var(--vh-ui-border) 78%, transparent);
-+  border-radius: calc(var(--vh-ui-radius) * 1.2);
-+  padding: 0.8rem;
++  background: color-mix(in oklab, var(--vh-ui-bg-elevated) 42%, transparent);
++  border: 1px solid var(--vh-ui-border);
++  border-radius: calc(var(--vh-ui-radius) * 1.05);
++  padding: 0.75rem;
 +}
 +
 +.vh-invocation-execution {
 +  display: grid;
 +  gap: 0.65rem;
-+  margin-block-start: 0.65rem;
++  margin: 0;
 +}
 +
 +.vh-invocation-execution__model {
@@ -538,10 +832,41 @@ index 0000000000000000000000000000000000000000..3378c6c949ded3acdfa3994f88311ab1
 +  font-weight: 600;
 +}
 +
-+.vh-invocation-tool-list {
-+  border-block: 1px solid var(--vh-ui-border);
++.vh-invocation-inspector__group--runtime {
++  display: grid;
++  gap: 0.65rem;
++}
++
++.vh-runtime-capabilities {
++  align-items: baseline;
++  display: grid;
++  gap: 0.4rem;
++  grid-template-columns: auto minmax(0, 1fr);
++}
++
++.vh-runtime-capabilities > span {
++  color: var(--vh-ui-dimmed);
++  font-size: 0.65625rem;
++}
++
++.vh-runtime-capabilities ul {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 0.25rem 0.65rem;
 +  list-style: none;
-+  margin: 0.55rem 0 0;
++  margin: 0;
++  padding: 0;
++}
++
++.vh-runtime-capabilities li {
++  color: var(--vh-ui-muted);
++  font: 0.6875rem/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
++}
++
++.vh-invocation-tool-list {
++  border-block-start: 1px solid var(--vh-ui-border);
++  list-style: none;
++  margin: 0;
 +  padding: 0;
 +}
 +
@@ -574,17 +899,15 @@ index 0000000000000000000000000000000000000000..3378c6c949ded3acdfa3994f88311ab1
 +
 +.vh-invocation-tool-list__count {
 +  color: var(--vh-ui-dimmed);
-+  font: 0.6875rem/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
++  font: 0.625rem/1.3 ui-sans-serif, system-ui, sans-serif;
 +  font-variant-numeric: tabular-nums;
-+  min-width: 1.5rem;
++  min-width: 2.8rem;
 +  text-align: end;
 +}
 +
 +.vh-invocation-tool-list > li[data-used="true"] .vh-invocation-tool-list__count {
-+  background: color-mix(in oklab, var(--vh-ui-success) 11%, transparent);
-+  border-radius: 999px;
-+  color: color-mix(in oklab, var(--vh-ui-success) 60%, var(--vh-ui-text));
-+  padding: 0.08rem 0.4rem;
++  color: color-mix(in oklab, var(--vh-ui-success) 62%, var(--vh-ui-text));
++  font-weight: 600;
 +}
 +
 +.vh-invocation-tool-list p {
@@ -596,6 +919,45 @@ index 0000000000000000000000000000000000000000..3378c6c949ded3acdfa3994f88311ab1
 +  line-height: 1.45;
 +  margin: 0.22rem 2.25rem 0 0;
 +  overflow: hidden;
++}
++
++.vh-invocation-identifiers {
++  border-block-start: 1px solid var(--vh-ui-border);
++  padding-block-start: 0.75rem;
++}
++
++.vh-invocation-identifiers .vh-invocation-inspector__copy-list {
++  background: transparent;
++  border: 0;
++  border-radius: 0;
++  display: grid;
++  gap: 1rem;
++  grid-template-columns: repeat(2, minmax(0, 1fr));
++  padding: 0;
++}
++
++.vh-invocation-identifiers .vh-invocation-inspector__copy {
++  background: transparent;
++  border: 0;
++  border-radius: 0;
++  min-width: 0;
++  padding: 0;
++}
++
++.vh-invocation-identifiers .vh-invocation-inspector__copy:last-child {
++  justify-self: end;
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .vh-copy-link,
++  .vh-console-toast {
++    transform: none;
++    transition: opacity 150ms ease;
++  }
++
++  .vh-console-toast[data-visible="true"] {
++    transform: none;
++  }
 +}
 diff --git a/dist/console/runtime/server/page.get.js b/dist/console/runtime/server/page.get.js
 index a2a673da1f42f2343a057e549016532d272a67e6..679c92fab1997fd0cb5b8f061870367e908d523a 100644

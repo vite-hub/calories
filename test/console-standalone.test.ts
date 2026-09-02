@@ -27,8 +27,9 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(page, /\/_vitehub\/assets\/console-invocation-overrides\.js/);
   assert.doesNotMatch(page, /\/_nuxt\//);
 
-  assert.match(messageStyles, /content: "You"/);
-  assert.match(messageStyles, /content: "Assistant"/);
+  assert.match(messageStyles, /\.vh-channel__logo/);
+  assert.match(messageStyles, /\.vh-copy-link/);
+  assert.match(messageStyles, /\.vh-console-toast/);
   assert.match(messageStyles, /\.vh-invocation-delivery__body/);
   assert.match(messageStyles, /button\[disabled\]\[aria-haspopup="menu"\]/);
   assert.match(messageStyles, /button:has\(> \[data-slot="trailing"\] kbd\)/);
@@ -43,4 +44,12 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(invocationEnhancer, /tool\.name/);
   assert.match(invocationEnhancer, /tool\.id/);
   assert.match(invocationEnhancer, /Put or delete Blob objects/);
+  assert.match(invocationEnhancer, /enhanceThread/);
+  assert.match(invocationEnhancer, /anchor\.after\(delivery\)/);
+  assert.match(invocationEnhancer, /channelMeta\("Assistant"\)/);
+  assert.match(invocationEnhancer, /Capabilities & tools/);
+  assert.match(invocationEnhancer, /Partial setup/);
+  assert.match(invocationEnhancer, /Copy session link/);
+  assert.match(invocationEnhancer, /refresh\.hidden = completed/);
+  assert.match(invocationEnhancer, /session-inspector__instruction-fallback/);
 });
