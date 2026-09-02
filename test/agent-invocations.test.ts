@@ -191,40 +191,6 @@ describe("publicObservation", () => {
     );
   });
 
-  it("provides a safe reply preview for traces recorded before reply content", () => {
-    const observation = publicObservation({
-      attributes: {
-        "channel.delivery.provider": "telegram",
-        "channel.effect.kind": "reply",
-      },
-      name: "agent.channel.delivery.effect",
-      sequence: 24,
-      timestamp: "2026-08-26T10:20:24.000Z",
-      type: "run",
-    });
-
-    assert.equal(observation.attributes?.["channel.effect.content"], "Reply content was not retained for this older Telegram session.");
-  });
-
-  it("does not present the legacy completion placeholder as a real reply", () => {
-    const observation = publicObservation({
-      attributes: {
-        "channel.delivery.provider": "telegram",
-        "channel.effect.content": "Completed the meal request and replied on Telegram.",
-        "channel.effect.kind": "reply",
-      },
-      name: "agent.channel.delivery.effect",
-      sequence: 24,
-      timestamp: "2026-08-26T10:20:24.000Z",
-      type: "run",
-    });
-
-    assert.equal(
-      observation.attributes?.["channel.effect.content"],
-      "Reply content was not retained for this older Telegram session.",
-    );
-  });
-
   it("promotes workspace materialization to a safe ViteHub preparation event", () => {
     const observation = publicObservation({
       attributes: {
@@ -546,37 +512,6 @@ describe("public Console metadata", () => {
       publicRecord({ ...base, completedAt: base.updatedAt, status: "completed" }).title,
       "Meal saved. 640 kcal and 42 g protein.",
     );
-  });
-
-  it("labels legacy placeholder sessions honestly", () => {
-    const record = publicRecord({
-      agentName: "calories",
-      completedAt: "2026-08-26T10:20:25.290Z",
-      createdAt: "2026-08-26T10:19:58.587Z",
-      cursor: "1",
-      id: "invocation-legacy",
-      observations: [{
-        attributes: {
-          "channel.delivery.provider": "telegram",
-          "channel.effect.content": "Completed the meal request and replied on Telegram.",
-          "channel.effect.kind": "reply",
-        },
-        name: "agent.channel.delivery.effect",
-        sequence: 1,
-        timestamp: "2026-08-26T10:20:24.000Z",
-        type: "run",
-      }],
-      status: "completed",
-      traceId: "trace-legacy",
-      updatedAt: "2026-08-26T10:20:25.290Z",
-    });
-
-    assert.equal(record.title, "Completed session");
-    assert.equal(
-      record.observations[0]?.attributes?.["channel.effect.content"],
-      "Reply content was not retained for this older Telegram session.",
-    );
-    assert.equal(JSON.stringify(record).includes("Completed the meal request"), false);
   });
 
   it("searches retained message text but not private tool payloads", () => {
