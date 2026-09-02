@@ -23,6 +23,7 @@ const publicAttributeKeys = new Set([
   "invocation.durationMs",
   "model.call.id",
   "result.hasValue",
+  "result.text",
   "runtime.name",
   "step.id",
   "tool.durationMs",
@@ -59,6 +60,8 @@ const databaseCapabilityError = /Capability ["']db["'] requires the database pri
 const cloudflareRuntimeError = /^The Workers runtime canceled this request because /;
 const workflowInputPortabilityError = /^Agent Workflow inputs must contain only JSON-compatible values\.$/;
 const genericInvocationError = "The agent stopped before completing this request. Use the trace ID shown in this session to find the matching Worker logs.";
+const legacyCompletionMessage = "Completed the meal request and replied on Telegram.";
+const missingReplyMessage = "Reply content was not retained for this older Telegram session.";
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -292,7 +295,9 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
   const attributes: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(entry.attributes ?? {})) {
     if (!publicAttributeKeys.has(key)) continue;
-    if (typeof value === "string") attributes[key] = value.slice(0, key === "channel.effect.content" ? 4_096 : 256);
+    if (typeof value === "string") {
+      attributes[key] = value.slice(0, key === "channel.effect.content" || key === "result.text" ? 4_096 : 256);
+    }
     else if (typeof value === "number" && Number.isFinite(value)) attributes[key] = value;
     else if (typeof value === "boolean" || value === null) attributes[key] = value;
   }
@@ -301,12 +306,15 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
   if (configuration) attributes["vitehub.agent.configuration"] = configuration;
 
   const isTelegramInvocation = entry.attributes?.["channel.delivery.provider"] === "telegram";
+  if (attributes["channel.effect.content"] === legacyCompletionMessage) {
+    attributes["channel.effect.content"] = missingReplyMessage;
+  }
   if (
     isTelegramInvocation
     && entry.attributes?.["channel.effect.kind"] === "reply"
     && !stringValue(attributes["channel.effect.content"])
   ) {
-    attributes["channel.effect.content"] = "Reply content was not retained for this older Telegram session.";
+    attributes["channel.effect.content"] = missingReplyMessage;
   }
   if (
     entry.name === "agent.invocation.start"
@@ -319,11 +327,8 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
     attributes["input.messages"] = triggerMessages(entry.attributes?.["input.messages"]);
   }
 
-  if (
-    entry.name === "agent.invocation.finish"
-    && (isTelegramInvocation || entry.attributes?.["result.hasValue"] === true)
-  ) {
-    attributes["result.text"] = "Completed the meal request and replied on Telegram.";
+  if (attributes["result.text"] === legacyCompletionMessage) {
+    attributes["result.text"] = missingReplyMessage;
   }
 
   const toolName = stringValue(entry.attributes?.["tool.name"]);
@@ -377,17 +382,22 @@ function consoleInvocationTitle(
 
   const deliveredReply = [...observations].reverse().find((observation) => (
     observation.attributes?.["channel.effect.kind"] === "reply"
-    && stringValue(observation.attributes?.["channel.effect.content"])
+    && responseTitle(observation.attributes?.["channel.effect.content"])
   ))?.attributes?.["channel.effect.content"];
   const finalResult = [...observations].reverse().find((observation) => (
-    stringValue(observation.attributes?.["result.text"])
+    responseTitle(observation.attributes?.["result.text"])
   ))?.attributes?.["result.text"];
-  const terminalTitle = stringValue(deliveredReply) ?? stringValue(finalResult);
+  const terminalTitle = responseTitle(deliveredReply) ?? responseTitle(finalResult);
   if (terminalTitle) return terminalTitle.replace(/\s+/g, " ").slice(0, 120);
 
   if (status === "failed") return "Failed session";
   if (status === "cancelled") return "Cancelled session";
   return "Completed session";
+}
+
+function responseTitle(value: unknown): string | undefined {
+  const text = stringValue(value);
+  return text && text !== missingReplyMessage && text !== legacyCompletionMessage ? text : undefined;
 }
 
 export function publicRecord(record: AgentInvocationRecord): PublicAgentInvocationRecord {
