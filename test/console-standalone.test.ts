@@ -38,10 +38,14 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(messageStyles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(messageStyles, /\.vh-invocation-execution/);
   assert.match(messageStyles, /\.vh-invocation-tool-list/);
+  assert.match(messageStyles, /\.vh-invocation-tool-calls/);
+  assert.match(messageStyles, /\.vh-invocation-identifiers/);
 
   assert.match(invocationEnhancer, /OpenRouter/);
   assert.match(invocationEnhancer, /Z\.AI/);
   assert.match(invocationEnhancer, /usageCounts/);
+  assert.match(invocationEnhancer, /toolCalls/);
+  assert.match(invocationEnhancer, /jumpToCall/);
   assert.match(invocationEnhancer, /tool\.name/);
   assert.match(invocationEnhancer, /tool\.id/);
   assert.match(invocationEnhancer, /Put or delete Blob objects/);
@@ -49,8 +53,11 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(invocationEnhancer, /anchor\.after\(delivery\)/);
   assert.match(invocationEnhancer, /channelMeta\("Assistant"\)/);
   assert.match(invocationEnhancer, /Capabilities & tools/);
-  assert.match(invocationEnhancer, /Partial setup/);
+  assert.match(invocationEnhancer, /invocation-inspector__notice\"\)\?\.remove/);
   assert.match(invocationEnhancer, /Copy session link/);
+  assert.match(invocationEnhancer, /linkIcon/);
+  assert.match(invocationEnhancer, /Total time/);
+  assert.match(invocationEnhancer, /vh-sidebar-model/);
   assert.match(invocationEnhancer, /refresh\.hidden = completed/);
   assert.match(invocationEnhancer, /session-inspector__instruction-fallback/);
   assert.match(invocationEnhancer, /OpenAI/);
@@ -60,6 +67,7 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(invocationEnhancer, /Amazon Bedrock/);
   assert.match(invocationEnhancer, /modelMaker/);
   assert.match(invocationEnhancer, /\/_vitehub\/assets\/brands/);
+  assert.doesNotMatch(invocationEnhancer, /Partial setup/);
 
   for (const brand of ["openai", "anthropic", "google", "meta", "mistral", "xai", "deepseek", "cohere", "qwen", "zai", "openrouter", "aws", "azure", "groq"]) {
     assert.ok(brandFiles.includes(`${brand}.svg`), `missing ${brand} Console logo`);
