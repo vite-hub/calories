@@ -256,6 +256,27 @@ describe("publicObservation", () => {
     assert.equal(JSON.stringify(observation).includes("private dinner"), false);
   });
 
+  it("identifies a failed photo operation without exposing its private error", () => {
+    const observation = publicObservation({
+      attributes: {
+        "error.message": "Could not store private photo for Maxi's lunch",
+        "error.name": "PrivateBlobError",
+        "tool.name": "blob_edit",
+      },
+      name: "agent.tool.error",
+      sequence: 9,
+      timestamp: "2026-09-02T14:19:59.000Z",
+      type: "error",
+    });
+
+    assert.equal(observation.attributes?.["vitehub.activity.title"], "Photo storage failed");
+    assert.equal(
+      observation.attributes?.["error.message"],
+      "The agent stopped before completing this request. Use the trace ID shown in this session to find the matching Worker logs.",
+    );
+    assert.equal(JSON.stringify(observation).includes("Maxi's lunch"), false);
+  });
+
   it("restores conversation cards for legacy Telegram traces", () => {
     const start = publicObservation({
       attributes: { "channel.delivery.provider": "telegram" },
@@ -449,6 +470,33 @@ describe("public Console metadata", () => {
     assert.equal(record.origin, "telegram");
     assert.equal(record.threadId, undefined);
     assert.equal(JSON.stringify(record).includes("private"), false);
+  });
+
+  it("flags a completed session that contains a failed tool call", () => {
+    const record = publicRecord({
+      agentName: "calories",
+      completedAt: "2026-09-02T14:20:29.000Z",
+      createdAt: "2026-09-02T14:19:58.000Z",
+      cursor: "2",
+      id: "invocation-tool-error",
+      observations: [{
+        attributes: {
+          "error.message": "private blob failure",
+          "error.name": "Error",
+          "tool.name": "blob_edit",
+        },
+        name: "agent.tool.error",
+        sequence: 1,
+        timestamp: "2026-09-02T14:19:59.000Z",
+        type: "error",
+      }],
+      status: "completed",
+      traceId: "trace-tool-error",
+      updatedAt: "2026-09-02T14:20:29.000Z",
+    });
+
+    assert.equal(record.title, "Completed with tool errors");
+    assert.equal(record.observations[0]?.attributes?.["vitehub.activity.title"], "Photo storage failed");
   });
 
   it("prefers a generated title over the delivered reply", () => {

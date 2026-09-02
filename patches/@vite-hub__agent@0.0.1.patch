@@ -266,6 +266,27 @@ diff --git a/dist/channel-delivery-CWRb4-Rs.js b/dist/channel-delivery-CWRb4-Rs.
  }
  async function openAgentChannelDelivery(state, input) {
  	const candidate = {
+diff --git a/dist/routes-B3MzH8n-.js b/dist/routes-B3MzH8n-.js
+--- a/dist/routes-B3MzH8n-.js
++++ b/dist/routes-B3MzH8n-.js
+@@ -3266,11 +3266,16 @@ async function chatMessagePartsWithReply(message, options = {}) {
+ 	for (const [index, source] of message.replyTo.attachments.entries()) {
+ 		const part = attachmentPartFromAttachment(source, index);
+ 		if (!part) continue;
+ 		const { data: _data, fetchData: _fetchData, ...attachment } = part;
++		const replyId = `reply-${part.id || index + 1}`;
+ 		replyParts.push({
+ 			data: { attachment },
+-			id: `reply-${part.id || index + 1}`,
++			id: replyId,
+ 			type: "data-chat-reply-attachment"
+ 		});
++		replyParts.push({
++			...part,
++			id: `${replyId}-content`
++		});
+ 	}
+ 	return [
 diff --git a/dist/src-CuBy0eWq.js b/dist/src-CuBy0eWq.js
 --- a/dist/src-CuBy0eWq.js
 +++ b/dist/src-CuBy0eWq.js

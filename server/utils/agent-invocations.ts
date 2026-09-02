@@ -56,6 +56,15 @@ const publicToolTitles: Record<string, string> = {
   transcribe: "Transcribed voice message",
 };
 
+const publicToolErrorTitles: Record<string, string> = {
+  blob_edit: "Photo storage failed",
+  db_exec: "Database update failed",
+  db_query: "Database query failed",
+  db_schema: "Database schema inspection failed",
+  materialize_sources: "ViteHub workspace preparation failed",
+  transcribe: "Voice transcription failed",
+};
+
 const databaseCapabilityError = /Capability ["']db["'] requires the database primitive|@vite-hub\/database\/drizzle/;
 const cloudflareRuntimeError = /^The Workers runtime canceled this request because /;
 const workflowInputPortabilityError = /^Agent Workflow inputs must contain only JSON-compatible values\.$/;
@@ -344,7 +353,9 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
       name: entry.attributes?.["error.name"],
     });
     attributes["error.message"] = error.message;
-    attributes["vitehub.activity.title"] = error.name;
+    attributes["vitehub.activity.title"] = toolName && publicToolErrorTitles[toolName]
+      ? publicToolErrorTitles[toolName]
+      : error.name;
   }
 
   return {
@@ -359,14 +370,23 @@ function consoleInvocationTitle(
   status: AgentInvocationRecord["status"],
   observations: readonly TraceEventLogEntry[],
 ): string {
+  if (status === "pending" || status === "running") return "Working…";
+
+  const hasToolError = observations.some((observation) => (
+    observation.name === "agent.tool.error"
+    || (
+      (observation.type === "error" || observation.name.endsWith(".error"))
+      && Boolean(stringValue(observation.attributes?.["tool.name"]))
+    )
+  ));
+  if (status === "completed" && hasToolError) return "Completed with tool errors";
+
   const title = [...observations].reverse().find((observation) => (
     observation.name === "agent.title.recorded"
     && stringValue(observation.attributes?.["vitehub.session.title"])
   ))?.attributes?.["vitehub.session.title"];
   const explicitTitle = stringValue(title);
   if (explicitTitle) return explicitTitle.replace(/\s+/g, " ").slice(0, 120);
-
-  if (status === "pending" || status === "running") return "Working…";
 
   const deliveredReply = [...observations].reverse().find((observation) => (
     observation.attributes?.["channel.effect.kind"] === "reply"
