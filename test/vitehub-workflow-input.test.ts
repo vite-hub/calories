@@ -81,6 +81,38 @@ test("Agent Workflows remove runtime loaders from direct and replied-to photos",
   });
 });
 
+test("Agent Workflows normalize cross-runtime channel delivery locks", async () => {
+  const lock = Object.assign(Object.create({ runtime: "cloudflare-rpc" }), {
+    expiresAt: 1_788_357_555_771,
+    threadId: "channel:calories:telegram",
+    token: "lock-token",
+  });
+
+  const input = await portableAgentWorkflowInput({
+    context: {
+      "vitehub.channelDelivery": {
+        channelId: "telegram",
+        deliveryId: "delivery-id",
+        provider: "telegram",
+        state: "chat",
+        steer: {
+          claimId: "claim-id",
+          lock,
+          pendingQueue: "pending-queue",
+          queue: "queue",
+          ttlMs: 300_000,
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(input.context["vitehub.channelDelivery"].steer.lock, {
+    expiresAt: 1_788_357_555_771,
+    threadId: "channel:calories:telegram",
+    token: "lock-token",
+  });
+});
+
 test("Agent Workflows journal failures that occur before the provider run starts", async () => {
   setAgentWorkflowRuntimeLoaders({
     state: async () => ({

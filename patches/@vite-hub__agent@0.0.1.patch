@@ -307,10 +307,29 @@ diff --git a/dist/src-CuBy0eWq.js b/dist/src-CuBy0eWq.js
 diff --git a/dist/src-CuBy0eWq.js b/dist/src-CuBy0eWq.js
 --- a/dist/src-CuBy0eWq.js
 +++ b/dist/src-CuBy0eWq.js
-@@ -944,19 +956,39 @@ async function portableAgentWorkflowInput(input) {
+@@ -944,19 +956,58 @@ async function portableAgentWorkflowInput(input) {
  	if (workflowInput.messages) workflowInput.messages = await portableWorkflowMessages(workflowInput.messages);
  	if (workflowInput.message && !hasRuntimeType(workflowInput.message, "string")) [workflowInput.message] = await portableWorkflowMessages([workflowInput.message]);
  	if (Array.isArray(workflowInput.prompt)) workflowInput.prompt = await portableWorkflowMessages(workflowInput.prompt);
++	const channelDelivery = workflowInput.context?.[agentChannelDeliveryWorkflowContextKey];
++	const steer = isRuntimeObject(channelDelivery?.steer) ? channelDelivery.steer : void 0;
++	const lock = isRuntimeObject(steer?.lock) ? steer.lock : void 0;
++	if (isAgentChannelDeliveryWorkflowBinding(channelDelivery) && steer && lock) {
++		workflowInput.context = {
++			...workflowInput.context,
++			[agentChannelDeliveryWorkflowContextKey]: {
++				...channelDelivery,
++				steer: {
++					...steer,
++					lock: {
++						expiresAt: lock.expiresAt,
++						threadId: lock.threadId,
++						token: lock.token
++					}
++				}
++			}
++		};
++	}
  	return cloneWorkflowJsonValue(workflowInput);
  }
 +async function recordAgentWorkflowStartFailure(agent, context, input, options, activity, error) {
@@ -348,7 +367,7 @@ diff --git a/dist/src-CuBy0eWq.js b/dist/src-CuBy0eWq.js
  		throw error;
  	}
  	let workflowConfig = workflowRuntimeState.getWorkflowRuntimeConfig();
-@@ -995,10 +1027,10 @@ async function runAgentAsWorkflow(agent, context, input, options = {}) {
+@@ -995,10 +1046,10 @@ async function runAgentAsWorkflow(agent, context, input, options = {}) {
  	try {
  		workflowName = resolveAgentWorkflowName(agent, binding, context);
  		handle = await getAgentWorkflowHandle(agent, workflowName, Boolean(context.agentIdentity));
