@@ -5,7 +5,7 @@ import {
   getMealTitle,
   parseUsageCostUsd,
   type Meal,
-} from "~/utils/meal";
+} from "../utils/meal";
 
 const props = defineProps<{ meal: Meal }>();
 const usageCost = computed(() => parseUsageCostUsd(props.meal.usageCost));

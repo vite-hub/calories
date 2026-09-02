@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getMealTitle, type Meal } from "~/utils/meal";
+import { getMealTitle, type Meal } from "../utils/meal";
 
 const props = defineProps<{ meal: Meal }>();
 const failed = ref(false);
