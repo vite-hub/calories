@@ -266,27 +266,6 @@ diff --git a/dist/channel-delivery-CWRb4-Rs.js b/dist/channel-delivery-CWRb4-Rs.
  }
  async function openAgentChannelDelivery(state, input) {
  	const candidate = {
-diff --git a/dist/routes-B3MzH8n-.js b/dist/routes-B3MzH8n-.js
---- a/dist/routes-B3MzH8n-.js
-+++ b/dist/routes-B3MzH8n-.js
-@@ -3266,11 +3266,16 @@ async function chatMessagePartsWithReply(message, options = {}) {
- 	for (const [index, source] of message.replyTo.attachments.entries()) {
- 		const part = attachmentPartFromAttachment(source, index);
- 		if (!part) continue;
- 		const { data: _data, fetchData: _fetchData, ...attachment } = part;
-+		const replyId = `reply-${part.id || index + 1}`;
- 		replyParts.push({
- 			data: { attachment },
--			id: `reply-${part.id || index + 1}`,
-+			id: replyId,
- 			type: "data-chat-reply-attachment"
- 		});
-+		replyParts.push({
-+			...part,
-+			id: `${replyId}-content`
-+		});
- 	}
- 	return [
 diff --git a/dist/src-CuBy0eWq.js b/dist/src-CuBy0eWq.js
 --- a/dist/src-CuBy0eWq.js
 +++ b/dist/src-CuBy0eWq.js
@@ -400,3 +379,55 @@ diff --git a/dist/src-CuBy0eWq.js b/dist/src-CuBy0eWq.js
  		throw error;
  	}
  	const resolvedContext = createResolvedRuntimeContext(context);
+diff --git a/dist/routes-B3MzH8n-.js b/dist/routes-B3MzH8n-.js
+index 87baa372bdc0e2018f8cebaa4ae2eb9760627095..bb1109d9141f3fe5d5b599496f2249fef3024af6 100644
+--- a/dist/routes-B3MzH8n-.js
++++ b/dist/routes-B3MzH8n-.js
+@@ -3267,11 +3267,16 @@ async function chatMessagePartsWithReply(message, options = {}) {
+ 		const part = attachmentPartFromAttachment(source, index);
+ 		if (!part) continue;
+ 		const { data: _data, fetchData: _fetchData, ...attachment } = part;
++		const replyId = `reply-${part.id || index + 1}`;
+ 		replyParts.push({
+ 			data: { attachment },
+-			id: `reply-${part.id || index + 1}`,
++			id: replyId,
+ 			type: "data-chat-reply-attachment"
+ 		});
++		if (options.includeReplyAttachments) replyParts.push({
++			...part,
++			id: `${replyId}-content`
++		});
+ 	}
+ 	return [
+ 		{
+@@ -3366,7 +3371,10 @@ async function durableChatThreadMessages(thread, limit) {
+ 	}
+ }
+ async function chatTriggerMessages(thread, message, options, messageContext, historyThroughCurrent = false) {
+-	const current = await chatSdkMessageToUiMessage(message, chatMessageMetadata(thread, message, messageContext), { rejectOversizedTextAttachments: true });
++	const current = await chatSdkMessageToUiMessage(message, chatMessageMetadata(thread, message, messageContext), {
++		includeReplyAttachments: options?.replyAttachments === "content",
++		rejectOversizedTextAttachments: true
++	});
+ 	const limit = chatTriggerHistoryLimit(resolveChatTriggerHistory(options));
+ 	if (!limit) return [current];
+ 	const fetchedNewestFirst = [];
+diff --git a/dist/types-Dj2tnklQ.d.ts b/dist/types-Dj2tnklQ.d.ts
+index 6a8acd25de4d0b9ccc9ed97cdd96d1d4be7d470f..d57fe6af2ecfa36a69d571d5bcf5c3aba4040da4 100644
+--- a/dist/types-Dj2tnklQ.d.ts
++++ b/dist/types-Dj2tnklQ.d.ts
+@@ -2170,6 +2170,13 @@ interface AgentMessageChannelSettings<TRuntimeConfig extends AgentRuntimeConfig
+   messageHistory?: unknown;
+   meta?: StandardSchemaV1<unknown, Record<string, unknown>>;
+   metaRevision?: string;
++  /**
++   * How attachments on the message being replied to are exposed to the Agent.
++   * `reference` keeps portable metadata only. `content` also resolves them as
++   * current input attachments before a durable runtime handoff.
++   * @default "reference"
++   */
++  replyAttachments?: "content" | "reference";
+   sessions?: boolean | AgentChatSessionOptions;
+   state?: AgentChatStateResolver<TRuntimeConfig>;
+   stream?: boolean;

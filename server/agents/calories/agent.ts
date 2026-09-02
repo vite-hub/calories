@@ -69,6 +69,7 @@ export default defineAgent({
         delivery: "manual",
         fallbackStreamingPlaceholderText: null,
         lockScope: "channel",
+        replyAttachments: "content",
         state: cloudflareChatState,
         triggerHistory: {
           maxAgeMs: 30 * 60 * 1_000,

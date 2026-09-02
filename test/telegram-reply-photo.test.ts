@@ -8,6 +8,7 @@ import { defineAgent } from "vite-hub/agent";
 import { telegram } from "vite-hub/agent/channels";
 
 const require = createRequire(import.meta.url);
+let webhookRun = 0;
 
 async function createChannelWebhookRouteHandler(agent: unknown) {
   const wrapper = require.resolve("vite-hub/_internal/agent/server/internal");
@@ -51,7 +52,8 @@ function capturingModel() {
   };
 }
 
-test("Telegram photo replies expose the replied-to image to the model", async () => {
+async function runTelegramPhotoReply(replyAttachments?: "content" | "reference") {
+  const runOffset = webhookRun++ * 10;
   const originalFetch = globalThis.fetch;
   const model = capturingModel();
   const backgroundTasks: Promise<unknown>[] = [];
@@ -102,6 +104,7 @@ test("Telegram photo replies expose the replied-to image to the model", async ()
           messages: {
             delivery: "manual",
             fallbackStreamingPlaceholderText: null,
+            ...(replyAttachments ? { replyAttachments } : {}),
           },
           webhookSecret: "test-secret",
         }),
@@ -118,12 +121,12 @@ test("Telegram photo replies expose the replied-to image to the model", async ()
             chat: { id: 42, type: "private" },
             date: 1_788_358_000,
             from: { first_name: "Max", id: 42, is_bot: false },
-            message_id: 101,
+            message_id: 101 + runOffset,
             reply_to_message: {
               chat: { id: 42, type: "private" },
               date: 1_788_357_600,
               from: { first_name: "Max", id: 42, is_bot: false },
-              message_id: 100,
+              message_id: 100 + runOffset,
               photo: [{
                 file_id: "telegram-photo-id",
                 file_size: 3,
@@ -134,7 +137,7 @@ test("Telegram photo replies expose the replied-to image to the model", async ()
             },
             text: "today at 11.41 in denmark",
           },
-          update_id: 123,
+          update_id: 123 + runOffset,
         }),
         headers: {
           "content-type": "application/json",
@@ -153,9 +156,26 @@ test("Telegram photo replies expose the replied-to image to the model", async ()
     assert.equal(response.status, 200);
     await Promise.all(backgroundTasks);
     assert.equal(model.calls.length, 1);
-    assert.equal(downloadedPhoto, true);
-    assert.match(JSON.stringify(model.calls[0]?.prompt), /AQID|telegram-photo-id/);
+    return {
+      downloadedPhoto,
+      prompt: JSON.stringify(model.calls[0]?.prompt),
+    };
   } finally {
     globalThis.fetch = originalFetch;
   }
+}
+
+test("Telegram photo replies remain metadata-only by default", async () => {
+  const result = await runTelegramPhotoReply();
+
+  assert.equal(result.downloadedPhoto, false);
+  assert.match(result.prompt, /telegram-photo-id/);
+  assert.doesNotMatch(result.prompt, /AQID/);
+});
+
+test("Telegram photo replies expose content when the channel opts in", async () => {
+  const result = await runTelegramPhotoReply("content");
+
+  assert.equal(result.downloadedPhoto, true);
+  assert.match(result.prompt, /AQID|telegram-photo-id/);
 });

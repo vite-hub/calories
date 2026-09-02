@@ -256,12 +256,12 @@ describe("publicObservation", () => {
     assert.equal(JSON.stringify(observation).includes("private dinner"), false);
   });
 
-  it("identifies a failed photo operation without exposing its private error", () => {
+  it("identifies any failed tool without exposing its private error", () => {
     const observation = publicObservation({
       attributes: {
         "error.message": "Could not store private photo for Maxi's lunch",
         "error.name": "PrivateBlobError",
-        "tool.name": "blob_edit",
+        "tool.name": "lookup_customer",
       },
       name: "agent.tool.error",
       sequence: 9,
@@ -269,7 +269,7 @@ describe("publicObservation", () => {
       type: "error",
     });
 
-    assert.equal(observation.attributes?.["vitehub.activity.title"], "Photo storage failed");
+    assert.equal(observation.attributes?.["vitehub.activity.title"], "Lookup customer failed");
     assert.equal(
       observation.attributes?.["error.message"],
       "The agent stopped before completing this request. Use the trace ID shown in this session to find the matching Worker logs.",
@@ -495,8 +495,36 @@ describe("public Console metadata", () => {
       updatedAt: "2026-09-02T14:20:29.000Z",
     });
 
-    assert.equal(record.title, "Completed with tool errors");
-    assert.equal(record.observations[0]?.attributes?.["vitehub.activity.title"], "Photo storage failed");
+    assert.equal(record.title, "Completed with errors");
+    assert.equal(record.observations[0]?.attributes?.["vitehub.activity.title"], "Blob edit failed");
+  });
+
+  it("flags non-tool errors and preserves an explicit recovery signal", () => {
+    const record = publicRecord({
+      agentName: "calories",
+      completedAt: "2026-09-02T14:20:29.000Z",
+      createdAt: "2026-09-02T14:19:58.000Z",
+      cursor: "3",
+      id: "invocation-stream-error",
+      observations: [{
+        attributes: {
+          "error.message": "private transient provider failure",
+          "error.name": "ProviderError",
+          "error.recoverable": true,
+        },
+        name: "agent.stream.error",
+        sequence: 1,
+        timestamp: "2026-09-02T14:19:59.000Z",
+        type: "error",
+      }],
+      status: "completed",
+      traceId: "trace-stream-error",
+      updatedAt: "2026-09-02T14:20:29.000Z",
+    });
+
+    assert.equal(record.title, "Completed with errors");
+    assert.equal(record.observations[0]?.attributes?.["error.recoverable"], true);
+    assert.equal(JSON.stringify(record).includes("private transient"), false);
   });
 
   it("prefers a generated title over the delivered reply", () => {

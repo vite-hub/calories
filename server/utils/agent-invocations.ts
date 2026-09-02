@@ -17,6 +17,7 @@ const publicAttributeKeys = new Set([
   "channel.effect.content",
   "channel.effect.intent",
   "channel.effect.kind",
+  "error.recoverable",
   "finish.reason",
   "input.hasMessages",
   "input.hasPrompt",
@@ -56,15 +57,6 @@ const publicToolTitles: Record<string, string> = {
   transcribe: "Transcribed voice message",
 };
 
-const publicToolErrorTitles: Record<string, string> = {
-  blob_edit: "Photo storage failed",
-  db_exec: "Database update failed",
-  db_query: "Database query failed",
-  db_schema: "Database schema inspection failed",
-  materialize_sources: "ViteHub workspace preparation failed",
-  transcribe: "Voice transcription failed",
-};
-
 const databaseCapabilityError = /Capability ["']db["'] requires the database primitive|@vite-hub\/database\/drizzle/;
 const cloudflareRuntimeError = /^The Workers runtime canceled this request because /;
 const workflowInputPortabilityError = /^Agent Workflow inputs must contain only JSON-compatible values\.$/;
@@ -83,6 +75,16 @@ function stringValue(value: unknown): string | undefined {
 
 function finiteNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function publicToolErrorTitle(toolName: string): string {
+  const words = toolName
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)} failed`;
 }
 
 function publicMaterializationPayload(value: unknown, direction: "input" | "output"): Record<string, unknown> {
@@ -353,8 +355,8 @@ export function publicObservation(entry: TraceEventLogEntry): TraceEventLogEntry
       name: entry.attributes?.["error.name"],
     });
     attributes["error.message"] = error.message;
-    attributes["vitehub.activity.title"] = toolName && publicToolErrorTitles[toolName]
-      ? publicToolErrorTitles[toolName]
+    attributes["vitehub.activity.title"] = toolName
+      ? publicToolErrorTitle(toolName)
       : error.name;
   }
 
@@ -372,14 +374,10 @@ function consoleInvocationTitle(
 ): string {
   if (status === "pending" || status === "running") return "Working…";
 
-  const hasToolError = observations.some((observation) => (
-    observation.name === "agent.tool.error"
-    || (
-      (observation.type === "error" || observation.name.endsWith(".error"))
-      && Boolean(stringValue(observation.attributes?.["tool.name"]))
-    )
+  const hasError = observations.some((observation) => (
+    observation.type === "error" || observation.name.endsWith(".error")
   ));
-  if (status === "completed" && hasToolError) return "Completed with tool errors";
+  if (status === "completed" && hasError) return "Completed with errors";
 
   const title = [...observations].reverse().find((observation) => (
     observation.name === "agent.title.recorded"
