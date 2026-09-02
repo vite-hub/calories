@@ -34,7 +34,7 @@ index 20063ce08c9a093d0c3893ba985eb0bc040beedf..f94690be56b16e77dd5eac74410c5c38
  		return typeof agent?.name === "string" && agent.name.trim() ? agent.name : fallbackName;
 -	}), invocations);
 +	});
-+	const installedInvocations = configuredInvocations ?? invocations;
++	const installedInvocations = configuredInvocations ?? (typeof invocations === "function" ? invocations() : invocations);
 +	const projectRoot = globalThis[consoleInvocationsRootKey];
 +	if (configuredInvocations && typeof projectRoot === "string") installConsoleInvocationFallback(installedInvocations, projectRoot, globalThis, `agent:${projectRoot}`);
 +	return installConsoleAgents(agentNames, installedInvocations);
@@ -1728,3 +1728,27 @@ index 2344b1139dfd99ea629e130ae59e4260694eb37c..223f8fdb3fd833ffd58768c7cf47088b
  	if (configured.exposure === "host-managed") return;
  	if (configured.access !== "auth") throw new TypeError("[vitehub] Console production access must use access: \"auth\" or exposure: \"host-managed\".");
  	if (!options.auth) throw new Error("[vitehub] console: { access: \"auth\" } requires a discovered ViteHub Auth Definition.");
+diff --git a/dist/nuxt.js b/dist/nuxt.js
+--- a/dist/nuxt.js
++++ b/dist/nuxt.js
+@@ -172,7 +172,7 @@ function renderConsoleNitroPlugin(projectRoot, sections, agents, catalog, blobSt
+ 		...blobEnabled ? [`installConsoleBlob(${JSON.stringify(projectRoot)}, vitehubConsoleBlob, ${JSON.stringify(blobStores)})`] : [],
+ 		`installConsoleProjectName(${JSON.stringify(projectRoot)}, ${JSON.stringify(resolveConsoleProjectNameFromRoot(projectRoot))})`,
+ 		...definitionsEnabled ? [`installConsoleDefinitions(${JSON.stringify(projectRoot)}, ${JSON.stringify(catalog.definitions)})`] : [],
+-		...agentsEnabled ? [fixture ? `const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})` : `const vitehubConsoleInvocations = installConsoleInvocations(${JSON.stringify(projectRoot)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [],
++		...agentsEnabled ? fixture ? [`const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [`installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], () => installConsoleInvocations(${JSON.stringify(projectRoot)}))`] : [],
+ 		...kvEnabled ? [`installConsoleKV(${JSON.stringify(projectRoot)}, vitehubConsoleKV, ${JSON.stringify(kvStores)})`] : [],
+ 		"export default function viteHubConsolePlugin() {}",
+ 		""
+diff --git a/dist/src-B4pj6Dx_.js b/dist/src-B4pj6Dx_.js
+--- a/dist/src-B4pj6Dx_.js
++++ b/dist/src-B4pj6Dx_.js
+@@ -4115,7 +4115,7 @@ function renderConsoleNitroPlugin(projectRoot, sections, agents, catalog, blobSt
+ 		...blobEnabled ? [`installConsoleBlob(${JSON.stringify(projectRoot)}, vitehubConsoleBlob, ${JSON.stringify(blobStores)})`] : [],
+ 		`installConsoleProjectName(${JSON.stringify(projectRoot)}, ${JSON.stringify(resolveConsoleProjectNameFromRoot(projectRoot))})`,
+ 		...definitionsEnabled ? [`installConsoleDefinitions(${JSON.stringify(projectRoot)}, ${JSON.stringify(catalog.definitions)})`] : [],
+-		...agentsEnabled ? [fixture ? `const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})` : `const vitehubConsoleInvocations = installConsoleInvocations(${JSON.stringify(projectRoot)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [],
++		...agentsEnabled ? fixture ? [`const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [`installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], () => installConsoleInvocations(${JSON.stringify(projectRoot)}))`] : [],
+ 		...kvEnabled ? [`installConsoleKV(${JSON.stringify(projectRoot)}, vitehubConsoleKV, ${JSON.stringify(kvStores)})`] : [],
+ 		"export default function viteHubConsolePlugin() {}",
+ 		""
