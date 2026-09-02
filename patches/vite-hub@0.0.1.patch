@@ -41,12 +41,222 @@ index 20063ce08c9a093d0c3893ba985eb0bc040beedf..f94690be56b16e77dd5eac74410c5c38
  }
  function getConsoleAgents() {
  	return resolveConsoleInvocations()?.[consoleAgentsKey] ?? [];
+diff --git a/dist/console/runtime/public/console/console-invocation-overrides.js b/dist/console/runtime/public/console/console-invocation-overrides.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..c2fda273cec3ad9c3158a5e5cedb71e8ed25fe68
+--- /dev/null
++++ b/dist/console/runtime/public/console/console-invocation-overrides.js
+@@ -0,0 +1,204 @@
++(() => {
++  const descriptions = {
++    blob_edit: "Put or delete Blob objects from an attachment, workspace file, or provided body.",
++    blob_read: "Read Blob contents or metadata, or list objects under a prefix.",
++    db_exec: "Run a database mutation with a recorded rationale.",
++    db_query: "Run one read-only query against the configured database.",
++    db_schema: "Describe the configured database schema.",
++  };
++  let detail;
++  let scheduled = false;
++
++  const nativeFetch = window.fetch.bind(window);
++  window.fetch = async (...args) => {
++    const response = await nativeFetch(...args);
++    const url = String(args[0] instanceof Request ? args[0].url : args[0]);
++    if (/\/api\/_vitehub\/console\/invocations\/[^/?]+/.test(url)) {
++      void response.clone().json().then((value) => {
++        detail = value;
++        schedule();
++      }).catch(() => {});
++    }
++    return response;
++  };
++
++  function element(tag, className, text) {
++    const node = document.createElement(tag);
++    if (className) node.className = className;
++    if (text !== undefined) node.textContent = text;
++    return node;
++  }
++
++  function configuration() {
++    let result = detail?.invocation?.configuration ?? {};
++    for (const observation of detail?.observations ?? []) {
++      const next = observation?.attributes?.["vitehub.agent.configuration"];
++      if (!next || typeof next !== "object") continue;
++      result = {
++        ...result,
++        ...next,
++        driver: {
++          ...result.driver,
++          ...next.driver,
++          model: { ...result.driver?.model, ...next.driver?.model },
++        },
++      };
++    }
++    return result;
++  }
++
++  function usageCounts() {
++    const counts = new Map();
++    const seen = new Set();
++    for (const observation of detail?.observations ?? []) {
++      const name = observation?.attributes?.["tool.name"];
++      if (typeof name !== "string" || !name) continue;
++      const id = observation.attributes["tool.id"];
++      if (typeof id === "string" && id) {
++        const key = `${name}:${id}`;
++        if (seen.has(key)) continue;
++        seen.add(key);
++      } else if (!String(observation.name ?? "").endsWith(".start")) continue;
++      counts.set(name, (counts.get(name) ?? 0) + 1);
++    }
++    return counts;
++  }
++
++  function brand(value) {
++    const id = String(value ?? "").trim().toLowerCase();
++    if (!id) return;
++    if (id === "openrouter") return { id, label: "OpenRouter" };
++    if (id === "z-ai") return { id, label: "Z.AI" };
++    return {
++      id: "fallback",
++      label: id.split(/[._-]/g).filter(Boolean).map((part) => part.length <= 3 ? part.toUpperCase() : `${part[0].toUpperCase()}${part.slice(1)}`).join(" "),
++    };
++  }
++
++  function brandMark(value, className) {
++    if (!value) return;
++    if (value.id === "z-ai") {
++      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
++      svg.setAttribute("aria-hidden", "true");
++      svg.setAttribute("class", `vh-invocation-brand__logo ${className}`);
++      svg.setAttribute("viewBox", "0 0 30 30");
++      const box = document.createElementNS(svg.namespaceURI, "rect");
++      box.setAttribute("fill", "#2d2d2d");
++      box.setAttribute("height", "28");
++      box.setAttribute("rx", "4");
++      box.setAttribute("width", "28");
++      box.setAttribute("x", "1");
++      box.setAttribute("y", "1");
++      const path = document.createElementNS(svg.namespaceURI, "path");
++      path.setAttribute("d", "M15.47 7.1l-1.3 1.85c-.2.29-.54.47-.9.47h-7.1V7.09h9.3Zm8.83 0L13.14 22.91H5.7L16.86 7.1h7.44Zm-9.77 15.81 1.31-1.86c.2-.29.54-.47.9-.47h7.09v2.33h-9.3Z");
++      path.setAttribute("fill", "#fff");
++      svg.append(box, path);
++      return svg;
++    }
++    if (value.id === "openrouter") {
++      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
++      svg.setAttribute("aria-hidden", "true");
++      svg.setAttribute("class", `vh-invocation-brand__logo ${className}`);
++      svg.setAttribute("viewBox", "0 0 401.4 293.7");
++      const path = document.createElementNS(svg.namespaceURI, "path");
++      path.setAttribute("d", "M303.9475,17.19926c42.79734,0,77.48933,34.69327,77.48933,77.48933s-34.69199,77.48933-77.48933,77.48933l76.86166,76.86244c9.76367,9.76313,2.84903,26.45667-10.95697,26.45667h-220.88335c-71.32686,0-129.14889-57.82202-129.14889-129.14889S77.64197,17.19926,148.96884,17.19926h154.97866ZM148.96884,68.85881c-42.79607,0-77.48933,34.69327-77.48933,77.48933s34.69327,77.48933,77.48933,77.48933,77.48933-34.69327,77.48933-77.48933-34.69327-77.48933-77.48933-77.48933Z");
++      svg.append(path);
++      return svg;
++    }
++    return element("span", `vh-invocation-brand__fallback ${className}`, value.label.slice(0, 1));
++  }
++
++  function modelName(value) {
++    const slug = String(value ?? "").split("/").at(-1) ?? "";
++    return slug.split("-").filter(Boolean).map((part) => {
++      const lower = part.toLowerCase();
++      if (/^(ai|gpt|glm|llm|vlm)$/.test(lower)) return lower.toUpperCase();
++      if (/^\d+[a-z]$/i.test(part)) return part.toUpperCase();
++      return `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`;
++    }).join(" ") || "Configured model";
++  }
++
++  function enhanceExecution(group, config) {
++    const model = config.driver?.model;
++    if (!model?.id) return;
++    const version = `${model.id}:${model.provider ?? config.driver?.provider ?? ""}`;
++    if (group.dataset.vhExecution === version) return;
++    group.dataset.vhExecution = version;
++    group.classList.add("vh-invocation-inspector__group--execution");
++    group.querySelector(":scope > dl")?.remove();
++    group.querySelector(":scope > .vh-invocation-execution")?.remove();
++    const maker = brand(model.id.includes("/") ? model.id.split("/")[0] : undefined);
++    const provider = brand(model.provider ?? config.driver?.provider);
++    const card = element("div", "vh-invocation-execution");
++    const identity = element("div", "vh-invocation-execution__model");
++    identity.title = model.id;
++    identity.append(brandMark(maker, "vh-invocation-execution__model-logo"));
++    const names = element("div");
++    names.append(element("strong", "", modelName(model.id)));
++    if (maker) names.append(element("span", "", `by ${maker.label}`));
++    identity.append(names);
++    card.append(identity);
++    if (provider) {
++      const route = element("div", "vh-invocation-execution__route");
++      route.append(element("span", "", "via"), brandMark(provider, "vh-invocation-execution__provider-logo"), element("strong", "", provider.label));
++      card.append(route);
++    }
++    group.append(card);
++  }
++
++  function enhanceTools(group, tools) {
++    const counts = usageCounts();
++    const rows = [...tools].sort((left, right) => (counts.get(right.name) ?? 0) - (counts.get(left.name) ?? 0) || left.name.localeCompare(right.name));
++    const signature = rows.map((tool) => `${tool.name}:${counts.get(tool.name) ?? 0}:${tool.description ?? ""}`).join("|");
++    if (group.dataset.vhTools === signature) return;
++    group.dataset.vhTools = signature;
++    const used = rows.filter((tool) => (counts.get(tool.name) ?? 0) > 0).length;
++    const summary = group.querySelector(":scope > .vh-invocation-inspector__group-heading small");
++    if (summary) summary.textContent = `${used} of ${rows.length} used`;
++    group.querySelector(":scope > ul, :scope > ol")?.remove();
++    const list = element("ol", "vh-invocation-tool-list");
++    for (const tool of rows) {
++      const count = counts.get(tool.name) ?? 0;
++      const item = element("li");
++      item.dataset.used = count ? "true" : "false";
++      const heading = element("div", "vh-invocation-tool-list__heading");
++      heading.append(element("code", "", tool.name));
++      const badge = element("span", "vh-invocation-tool-list__count", count || "—");
++      badge.setAttribute("aria-label", count ? `${count} call${count === 1 ? "" : "s"}` : "Not used");
++      heading.append(badge);
++      const description = tool.description ?? descriptions[tool.name];
++      item.append(heading);
++      if (description) {
++        const copy = element("p", "", description);
++        copy.title = description;
++        item.append(copy);
++      }
++      list.append(item);
++    }
++    group.append(list);
++  }
++
++  function enhance() {
++    scheduled = false;
++    const config = configuration();
++    if (!detail || !config || !Array.isArray(config.tools)) return;
++    for (const inspector of document.querySelectorAll(".vh-invocation-inspector")) {
++      const groups = inspector.querySelector(".vh-invocation-inspector__groups");
++      if (!groups) continue;
++      for (const group of groups.querySelectorAll(":scope > .vh-invocation-inspector__group")) {
++        const title = group.querySelector(":scope > .vh-invocation-inspector__group-heading strong")?.textContent;
++        if (title === "Execution") enhanceExecution(group, config);
++        if (title === "Tools") enhanceTools(group, config.tools);
++      }
++    }
++  }
++
++  function schedule() {
++    if (scheduled) return;
++    scheduled = true;
++    requestAnimationFrame(enhance);
++  }
++
++  new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
++  schedule();
++})();
 diff --git a/dist/console/runtime/public/console/console-message-overrides.css b/dist/console/runtime/public/console/console-message-overrides.css
 new file mode 100644
-index 0000000000000000000000000000000000000000..b9024913e385c28fa6b5bb0c81912b7289fcd0bf
+index 0000000000000000000000000000000000000000..3378c6c949ded3acdfa3994f88311ab1808c4fb0
 --- /dev/null
 +++ b/dist/console/runtime/public/console/console-message-overrides.css
-@@ -0,0 +1,146 @@
+@@ -0,0 +1,340 @@
 +.vitehub-console__sessions div:has(> button[disabled][aria-haspopup="menu"]) {
 +  display: none;
 +}
@@ -193,11 +403,205 @@ index 0000000000000000000000000000000000000000..b9024913e385c28fa6b5bb0c81912b72
 +    transition: opacity 150ms ease;
 +  }
 +}
++
++.vh-invocation-inspector__metrics {
++  border-block: 1px solid var(--vh-ui-border);
++  gap: 0;
++}
++
++.vh-invocation-inspector__metrics > div {
++  background: transparent;
++  border: 0;
++  border-radius: 0;
++  padding: 0.6rem 0.65rem;
++}
++
++.vh-invocation-inspector__metrics > div + div {
++  border-inline-start: 1px solid var(--vh-ui-border);
++}
++
++.vh-invocation-inspector__notice {
++  background: color-mix(in oklab, var(--ui-warning, #a16207) 7%, transparent);
++  border: 0;
++  border-inline-start: 2px solid color-mix(in oklab, currentColor 55%, transparent);
++  border-radius: 0;
++  padding: 0.6rem 0.7rem;
++}
++
++.vh-invocation-inspector__groups {
++  border: 0;
++  border-radius: 0;
++  display: grid;
++  gap: 1.1rem;
++  overflow: visible;
++}
++
++.vh-invocation-inspector__group {
++  border: 0;
++  min-width: 0;
++  padding: 0;
++}
++
++.vh-invocation-inspector__group + .vh-invocation-inspector__group {
++  border-block-start: 0;
++}
++
++.vh-invocation-inspector__group--execution {
++  background:
++    radial-gradient(circle at 95% 0%, color-mix(in oklab, var(--ui-primary, #2563eb) 9%, transparent), transparent 48%),
++    color-mix(in oklab, var(--vh-ui-bg-elevated) 54%, transparent);
++  border: 1px solid color-mix(in oklab, var(--vh-ui-border) 78%, transparent);
++  border-radius: calc(var(--vh-ui-radius) * 1.2);
++  padding: 0.8rem;
++}
++
++.vh-invocation-execution {
++  display: grid;
++  gap: 0.65rem;
++  margin-block-start: 0.65rem;
++}
++
++.vh-invocation-execution__model {
++  align-items: center;
++  display: grid;
++  gap: 0.7rem;
++  grid-template-columns: 2.35rem minmax(0, 1fr);
++  min-width: 0;
++}
++
++.vh-invocation-execution__model > div {
++  display: grid;
++  gap: 0.08rem;
++  min-width: 0;
++}
++
++.vh-invocation-execution__model strong {
++  color: var(--vh-ui-text);
++  font-size: 0.875rem;
++  font-weight: 670;
++  letter-spacing: -0.015em;
++  line-height: 1.3;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.vh-invocation-execution__model span {
++  color: var(--vh-ui-dimmed);
++  font-size: 0.6875rem;
++}
++
++.vh-invocation-brand__logo,
++.vh-invocation-brand__fallback {
++  display: block;
++  flex: none;
++}
++
++.vh-invocation-brand__logo {
++  fill: currentColor;
++  height: 1rem;
++  width: 1rem;
++}
++
++.vh-invocation-execution__provider-logo {
++  color: #7624f4;
++}
++
++.vh-invocation-execution__model-logo,
++.vh-invocation-brand__fallback.vh-invocation-execution__model-logo {
++  height: 2.35rem;
++  width: 2.35rem;
++}
++
++.vh-invocation-brand__fallback {
++  align-items: center;
++  background: color-mix(in oklab, var(--ui-primary, #2563eb) 10%, var(--vh-ui-bg));
++  border: 1px solid color-mix(in oklab, var(--ui-primary, #2563eb) 20%, var(--vh-ui-border));
++  border-radius: calc(var(--vh-ui-radius) * 0.9);
++  color: var(--vh-ui-muted);
++  font-size: 0.65rem;
++  font-weight: 700;
++  justify-content: center;
++}
++
++.vh-invocation-execution__route {
++  align-items: center;
++  color: var(--vh-ui-dimmed);
++  display: flex;
++  font-size: 0.6875rem;
++  gap: 0.35rem;
++  margin-inline-start: 3.05rem;
++}
++
++.vh-invocation-execution__route strong {
++  color: var(--vh-ui-muted);
++  font-weight: 600;
++}
++
++.vh-invocation-tool-list {
++  border-block: 1px solid var(--vh-ui-border);
++  list-style: none;
++  margin: 0.55rem 0 0;
++  padding: 0;
++}
++
++.vh-invocation-tool-list > li {
++  min-width: 0;
++  padding: 0.55rem 0.15rem 0.6rem;
++}
++
++.vh-invocation-tool-list > li + li {
++  border-block-start: 1px solid color-mix(in oklab, var(--vh-ui-border) 72%, transparent);
++}
++
++.vh-invocation-tool-list > li[data-used="false"] {
++  opacity: 0.66;
++}
++
++.vh-invocation-tool-list__heading {
++  align-items: baseline;
++  display: grid;
++  gap: 0.75rem;
++  grid-template-columns: minmax(0, 1fr) auto;
++}
++
++.vh-invocation-tool-list__heading code {
++  color: var(--vh-ui-text);
++  font-size: 0.6875rem;
++  font-weight: 580;
++  overflow-wrap: anywhere;
++}
++
++.vh-invocation-tool-list__count {
++  color: var(--vh-ui-dimmed);
++  font: 0.6875rem/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
++  font-variant-numeric: tabular-nums;
++  min-width: 1.5rem;
++  text-align: end;
++}
++
++.vh-invocation-tool-list > li[data-used="true"] .vh-invocation-tool-list__count {
++  background: color-mix(in oklab, var(--vh-ui-success) 11%, transparent);
++  border-radius: 999px;
++  color: color-mix(in oklab, var(--vh-ui-success) 60%, var(--vh-ui-text));
++  padding: 0.08rem 0.4rem;
++}
++
++.vh-invocation-tool-list p {
++  color: var(--vh-ui-dimmed);
++  display: -webkit-box;
++  font-size: 0.65625rem;
++  -webkit-box-orient: vertical;
++  -webkit-line-clamp: 2;
++  line-height: 1.45;
++  margin: 0.22rem 2.25rem 0 0;
++  overflow: hidden;
++}
 diff --git a/dist/console/runtime/server/page.get.js b/dist/console/runtime/server/page.get.js
-index a2a673da1f42f2343a057e549016532d272a67e6..badb7cf753476cb1fc5e22b2712e70e81e326861 100644
+index a2a673da1f42f2343a057e549016532d272a67e6..679c92fab1997fd0cb5b8f061870367e908d523a 100644
 --- a/dist/console/runtime/server/page.get.js
 +++ b/dist/console/runtime/server/page.get.js
-@@ -11,6 +11,7 @@ const page = `<!doctype html>
+@@ -11,9 +11,11 @@ const page = `<!doctype html>
      <meta name="robots" content="noindex, nofollow">
      <title>ViteHub Console</title>
      <link rel="stylesheet" href="/_vitehub/assets/console-Db9lYBMf.css">
@@ -205,6 +609,10 @@ index a2a673da1f42f2343a057e549016532d272a67e6..badb7cf753476cb1fc5e22b2712e70e8
    </head>
    <body>
      <div id="app"></div>
++    <script src="/_vitehub/assets/console-invocation-overrides.js"><\/script>
+     <script type="module" src="/_vitehub/assets/console-Ce-1dTYT.js"><\/script>
+   </body>
+ </html>`;
 diff --git a/dist/invocations-D6WerHyB.js b/dist/invocations-D6WerHyB.js
 index 1522cdfeeb20c4a0726f52901fa29723b2fa129d..6c0c3207e64be0ec0c360e50d7b45be7f4c3735f 100644
 --- a/dist/invocations-D6WerHyB.js
