@@ -1,5 +1,5 @@
 diff --git a/dist/agents-CohvvR2a.js b/dist/agents-CohvvR2a.js
-index 20063ce08c9a093d0c3893ba985eb0bc040beedf..f94690be56b16e77dd5eac74410c5c38c8904744 100644
+index 20063ce08c9a093d0c3893ba985eb0bc040beedf..4f3dd3e5f05f2075112130f149cb9257e69e264e 100644
 --- a/dist/agents-CohvvR2a.js
 +++ b/dist/agents-CohvvR2a.js
 @@ -1,6 +1,7 @@
@@ -11,12 +11,13 @@ index 20063ce08c9a093d0c3893ba985eb0bc040beedf..f94690be56b16e77dd5eac74410c5c38
  const consoleAssignedInvocations = /* @__PURE__ */ new WeakMap();
  function installConsoleAgents(agentNames, invocations) {
  	const agents = [...new Set(agentNames.map((name) => name.trim()).filter(Boolean))].sort();
-@@ -9,7 +10,8 @@ function installConsoleAgents(agentNames, invocations) {
+@@ -8,8 +9,9 @@ function installConsoleAgents(agentNames, invocations) {
+ 	consoleInvocations[consoleAgentsKey] = agents;
  	return agents;
  }
 -function installConsoleAgentDefinitions(entries, invocations) {
-+function installConsoleAgentDefinitions(entries, invocations, projectRoot) {
 -	return installConsoleAgents(entries.map(({ definition, fallbackName }) => {
++function installConsoleAgentDefinitions(entries, invocations, projectRoot) {
 +	let configuredInvocations;
 +	const agentNames = entries.map(({ definition, fallbackName }) => {
  		const module = definition && typeof definition === "object" ? definition : void 0;
@@ -260,10 +261,10 @@ index 0000000000000000000000000000000000000000..1a47fd72e471ca129c8b5f12236f623c
 +<svg fill="currentColor" fill-rule="evenodd" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><title>Z.ai</title><path d="M12.105 2L9.927 4.953H.653L2.83 2h9.276zM23.254 19.048L21.078 22h-9.242l2.174-2.952h9.244zM24 2L9.264 22H0L14.736 2H24z"></path></svg>
 diff --git a/dist/console/runtime/public/console/console-invocation-overrides.js b/dist/console/runtime/public/console/console-invocation-overrides.js
 new file mode 100644
-index 0000000000000000000000000000000000000000..d22c93248b32fceb2a0e942e4994ac95d62eab79
+index 0000000000000000000000000000000000000000..d8d3aa0e55a41c8e2a4b2da6190e2ea4ef29f6e9
 --- /dev/null
 +++ b/dist/console/runtime/public/console/console-invocation-overrides.js
-@@ -0,0 +1,680 @@
+@@ -0,0 +1,682 @@
 +(() => {
 +  const descriptions = {
 +    blob_edit: "Put or delete Blob objects from an attachment, workspace file, or provided body.",
@@ -548,8 +549,10 @@ index 0000000000000000000000000000000000000000..d22c93248b32fceb2a0e942e4994ac95
 +      const mark = element("span", `vh-invocation-brand__logo ${className}`);
 +      mark.dataset.brand = value.id;
 +      mark.setAttribute("aria-hidden", "true");
-+      const glyph = element("span", "vh-invocation-brand__glyph");
-+      glyph.style.setProperty("--vh-brand-icon", `url('/_vitehub/assets/brands/${value.icon}.svg')`);
++      const glyph = document.createElement("img");
++      glyph.className = "vh-invocation-brand__glyph";
++      glyph.alt = "";
++      glyph.src = `/_vitehub/assets/brands/${value.icon}.svg`;
 +      mark.append(glyph);
 +      return mark;
 +    }
@@ -946,10 +949,10 @@ index 0000000000000000000000000000000000000000..d22c93248b32fceb2a0e942e4994ac95
 +})();
 diff --git a/dist/console/runtime/public/console/console-message-overrides.css b/dist/console/runtime/public/console/console-message-overrides.css
 new file mode 100644
-index 0000000000000000000000000000000000000000..2241fe427ac54d941169f1918418f1bd3224cd0d
+index 0000000000000000000000000000000000000000..10a94bfd3e5262595eb200d687d44444b0e39d74
 --- /dev/null
 +++ b/dist/console/runtime/public/console/console-message-overrides.css
-@@ -0,0 +1,782 @@
+@@ -0,0 +1,794 @@
 +.vitehub-console,
 +.vitehub-console > * {
 +  max-width: none;
@@ -1006,7 +1009,7 @@ index 0000000000000000000000000000000000000000..2241fe427ac54d941169f1918418f1bd
 +  display: inline-flex;
 +}
 +
-+.vh-sidebar-model__logo {
++.vh-invocation-brand__logo.vh-sidebar-model__logo {
 +  color: currentColor !important;
 +  height: 0.72rem;
 +  width: 0.72rem;
@@ -1418,11 +1421,23 @@ index 0000000000000000000000000000000000000000..2241fe427ac54d941169f1918418f1bd
 +}
 +
 +.vh-invocation-brand__glyph {
-+  background: currentColor;
 +  display: block;
++  filter: grayscale(1) brightness(0);
 +  height: 100%;
-+  mask: var(--vh-brand-icon) center / contain no-repeat;
++  object-fit: contain;
++  opacity: 0.72;
 +  width: 100%;
++}
++
++@media (prefers-color-scheme: dark) {
++  .vh-invocation-brand__glyph {
++    filter: grayscale(1) brightness(0) invert(1);
++  }
++}
++
++html.dark .vh-invocation-brand__glyph,
++[data-theme="dark"] .vh-invocation-brand__glyph {
++  filter: grayscale(1) brightness(0) invert(1);
 +}
 +
 +.vh-invocation-execution__model-logo,
@@ -1748,6 +1763,20 @@ index a2a673da1f42f2343a057e549016532d272a67e6..679c92fab1997fd0cb5b8f061870367e
      <script type="module" src="/_vitehub/assets/console-Ce-1dTYT.js"><\/script>
    </body>
  </html>`;
+diff --git a/dist/console/server.d.ts b/dist/console/server.d.ts
+index dcf3ca38a54764855f621e8b2a80ef1099a5dac8..ef84d259ef1bf32521ae13a2d4afced81e5e402b 100644
+--- a/dist/console/server.d.ts
++++ b/dist/console/server.d.ts
+@@ -23,7 +23,7 @@ type ConsoleAgentDefinitionEntry = {
+   fallbackName: string;
+ };
+ declare function installConsoleAgents(agentNames: readonly string[], invocations: AgentInvocations): readonly string[];
+-declare function installConsoleAgentDefinitions(entries: readonly ConsoleAgentDefinitionEntry[], invocations: AgentInvocations): readonly string[];
++declare function installConsoleAgentDefinitions(entries: readonly ConsoleAgentDefinitionEntry[], invocations: AgentInvocations | (() => AgentInvocations), projectRoot?: string): readonly string[];
+ declare function getConsoleAgents(): readonly string[];
+ //#endregion
+ export { createConsoleFixtureInvocations, createConsoleInvocations, getConsoleAgents, getConsoleBlob, getConsoleDefinitions, getConsoleInvocations, getConsoleKV, getConsoleProjectName, getConsoleSections, installConsoleAgentDefinitions, installConsoleAgents, installConsoleBlob, installConsoleDefinitions, installConsoleFixtureInvocations, installConsoleInvocations, installConsoleKV, installConsoleProjectName, installConsoleSections };
+\ No newline at end of file
 diff --git a/dist/invocations-D6WerHyB.js b/dist/invocations-D6WerHyB.js
 index 1522cdfeeb20c4a0726f52901fa29723b2fa129d..6c0c3207e64be0ec0c360e50d7b45be7f4c3735f 100644
 --- a/dist/invocations-D6WerHyB.js
@@ -1778,7 +1807,7 @@ index 1522cdfeeb20c4a0726f52901fa29723b2fa129d..6c0c3207e64be0ec0c360e50d7b45be7
  }
  function createConsoleFixtureInvocationsFromSnapshot(fixture) {
 diff --git a/dist/nuxt.js b/dist/nuxt.js
-index 236b4b32b7c59abf3cf1adf4c649f21ec24ff0a9..bde9b899cfcf45f010bd3421f920489599df62b6 100644
+index 236b4b32b7c59abf3cf1adf4c649f21ec24ff0a9..58ec909ace403faf038c654e2f3f3df106119602 100644
 --- a/dist/nuxt.js
 +++ b/dist/nuxt.js
 @@ -21,6 +21,7 @@ import { hubDb } from "@vite-hub/database/nuxt";
@@ -1789,6 +1818,15 @@ index 236b4b32b7c59abf3cf1adf4c649f21ec24ff0a9..bde9b899cfcf45f010bd3421f9204895
  function configuredProjectRoot(root, value) {
  	return value && typeof value === "object" && "projectRoot" in value && typeof value.projectRoot === "string" ? resolve(root, value.projectRoot) : void 0;
  }
+@@ -171,7 +172,7 @@ function renderConsoleNitroPlugin(projectRoot, sections, agents, catalog, blobSt
+ 		...blobEnabled ? [`installConsoleBlob(${JSON.stringify(projectRoot)}, vitehubConsoleBlob, ${JSON.stringify(blobStores)})`] : [],
+ 		`installConsoleProjectName(${JSON.stringify(projectRoot)}, ${JSON.stringify(resolveConsoleProjectNameFromRoot(projectRoot))})`,
+ 		...definitionsEnabled ? [`installConsoleDefinitions(${JSON.stringify(projectRoot)}, ${JSON.stringify(catalog.definitions)})`] : [],
+-		...agentsEnabled ? [fixture ? `const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})` : `const vitehubConsoleInvocations = installConsoleInvocations(${JSON.stringify(projectRoot)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [],
++		...agentsEnabled ? fixture ? [`const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [`installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], () => installConsoleInvocations(${JSON.stringify(projectRoot)}), ${JSON.stringify(projectRoot)})`] : [],
+ 		...kvEnabled ? [`installConsoleKV(${JSON.stringify(projectRoot)}, vitehubConsoleKV, ${JSON.stringify(kvStores)})`] : [],
+ 		"export default function viteHubConsolePlugin() {}",
+ 		""
 @@ -238,11 +239,6 @@ function reconcileConsoleDefinitionsHandler(nitro, enabled) {
  	});
  }
@@ -1915,7 +1953,7 @@ index 236b4b32b7c59abf3cf1adf4c649f21ec24ff0a9..bde9b899cfcf45f010bd3421f9204895
  		const discoverySections = canDiscoverDefinitions() ? sections : sections.filter((section) => !consoleDefinitionSectionIds.some((definitionSection) => definitionSection === section));
  		const catalog = await discoverConsoleBuildCatalog({
 diff --git a/dist/src-B4pj6Dx_.js b/dist/src-B4pj6Dx_.js
-index 2344b1139dfd99ea629e130ae59e4260694eb37c..223f8fdb3fd833ffd58768c7cf47088b9f912fcd 100644
+index 2344b1139dfd99ea629e130ae59e4260694eb37c..db18547e9e6ade9390bc6c827ccd7285db94a921 100644
 --- a/dist/src-B4pj6Dx_.js
 +++ b/dist/src-B4pj6Dx_.js
 @@ -4090,8 +4090,7 @@ function authRouteProtects(route, target) {
@@ -1928,10 +1966,7 @@ index 2344b1139dfd99ea629e130ae59e4260694eb37c..223f8fdb3fd833ffd58768c7cf47088b
  	if (configured.exposure === "host-managed") return;
  	if (configured.access !== "auth") throw new TypeError("[vitehub] Console production access must use access: \"auth\" or exposure: \"host-managed\".");
  	if (!options.auth) throw new Error("[vitehub] console: { access: \"auth\" } requires a discovered ViteHub Auth Definition.");
-diff --git a/dist/nuxt.js b/dist/nuxt.js
---- a/dist/nuxt.js
-+++ b/dist/nuxt.js
-@@ -172,7 +172,7 @@ function renderConsoleNitroPlugin(projectRoot, sections, agents, catalog, blobSt
+@@ -4116,7 +4115,7 @@ function renderConsoleNitroPlugin(projectRoot, sections, agents, catalog, blobSt
  		...blobEnabled ? [`installConsoleBlob(${JSON.stringify(projectRoot)}, vitehubConsoleBlob, ${JSON.stringify(blobStores)})`] : [],
  		`installConsoleProjectName(${JSON.stringify(projectRoot)}, ${JSON.stringify(resolveConsoleProjectNameFromRoot(projectRoot))})`,
  		...definitionsEnabled ? [`installConsoleDefinitions(${JSON.stringify(projectRoot)}, ${JSON.stringify(catalog.definitions)})`] : [],
@@ -1940,27 +1975,3 @@ diff --git a/dist/nuxt.js b/dist/nuxt.js
  		...kvEnabled ? [`installConsoleKV(${JSON.stringify(projectRoot)}, vitehubConsoleKV, ${JSON.stringify(kvStores)})`] : [],
  		"export default function viteHubConsolePlugin() {}",
  		""
-diff --git a/dist/src-B4pj6Dx_.js b/dist/src-B4pj6Dx_.js
---- a/dist/src-B4pj6Dx_.js
-+++ b/dist/src-B4pj6Dx_.js
-@@ -4115,7 +4115,7 @@ function renderConsoleNitroPlugin(projectRoot, sections, agents, catalog, blobSt
- 		...blobEnabled ? [`installConsoleBlob(${JSON.stringify(projectRoot)}, vitehubConsoleBlob, ${JSON.stringify(blobStores)})`] : [],
- 		`installConsoleProjectName(${JSON.stringify(projectRoot)}, ${JSON.stringify(resolveConsoleProjectNameFromRoot(projectRoot))})`,
- 		...definitionsEnabled ? [`installConsoleDefinitions(${JSON.stringify(projectRoot)}, ${JSON.stringify(catalog.definitions)})`] : [],
--		...agentsEnabled ? [fixture ? `const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})` : `const vitehubConsoleInvocations = installConsoleInvocations(${JSON.stringify(projectRoot)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [],
-+		...agentsEnabled ? fixture ? [`const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [`installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], () => installConsoleInvocations(${JSON.stringify(projectRoot)}), ${JSON.stringify(projectRoot)})`] : [],
- 		...kvEnabled ? [`installConsoleKV(${JSON.stringify(projectRoot)}, vitehubConsoleKV, ${JSON.stringify(kvStores)})`] : [],
- 		"export default function viteHubConsolePlugin() {}",
- 		""
-diff --git a/dist/console/server.d.ts b/dist/console/server.d.ts
---- a/dist/console/server.d.ts
-+++ b/dist/console/server.d.ts
-@@ -23,7 +23,7 @@ type ConsoleAgentDefinitionEntry = {
-   fallbackName: string;
- };
- declare function installConsoleAgents(agentNames: readonly string[], invocations: AgentInvocations): readonly string[];
--declare function installConsoleAgentDefinitions(entries: readonly ConsoleAgentDefinitionEntry[], invocations: AgentInvocations): readonly string[];
-+declare function installConsoleAgentDefinitions(entries: readonly ConsoleAgentDefinitionEntry[], invocations: AgentInvocations | (() => AgentInvocations), projectRoot?: string): readonly string[];
- declare function getConsoleAgents(): readonly string[];
- //#endregion
- export { createConsoleFixtureInvocations, createConsoleInvocations, getConsoleAgents, getConsoleBlob, getConsoleDefinitions, getConsoleInvocations, getConsoleKV, getConsoleProjectName, getConsoleSections, installConsoleAgentDefinitions, installConsoleAgents, installConsoleBlob, installConsoleDefinitions, installConsoleFixtureInvocations, installConsoleInvocations, installConsoleKV, installConsoleProjectName, installConsoleSections };

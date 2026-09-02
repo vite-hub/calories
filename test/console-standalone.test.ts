@@ -40,6 +40,9 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(messageStyles, /\.vh-invocation-tool-list/);
   assert.match(messageStyles, /\.vh-invocation-tool-calls/);
   assert.match(messageStyles, /\.vh-invocation-identifiers/);
+  assert.match(messageStyles, /\.vh-invocation-brand__logo\.vh-sidebar-model__logo/);
+  assert.match(messageStyles, /\.vh-invocation-brand__glyph/);
+  assert.match(messageStyles, /object-fit: contain/);
 
   assert.match(invocationEnhancer, /OpenRouter/);
   assert.match(invocationEnhancer, /Z\.AI/);
@@ -67,6 +70,8 @@ test("the Console ships as an isolated standalone document", async () => {
   assert.match(invocationEnhancer, /Amazon Bedrock/);
   assert.match(invocationEnhancer, /modelMaker/);
   assert.match(invocationEnhancer, /\/_vitehub\/assets\/brands/);
+  assert.match(invocationEnhancer, /document\.createElement\("img"\)/);
+  assert.doesNotMatch(invocationEnhancer, /--vh-brand-icon/);
   assert.doesNotMatch(invocationEnhancer, /Partial setup/);
 
   for (const brand of ["openai", "anthropic", "google", "meta", "mistral", "xai", "deepseek", "cohere", "qwen", "zai", "openrouter", "aws", "azure", "groq"]) {

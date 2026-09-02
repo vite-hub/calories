@@ -23,7 +23,7 @@ patchedDependencies:
     hash: 69359c36578f64ffbf9caa10781bf6dbd747b73839f291f391ff5e48f516e775
     path: patches/@vite-hub__workflow@0.0.1.patch
   vite-hub@0.0.1:
-    hash: ae63769286ce53fcd2114defbabb0ecaee263a50b55cd23acdc874e6db7afd60
+    hash: 455dfdd7797f1ab82377be93e06bbe9a40a44de8cb232712fda9a729108f0784
     path: patches/vite-hub@0.0.1.patch
 
 importers:
@@ -62,7 +62,7 @@ importers:
         version: 4.3.3
       vite-hub:
         specifier: https://pkg.pr.new/vite-hub/vitehub/vite-hub@cd1f9d79975ba110bae906f205f983d675610286
-        version: https://pkg.pr.new/vite-hub/vitehub/vite-hub@cd1f9d79975ba110bae906f205f983d675610286(patch_hash=ae63769286ce53fcd2114defbabb0ecaee263a50b55cd23acdc874e6db7afd60)(3664ea961c4ee577c1cbd67eb5785260)
+        version: https://pkg.pr.new/vite-hub/vitehub/vite-hub@cd1f9d79975ba110bae906f205f983d675610286(patch_hash=455dfdd7797f1ab82377be93e06bbe9a40a44de8cb232712fda9a729108f0784)(3664ea961c4ee577c1cbd67eb5785260)
       vue-router:
         specifier: 5.2.0
         version: 5.2.0(@vue/compiler-sfc@3.5.41)(esbuild@0.28.2)(rolldown@1.2.5)(rollup@4.62.5)(vite@8.1.5(@types/node@25.9.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))(vue@3.5.41(typescript@6.0.3))
@@ -17952,7 +17952,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite-hub@https://pkg.pr.new/vite-hub/vitehub/vite-hub@cd1f9d79975ba110bae906f205f983d675610286(patch_hash=ae63769286ce53fcd2114defbabb0ecaee263a50b55cd23acdc874e6db7afd60)(3664ea961c4ee577c1cbd67eb5785260):
+  vite-hub@https://pkg.pr.new/vite-hub/vitehub/vite-hub@cd1f9d79975ba110bae906f205f983d675610286(patch_hash=455dfdd7797f1ab82377be93e06bbe9a40a44de8cb232712fda9a729108f0784)(3664ea961c4ee577c1cbd67eb5785260):
     dependencies:
       '@aws-sdk/client-s3': 3.1116.0
       '@aws-sdk/lib-storage': 3.1116.0(@aws-sdk/client-s3@3.1116.0)
