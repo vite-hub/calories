@@ -56,6 +56,7 @@ const publicToolTitles: Record<string, string> = {
 
 const databaseCapabilityError = /Capability ["']db["'] requires the database primitive|@vite-hub\/database\/drizzle/;
 const cloudflareRuntimeError = /^The Workers runtime canceled this request because /;
+const workflowInputPortabilityError = /^Agent Workflow inputs must contain only JSON-compatible values\.$/;
 const genericInvocationError = "The agent stopped before completing this request. Use the trace ID shown in this session to find the matching Worker logs.";
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -257,6 +258,13 @@ function publicInvocationError(error: unknown): { message: string; name: string 
     return {
       message: "This deployment could not load its database adapter, so the request was not saved. Retry after the deployment has been updated.",
       name: "Database unavailable",
+    };
+  }
+
+  if (workflowInputPortabilityError.test(message)) {
+    return {
+      message: "The agent could not start because its prepared message contained a value that Cloudflare Workflows cannot persist as JSON.",
+      name: "Workflow input invalid",
     };
   }
 

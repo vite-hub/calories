@@ -308,6 +308,29 @@ describe("publicObservation", () => {
 });
 
 describe("public Console metadata", () => {
+  it("reports invalid Workflow input without exposing the prepared message", () => {
+    const record = publicRecord({
+      agentName: "calories",
+      createdAt: "2026-09-02T12:23:14.804Z",
+      cursor: "195",
+      error: {
+        message: "Agent Workflow inputs must contain only JSON-compatible values.",
+        name: "TypeError",
+      },
+      failedAt: "2026-09-02T12:23:14.804Z",
+      id: "invocation-3",
+      observations: [],
+      status: "failed",
+      traceId: "trace-3",
+      updatedAt: "2026-09-02T12:23:14.804Z",
+    });
+
+    assert.deepEqual(record.error, {
+      message: "The agent could not start because its prepared message contained a value that Cloudflare Workflows cannot persist as JSON.",
+      name: "Workflow input invalid",
+    });
+  });
+
   it("retains the Cloudflare hung-Worker diagnosis while redacting credentials and URLs", () => {
     const privateError = "The Workers runtime canceled this request because it detected that the Worker had hung and would never generate a response. Refer to https://developers.cloudflare.com/workers/observability/errors/ with Authorization: Bearer private-openrouter-token";
     const record = publicRecord({

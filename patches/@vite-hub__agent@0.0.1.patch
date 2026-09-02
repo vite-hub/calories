@@ -266,3 +266,81 @@ diff --git a/dist/channel-delivery-CWRb4-Rs.js b/dist/channel-delivery-CWRb4-Rs.
  }
  async function openAgentChannelDelivery(state, input) {
  	const candidate = {
+diff --git a/dist/src-CuBy0eWq.js b/dist/src-CuBy0eWq.js
+--- a/dist/src-CuBy0eWq.js
++++ b/dist/src-CuBy0eWq.js
+@@ -927,13 +927,14 @@ async function portableWorkflowMessages(messages) {
+ 		...message,
+ 		parts: await Promise.all(message.parts.map(async (part) => {
+ 			if (!isAttachmentPart(part)) return cloneWorkflowJsonValue(part);
+-			let data = part.data;
++			const { fetchMetadata: _fetchMetadata, ...portablePart } = part;
++			let data = portablePart.data;
+ 			if (data instanceof Blob) data = await data.arrayBuffer();
+ 			if (data instanceof ArrayBuffer) data = new Uint8Array(data);
+ 			return cloneWorkflowJsonValue(data instanceof Uint8Array ? {
+-				...part,
+-				data: `data:${part.mediaType};base64,${workflowBytesToBase64(data)}`
+-			} : part);
++				...portablePart,
++				data: `data:${portablePart.mediaType};base64,${workflowBytesToBase64(data)}`
++			} : portablePart);
+ 		}))
+ 	})));
+ }
+diff --git a/dist/src-CuBy0eWq.js b/dist/src-CuBy0eWq.js
+--- a/dist/src-CuBy0eWq.js
++++ b/dist/src-CuBy0eWq.js
+@@ -944,19 +945,39 @@ async function portableAgentWorkflowInput(input) {
+ 	if (workflowInput.messages) workflowInput.messages = await portableWorkflowMessages(workflowInput.messages);
+ 	if (workflowInput.message && !hasRuntimeType(workflowInput.message, "string")) [workflowInput.message] = await portableWorkflowMessages([workflowInput.message]);
+ 	if (Array.isArray(workflowInput.prompt)) workflowInput.prompt = await portableWorkflowMessages(workflowInput.prompt);
+ 	return cloneWorkflowJsonValue(workflowInput);
+ }
++async function recordAgentWorkflowStartFailure(agent, context, input, options, activity, error) {
++	await activity?.update(input.abortSignal?.aborted ? "cancelled" : "failed", error);
++	if (!hasAgentDefinition(agent)) return;
++	const failedRunId = !options.fresh && context.run?.runId ? context.run.runId : createTraceId();
++	try {
++		const invocationJournal = await bindAgentInvocations(agent.invocations, {
++			...context,
++			run: {
++				...context.run,
++				runId: failedRunId
++			}
++		}, {
++			agentName: agent.name || context.agentIdentity?.name,
++			terminalTakeover: true
++		});
++		await invocationJournal?.finish(input.abortSignal?.aborted ? "cancelled" : "failed", error);
++	} catch (journalError) {
++		console.error(new AggregateError([error, journalError], "[vitehub] Agent Workflow setup failed and invocation journaling also failed."));
++	}
++}
+ async function runAgentAsWorkflow(agent, context, input, options = {}) {
+ 	const binding = resolveAgentWorkflowRuntimeBinding(agent);
+ 	const cloudflareEnv = context.cloudflare?.env || getCloudflareEnv(context);
+ 	if (!binding || "discoveryDefault" in binding && !context.agentIdentity) return void 0;
+ 	const activity = hasAgentDefinition(agent) ? createActiveAgentActivity(agent, context) : void 0;
+ 	let workflowRuntimeState;
+ 	try {
+ 		workflowRuntimeState = await loadAgentWorkflowRuntimeStateModule();
+ 	} catch (error) {
+ 		await activity?.update("queued");
+-		await activity?.update(input.abortSignal?.aborted ? "cancelled" : "failed", error);
++		await recordAgentWorkflowStartFailure(agent, context, input, options, activity, error);
+ 		throw error;
+ 	}
+ 	let workflowConfig = workflowRuntimeState.getWorkflowRuntimeConfig();
+@@ -995,10 +1016,10 @@ async function runAgentAsWorkflow(agent, context, input, options = {}) {
+ 	try {
+ 		workflowName = resolveAgentWorkflowName(agent, binding, context);
+ 		handle = await getAgentWorkflowHandle(agent, workflowName, Boolean(context.agentIdentity));
+ 		parsedInput = hasAgentDefinition(agent) ? await withParsedAgentMessageMeta(agent, input, context.run) : input;
+ 		workflowInput = await portableAgentWorkflowInput(parsedInput);
+ 	} catch (error) {
+-		await activity?.update(input.abortSignal?.aborted ? "cancelled" : "failed", error);
++		await recordAgentWorkflowStartFailure(agent, context, input, options, activity, error);
+ 		throw error;
+ 	}
+ 	const resolvedContext = createResolvedRuntimeContext(context);
