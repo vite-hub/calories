@@ -59,6 +59,7 @@ const publicToolTitles: Record<string, string> = {
 const databaseCapabilityError = /Capability ["']db["'] requires the database primitive|@vite-hub\/database\/drizzle/;
 const cloudflareRuntimeError = /^The Workers runtime canceled this request because /;
 const workflowInputPortabilityError = /^Agent Workflow inputs must contain only JSON-compatible values\.$/;
+const workflowInputPublicError = "The agent could not start because its prepared message contained a value that Cloudflare Workflows cannot persist as JSON.";
 const genericInvocationError = "The agent stopped before completing this request. Use the trace ID shown in this session to find the matching Worker logs.";
 const legacyCompletionMessage = "Completed the meal request and replied on Telegram.";
 const missingReplyMessage = "Reply content was not retained for this older Telegram session.";
@@ -265,9 +266,12 @@ function publicInvocationError(error: unknown): { message: string; name: string 
     };
   }
 
-  if (workflowInputPortabilityError.test(message)) {
+  if (
+    workflowInputPortabilityError.test(message)
+    || (name === "Workflow input invalid" && message === workflowInputPublicError)
+  ) {
     return {
-      message: "The agent could not start because its prepared message contained a value that Cloudflare Workflows cannot persist as JSON.",
+      message: workflowInputPublicError,
       name: "Workflow input invalid",
     };
   }

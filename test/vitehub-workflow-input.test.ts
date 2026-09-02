@@ -26,24 +26,39 @@ async function portableAgentWorkflowInput(input: unknown) {
   return runtime.s(input);
 }
 
-test("Agent Workflows remove runtime metadata loaders from materialized photos", async () => {
+test("Agent Workflows remove runtime loaders from direct and replied-to photos", async () => {
   let dataLoads = 0;
   let metadataLoads = 0;
   const input = await portableAgentWorkflowInput({
     context: {},
     messages: [{
-      parts: [{
-        fetchData: async () => {
-          dataLoads += 1;
-          return new Uint8Array([1, 2, 3]);
+      parts: [
+        {
+          data: {
+            attachment: {
+              fetchMetadata: async () => {
+                metadataLoads += 1;
+                return { height: 480, width: 640 };
+              },
+              mediaType: "image/jpeg",
+              type: "image",
+            },
+          },
+          type: "data-chat-reply-attachment",
         },
-        fetchMetadata: async () => {
-          metadataLoads += 1;
-          return { height: 480, width: 640 };
+        {
+          fetchData: async () => {
+            dataLoads += 1;
+            return new Uint8Array([1, 2, 3]);
+          },
+          fetchMetadata: async () => {
+            metadataLoads += 1;
+            return { height: 480, width: 640 };
+          },
+          mediaType: "image/jpeg",
+          type: "image",
         },
-        mediaType: "image/jpeg",
-        type: "image",
-      }],
+      ],
       role: "user",
     }],
   });
@@ -51,6 +66,15 @@ test("Agent Workflows remove runtime metadata loaders from materialized photos",
   assert.equal(dataLoads, 1);
   assert.equal(metadataLoads, 0);
   assert.deepEqual(input.messages[0].parts[0], {
+    data: {
+      attachment: {
+        mediaType: "image/jpeg",
+        type: "image",
+      },
+    },
+    type: "data-chat-reply-attachment",
+  });
+  assert.deepEqual(input.messages[0].parts[1], {
     data: "data:image/jpeg;base64,AQID",
     mediaType: "image/jpeg",
     type: "image",

@@ -369,7 +369,7 @@ describe("publicObservation", () => {
 
 describe("public Console metadata", () => {
   it("reports invalid Workflow input without exposing the prepared message", () => {
-    const record = publicRecord({
+    const firstPass = publicRecord({
       agentName: "calories",
       createdAt: "2026-09-02T12:23:14.804Z",
       cursor: "195",
@@ -385,7 +385,13 @@ describe("public Console metadata", () => {
       updatedAt: "2026-09-02T12:23:14.804Z",
     });
 
-    assert.deepEqual(record.error, {
+    const secondPass = publicRecord(firstPass);
+
+    assert.deepEqual(firstPass.error, {
+      message: "The agent could not start because its prepared message contained a value that Cloudflare Workflows cannot persist as JSON.",
+      name: "Workflow input invalid",
+    });
+    assert.deepEqual(secondPass.error, {
       message: "The agent could not start because its prepared message contained a value that Cloudflare Workflows cannot persist as JSON.",
       name: "Workflow input invalid",
     });
