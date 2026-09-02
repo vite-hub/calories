@@ -27,3 +27,27 @@ test("the generated Console plugin defers its local invocation journal fallback"
   assert.match(plugin, /installConsoleAgentDefinitions\([^\n]+, \(\) => installConsoleInvocations\(/);
   assert.doesNotMatch(plugin, /const vitehubConsoleInvocations = installConsoleInvocations\(/);
 });
+
+test("a configured journal installs before the local fallback establishes a Console root", () => {
+  const configured = defineAgentInvocations({ store: createMemoryAgentInvocationStore() });
+  const rootKey = Symbol.for("vitehub.console.invocations.root");
+  const previousRoot = Reflect.get(globalThis, rootKey);
+  Reflect.deleteProperty(globalThis, rootKey);
+  let fallbackEvaluated = false;
+
+  try {
+    installConsoleAgentDefinitions([{
+      definition: { default: { invocations: configured } },
+      fallbackName: "configured-calories",
+    }], () => {
+      fallbackEvaluated = true;
+      return defineAgentInvocations({ store: createMemoryAgentInvocationStore() });
+    }, "/configured-calories");
+
+    assert.equal(fallbackEvaluated, false);
+    assert.equal(getConsoleInvocations(), configured);
+  } finally {
+    if (previousRoot === undefined) Reflect.deleteProperty(globalThis, rootKey);
+    else Reflect.set(globalThis, rootKey, previousRoot);
+  }
+});

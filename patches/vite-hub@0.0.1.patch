@@ -14,7 +14,8 @@ index 20063ce08c9a093d0c3893ba985eb0bc040beedf..f94690be56b16e77dd5eac74410c5c38
 @@ -9,7 +10,8 @@ function installConsoleAgents(agentNames, invocations) {
  	return agents;
  }
- function installConsoleAgentDefinitions(entries, invocations) {
+-function installConsoleAgentDefinitions(entries, invocations) {
++function installConsoleAgentDefinitions(entries, invocations, projectRoot) {
 -	return installConsoleAgents(entries.map(({ definition, fallbackName }) => {
 +	let configuredInvocations;
 +	const agentNames = entries.map(({ definition, fallbackName }) => {
@@ -35,8 +36,8 @@ index 20063ce08c9a093d0c3893ba985eb0bc040beedf..f94690be56b16e77dd5eac74410c5c38
 -	}), invocations);
 +	});
 +	const installedInvocations = configuredInvocations ?? (typeof invocations === "function" ? invocations() : invocations);
-+	const projectRoot = globalThis[consoleInvocationsRootKey];
-+	if (configuredInvocations && typeof projectRoot === "string") installConsoleInvocationFallback(installedInvocations, projectRoot, globalThis, `agent:${projectRoot}`);
++	const resolvedProjectRoot = projectRoot ?? globalThis[consoleInvocationsRootKey];
++	if (configuredInvocations && typeof resolvedProjectRoot === "string") installConsoleInvocationFallback(installedInvocations, resolvedProjectRoot, globalThis, `agent:${resolvedProjectRoot}`);
 +	return installConsoleAgents(agentNames, installedInvocations);
  }
  function getConsoleAgents() {
@@ -1935,7 +1936,7 @@ diff --git a/dist/nuxt.js b/dist/nuxt.js
  		`installConsoleProjectName(${JSON.stringify(projectRoot)}, ${JSON.stringify(resolveConsoleProjectNameFromRoot(projectRoot))})`,
  		...definitionsEnabled ? [`installConsoleDefinitions(${JSON.stringify(projectRoot)}, ${JSON.stringify(catalog.definitions)})`] : [],
 -		...agentsEnabled ? [fixture ? `const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})` : `const vitehubConsoleInvocations = installConsoleInvocations(${JSON.stringify(projectRoot)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [],
-+		...agentsEnabled ? fixture ? [`const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [`installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], () => installConsoleInvocations(${JSON.stringify(projectRoot)}))`] : [],
++		...agentsEnabled ? fixture ? [`const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [`installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], () => installConsoleInvocations(${JSON.stringify(projectRoot)}), ${JSON.stringify(projectRoot)})`] : [],
  		...kvEnabled ? [`installConsoleKV(${JSON.stringify(projectRoot)}, vitehubConsoleKV, ${JSON.stringify(kvStores)})`] : [],
  		"export default function viteHubConsolePlugin() {}",
  		""
@@ -1947,7 +1948,19 @@ diff --git a/dist/src-B4pj6Dx_.js b/dist/src-B4pj6Dx_.js
  		`installConsoleProjectName(${JSON.stringify(projectRoot)}, ${JSON.stringify(resolveConsoleProjectNameFromRoot(projectRoot))})`,
  		...definitionsEnabled ? [`installConsoleDefinitions(${JSON.stringify(projectRoot)}, ${JSON.stringify(catalog.definitions)})`] : [],
 -		...agentsEnabled ? [fixture ? `const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})` : `const vitehubConsoleInvocations = installConsoleInvocations(${JSON.stringify(projectRoot)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [],
-+		...agentsEnabled ? fixture ? [`const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [`installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], () => installConsoleInvocations(${JSON.stringify(projectRoot)}))`] : [],
++		...agentsEnabled ? fixture ? [`const vitehubConsoleInvocations = installConsoleFixtureInvocations(${JSON.stringify(projectRoot)}, ${JSON.stringify(fixture)}, ${fixtureSource}, ${JSON.stringify(revision)}, ${JSON.stringify(runtimeBinding)})`, `installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], vitehubConsoleInvocations)`] : [`installConsoleAgentDefinitions([${agents.map((agent, index) => `{ definition: vitehubConsoleAgent${index}, fallbackName: ${JSON.stringify(agent.name)} }`).join(", ")}], () => installConsoleInvocations(${JSON.stringify(projectRoot)}), ${JSON.stringify(projectRoot)})`] : [],
  		...kvEnabled ? [`installConsoleKV(${JSON.stringify(projectRoot)}, vitehubConsoleKV, ${JSON.stringify(kvStores)})`] : [],
  		"export default function viteHubConsolePlugin() {}",
  		""
+diff --git a/dist/console/server.d.ts b/dist/console/server.d.ts
+--- a/dist/console/server.d.ts
++++ b/dist/console/server.d.ts
+@@ -23,7 +23,7 @@ type ConsoleAgentDefinitionEntry = {
+   fallbackName: string;
+ };
+ declare function installConsoleAgents(agentNames: readonly string[], invocations: AgentInvocations): readonly string[];
+-declare function installConsoleAgentDefinitions(entries: readonly ConsoleAgentDefinitionEntry[], invocations: AgentInvocations): readonly string[];
++declare function installConsoleAgentDefinitions(entries: readonly ConsoleAgentDefinitionEntry[], invocations: AgentInvocations | (() => AgentInvocations), projectRoot?: string): readonly string[];
+ declare function getConsoleAgents(): readonly string[];
+ //#endregion
+ export { createConsoleFixtureInvocations, createConsoleInvocations, getConsoleAgents, getConsoleBlob, getConsoleDefinitions, getConsoleInvocations, getConsoleKV, getConsoleProjectName, getConsoleSections, installConsoleAgentDefinitions, installConsoleAgents, installConsoleBlob, installConsoleDefinitions, installConsoleFixtureInvocations, installConsoleInvocations, installConsoleKV, installConsoleProjectName, installConsoleSections };
