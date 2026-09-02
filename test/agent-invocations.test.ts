@@ -386,12 +386,23 @@ describe("public Console metadata", () => {
     });
 
     const secondPass = publicRecord(firstPass);
+    const previouslyGenericPass = publicRecord({
+      ...firstPass,
+      error: {
+        message: "The agent stopped before completing this request. Use the trace ID shown in this session to find the matching Worker logs.",
+        name: "Workflow input invalid",
+      },
+    });
 
     assert.deepEqual(firstPass.error, {
       message: "The agent could not start because its prepared message contained a value that Cloudflare Workflows cannot persist as JSON.",
       name: "Workflow input invalid",
     });
     assert.deepEqual(secondPass.error, {
+      message: "The agent could not start because its prepared message contained a value that Cloudflare Workflows cannot persist as JSON.",
+      name: "Workflow input invalid",
+    });
+    assert.deepEqual(previouslyGenericPass.error, {
       message: "The agent could not start because its prepared message contained a value that Cloudflare Workflows cannot persist as JSON.",
       name: "Workflow input invalid",
     });

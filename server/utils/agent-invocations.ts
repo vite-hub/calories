@@ -268,7 +268,7 @@ function publicInvocationError(error: unknown): { message: string; name: string 
 
   if (
     workflowInputPortabilityError.test(message)
-    || (name === "Workflow input invalid" && message === workflowInputPublicError)
+    || name === "Workflow input invalid"
   ) {
     return {
       message: workflowInputPublicError,
