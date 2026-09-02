@@ -146,6 +146,18 @@ function publicNamedItems(value: unknown, key: string): Array<Record<string, str
   return items.length ? items : undefined;
 }
 
+function publicTools(value: unknown): Array<{ description?: string; name: string }> | undefined {
+  if (!Array.isArray(value)) return;
+  const tools = value.flatMap((item) => {
+    const tool = record(item);
+    const name = stringValue(tool?.name);
+    if (!name) return [];
+    const description = stringValue(tool?.description)?.trim().replace(/\s+/g, " ").slice(0, 240);
+    return [{ name, ...(description ? { description } : {}) }];
+  });
+  return tools.length ? tools : undefined;
+}
+
 function publicAgentConfiguration(value: unknown): Record<string, unknown> | undefined {
   const configuration = record(value);
   if (!configuration) return;
@@ -176,7 +188,7 @@ function publicAgentConfiguration(value: unknown): Record<string, unknown> | und
     ...(stringValue(workspace.name) ? { name: stringValue(workspace.name) } : {}),
   };
   const capabilities = publicNamedItems(configuration.capabilities, "id");
-  const tools = publicNamedItems(configuration.tools, "name");
+  const tools = publicTools(configuration.tools);
   const result = {
     ...(publicAgent && Object.keys(publicAgent).length ? { agent: publicAgent } : {}),
     ...(capabilities ? { capabilities } : {}),

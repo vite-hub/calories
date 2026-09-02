@@ -23,7 +23,19 @@ index 29f43dff042210b9bf451fb6c9169e6d479a7cdf..f18ddf8fc9639daf857d76fc35b2b066
  async function createAgent(options, context, fallbackCapture) {
  	const aiSdk = await loadAiSdk();
  	const { ToolLoopAgent, isStepCount, jsonSchema } = aiSdk;
-@@ -1000,7 +1014,39 @@ async function createAgent(options, context, fallbackCapture) {
+@@ -971,7 +985,10 @@ async function createAgent(options, context, fallbackCapture) {
+ 			...hasRuntimeType(telemetryModel?.provider, "string") ? { provider: telemetryModel.provider } : {}
+ 		} },
+ 		...instructions ? { instructions: [instructions] } : {},
+-		...Object.keys(toolSet).length ? { tools: Object.keys(toolSet).sort().map((name) => ({ name })) } : {}
++		...Object.keys(toolSet).length ? { tools: Object.entries(toolSet).sort(([left], [right]) => left.localeCompare(right)).map(([name, tool]) => ({
++			name,
++			...typeof tool?.description === "string" && tool.description.trim() ? { description: tool.description.trim().replace(/\s+/g, " ").slice(0, 240) } : {}
++		})) } : {}
+ 	});
+ 	const { instructions: _instructions, execution: _execution, model: _model, tools: _tools } = options;
+ 	const stepLimit = execution?.stepLimit;
+@@ -1000,7 +1017,39 @@ async function createAgent(options, context, fallbackCapture) {
  		...withoutRepairConversationSettings(await prepareCall(input)),
  		...input.prompt === void 0 ? {} : { prompt: input.prompt }
  	}) : void 0;
@@ -64,7 +76,7 @@ index 29f43dff042210b9bf451fb6c9169e6d479a7cdf..f18ddf8fc9639daf857d76fc35b2b066
  		...repairSettings,
  		instructions,
  		model: instrumentedModel,
-@@ -1008,17 +1054,31 @@ async function createAgent(options, context, fallbackCapture) {
+@@ -1008,17 +1057,31 @@ async function createAgent(options, context, fallbackCapture) {
  		...prepareRepairCall ? { prepareCall: prepareRepairCall } : {},
  		stopWhen: isStepCount(1)
  	}) : void 0;
@@ -106,7 +118,7 @@ index 29f43dff042210b9bf451fb6c9169e6d479a7cdf..f18ddf8fc9639daf857d76fc35b2b066
  	} : void 0;
  	return {
  		agent: new ToolLoopAgent({
-@@ -1026,11 +1086,14 @@ async function createAgent(options, context, fallbackCapture) {
+@@ -1026,11 +1089,14 @@ async function createAgent(options, context, fallbackCapture) {
  			instructions,
  			model: instrumentedModel,
  			...nativeOutput ? { output: nativeOutput } : {},
@@ -121,7 +133,7 @@ index 29f43dff042210b9bf451fb6c9169e6d479a7cdf..f18ddf8fc9639daf857d76fc35b2b066
  		tools: Object.keys(toolSet).length ? toolSet : void 0
  	};
  }
-@@ -1042,16 +1105,20 @@ function createAiSdkAdapter(options) {
+@@ -1042,16 +1108,20 @@ function createAiSdkAdapter(options) {
  			const callInput = await getCallInput(context, execution?.attachments);
  			const fallback = getFallbackOptions(execution?.workspaceFallback);
  			const fallbackCapture = fallback.enabled || Boolean(context.output) ? createWorkspaceFallbackEvidenceCapture(fallback.enabled ? fallback.maxToolResults : 8) : void 0;
@@ -149,7 +161,7 @@ index 29f43dff042210b9bf451fb6c9169e6d479a7cdf..f18ddf8fc9639daf857d76fc35b2b066
  			};
  			const captureOriginalStep = async (event) => {
  				await usageCapture.onStepEnd(event);
-@@ -1067,25 +1134,22 @@ function createAiSdkAdapter(options) {
+@@ -1067,25 +1137,22 @@ function createAiSdkAdapter(options) {
  			let originalGenerated;
  			let repaired = false;
  			const synthesizedOutput = async (synthesized, original, repairResult) => {
@@ -181,7 +193,7 @@ index 29f43dff042210b9bf451fb6c9169e6d479a7cdf..f18ddf8fc9639daf857d76fc35b2b066
  				], combinedCapturedUsage(captures));
  				const raw = withCapturedUsage(original, captures);
  				if (raw && hasRuntimeType(raw, "object") && usageRecord) Object.defineProperty(raw, "usageRecord", {
-@@ -1149,14 +1213,15 @@ function createAiSdkAdapter(options) {
+@@ -1149,14 +1216,15 @@ function createAiSdkAdapter(options) {
  					text: generated.text
  				}, repairCallInput);
  			}

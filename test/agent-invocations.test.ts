@@ -274,7 +274,10 @@ describe("publicObservation", () => {
           },
           instructions: ["Private system instructions"],
           runtime: { name: "cloudflare" },
-          tools: [{ name: "db_query" }, { name: "blob_edit" }],
+          tools: [
+            { name: "db_query", description: "  Query persisted meal records.\nPrivate values are never included.  " },
+            { name: "blob_edit", description: "Store original meal photos." },
+          ],
           workspace: { mode: "read", name: "Calories" },
         },
       },
@@ -293,7 +296,10 @@ describe("publicObservation", () => {
         provider: "openrouter",
       },
       runtime: { name: "cloudflare" },
-      tools: [{ name: "db_query" }, { name: "blob_edit" }],
+      tools: [
+        { name: "db_query", description: "Query persisted meal records. Private values are never included." },
+        { name: "blob_edit", description: "Store original meal photos." },
+      ],
       workspace: { mode: "read", name: "Calories" },
     });
     assert.equal(JSON.stringify(observation).includes("Private system instructions"), false);
