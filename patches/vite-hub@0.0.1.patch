@@ -259,10 +259,10 @@ index 0000000000000000000000000000000000000000..1a47fd72e471ca129c8b5f12236f623c
 +<svg fill="currentColor" fill-rule="evenodd" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><title>Z.ai</title><path d="M12.105 2L9.927 4.953H.653L2.83 2h9.276zM23.254 19.048L21.078 22h-9.242l2.174-2.952h9.244zM24 2L9.264 22H0L14.736 2H24z"></path></svg>
 diff --git a/dist/console/runtime/public/console/console-invocation-overrides.js b/dist/console/runtime/public/console/console-invocation-overrides.js
 new file mode 100644
-index 0000000000000000000000000000000000000000..f42f5434d581c10ec13bc5e9aea105bf9a50dafa
+index 0000000000000000000000000000000000000000..d22c93248b32fceb2a0e942e4994ac95d62eab79
 --- /dev/null
 +++ b/dist/console/runtime/public/console/console-invocation-overrides.js
-@@ -0,0 +1,588 @@
+@@ -0,0 +1,680 @@
 +(() => {
 +  const descriptions = {
 +    blob_edit: "Put or delete Blob objects from an attachment, workspace file, or provided body.",
@@ -383,6 +383,17 @@ index 0000000000000000000000000000000000000000..f42f5434d581c10ec13bc5e9aea105bf
 +    svg.setAttribute("viewBox", "0 0 24 24");
 +    const path = document.createElementNS(svg.namespaceURI, "path");
 +    path.setAttribute("d", "M21.6 3.1 18.4 20c-.24 1.2-.87 1.5-1.77.94l-4.88-3.6-2.35 2.27c-.26.26-.48.48-.98.48l.35-4.97 9.04-8.17c.39-.35-.09-.55-.61-.2L6.03 13.8l-4.81-1.5c-1.05-.33-1.07-1.05.22-1.55L20.25 3.5c.87-.32 1.63.2 1.35-.4Z");
++    svg.append(path);
++    return svg;
++  }
++
++  function viteHubMark() {
++    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
++    svg.setAttribute("aria-hidden", "true");
++    svg.setAttribute("class", "vh-vitehub-mark");
++    svg.setAttribute("viewBox", "0 0 20 18");
++    const path = document.createElementNS(svg.namespaceURI, "path");
++    path.setAttribute("d", "M19.734 8.156 15.576.844A1.66 1.66 0 0 0 14.135 0H5.819C5.226 0 4.677.32 4.38.844L.222 8.156a1.71 1.71 0 0 0 0 1.688l4.158 7.312c.297.523.846.844 1.439.844h8.316c.593 0 1.142-.32 1.438-.844l4.158-7.312c.3-.523.3-1.165.003-1.688Z");
 +    svg.append(path);
 +    return svg;
 +  }
@@ -741,24 +752,102 @@ index 0000000000000000000000000000000000000000..f42f5434d581c10ec13bc5e9aea105bf
 +    }
 +  }
 +
++  function enhanceEffects() {
++    for (const activity of document.querySelectorAll(".vh-invocation-activity[data-kind=\"system\"]")) {
++      if (activity.dataset.vhEffect === "true") continue;
++      const summary = activity.querySelector(".vh-invocation-event__summary");
++      const title = summary?.querySelector(".vh-invocation-event__title");
++      if (!summary || title?.textContent?.trim() !== "Agent configured") continue;
++      const suffix = summary.querySelector(".vh-invocation-event__suffix");
++      const parts = suffix?.textContent?.split("·").map((part) => part.trim()).filter(Boolean) ?? [];
++      const capabilities = parts.find((part) => /capabilit(?:y|ies)$/i.test(part));
++      const tools = parts.find((part) => /tools?$/i.test(part));
++      const configuredModel = parts.find((part) => part !== capabilities && part !== tools);
++      const counts = [capabilities, tools].filter(Boolean);
++      const effectDetail = counts.length > 1 ? `${counts[0]} and ${counts[1]}` : counts[0];
++      const label = configuredModel
++        ? `Configured ${modelName(configuredModel)}${effectDetail ? ` with ${effectDetail}` : ""}`
++        : `Configured${effectDetail ? ` ${effectDetail}` : " agent"}`;
++      title.textContent = label;
++      suffix?.remove();
++      summary.querySelector(".vh-invocation-event__icon")?.replaceChildren(viteHubMark());
++      activity.classList.add("vh-vitehub-effect");
++      activity.dataset.vhEffect = "true";
++      summary.setAttribute("aria-label", label);
++    }
++  }
++
++  function relativeTime(value) {
++    const date = new Date(value);
++    if (!Number.isFinite(date.getTime())) return;
++    const elapsed = Math.max(0, Date.now() - date.getTime());
++    const minute = 60_000;
++    const hour = 60 * minute;
++    const day = 24 * hour;
++    const month = 30 * day;
++    const year = 365 * day;
++    const full = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
++    if (elapsed < minute) return { full, label: "now", short: "now" };
++    const [amount, unit, suffix] = elapsed < hour
++      ? [Math.floor(elapsed / minute), "minute", "m"]
++      : elapsed < day
++        ? [Math.floor(elapsed / hour), "hour", "h"]
++        : elapsed < month
++          ? [Math.floor(elapsed / day), "day", "d"]
++          : elapsed < year
++            ? [Math.floor(elapsed / month), "month", "mo"]
++            : [Math.floor(elapsed / year), "year", "y"];
++    return {
++      full,
++      label: new Intl.RelativeTimeFormat("en", { numeric: "always" }).format(-amount, unit),
++      short: `${amount}${suffix}`,
++    };
++  }
++
++  function enhanceTimes() {
++    for (const time of document.querySelectorAll(".vh-invocation-list__state time[datetime]")) {
++      const relative = relativeTime(time.dateTime);
++      if (!relative) continue;
++      if (time.textContent !== relative.short) time.textContent = relative.short;
++      time.title = relative.full;
++      time.setAttribute("aria-label", `${relative.label}; ${relative.full}`);
++    }
++  }
++
 +  function enhanceSidebar(config) {
 +    const maker = modelMaker(config?.driver?.model?.id);
 +    for (const item of document.querySelectorAll(".vh-invocation-list__item")) {
-+      if (item.querySelector(".vh-invocation-list__branch")?.textContent?.trim().toLowerCase() !== "telegram") continue;
++      const branch = item.querySelector(".vh-invocation-list__branch");
++      if (branch?.textContent?.trim().toLowerCase() !== "telegram") continue;
++      const meta = item.querySelector(".vh-invocation-list__meta");
 +      const harness = item.querySelector(".vh-invocation-list__harness");
-+      if (!harness || harness.dataset.modelMaker === maker?.id) continue;
-+      harness.dataset.modelMaker = maker?.id ?? "unknown";
++      if (!meta || !harness) continue;
++      if (!meta.querySelector(":scope > .vh-sidebar-status")) {
++        const status = element("span", "vh-sidebar-status");
++        const state = item.querySelector(".vh-invocation-list__state");
++        const description = item.querySelector(":scope > .vh-invocation-list__description");
++        if (state) status.append(state);
++        if (description) {
++          description.classList.add("vh-sidebar-status__detail");
++          status.append(description);
++        }
++        meta.prepend(status);
++        item.querySelector(":scope > .vh-invocation-list__context")?.remove();
++      }
++      const version = maker?.id ?? "unknown";
++      if (harness.dataset.modelMaker === version && harness.querySelector(".vh-sidebar-channel")) continue;
++      harness.dataset.modelMaker = version;
++      const channel = element("span", "vh-sidebar-channel");
++      channel.title = "Telegram";
++      channel.append(telegramMark(), element("span", "vh-visually-hidden", "Telegram"));
++      const marks = [channel];
 +      if (maker) {
 +        const model = element("span", "vh-sidebar-model");
 +        model.title = `${maker.label} model`;
 +        model.append(brandMark(maker, "vh-sidebar-model__logo"), element("span", "vh-visually-hidden", `${maker.label} model`));
-+        harness.replaceChildren(model);
-+      } else {
-+        const channel = element("span", "vh-sidebar-channel");
-+        channel.title = "Telegram";
-+        channel.append(telegramMark(), element("span", "vh-visually-hidden", "Telegram"));
-+        harness.replaceChildren(channel);
++        marks.push(model);
 +      }
++      harness.replaceChildren(...marks);
 +    }
 +  }
 +
@@ -826,9 +915,11 @@ index 0000000000000000000000000000000000000000..f42f5434d581c10ec13bc5e9aea105bf
 +  function enhance() {
 +    scheduled = false;
 +    enhanceThread();
++    enhanceEffects();
 +    enhanceHeader();
 +    const config = configuration();
 +    enhanceSidebar(config);
++    enhanceTimes();
 +    if (!detail || !config || !Array.isArray(config.tools)) return;
 +    for (const inspector of document.querySelectorAll(".vh-invocation-inspector")) {
 +      simplifyInspector(inspector);
@@ -849,14 +940,15 @@ index 0000000000000000000000000000000000000000..f42f5434d581c10ec13bc5e9aea105bf
 +  }
 +
 +  new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
++  window.setInterval(enhanceTimes, 30_000);
 +  schedule();
 +})();
 diff --git a/dist/console/runtime/public/console/console-message-overrides.css b/dist/console/runtime/public/console/console-message-overrides.css
 new file mode 100644
-index 0000000000000000000000000000000000000000..004601b1429a44032a1a07fdf871cfe581c96ce9
+index 0000000000000000000000000000000000000000..2241fe427ac54d941169f1918418f1bd3224cd0d
 --- /dev/null
 +++ b/dist/console/runtime/public/console/console-message-overrides.css
-@@ -0,0 +1,675 @@
+@@ -0,0 +1,782 @@
 +.vitehub-console,
 +.vitehub-console > * {
 +  max-width: none;
@@ -915,8 +1007,117 @@ index 0000000000000000000000000000000000000000..004601b1429a44032a1a07fdf871cfe5
 +
 +.vh-sidebar-model__logo {
 +  color: currentColor !important;
-+  height: 0.9rem;
-+  width: 0.9rem;
++  height: 0.72rem;
++  width: 0.72rem;
++}
++
++.vitehub-console__sessions .vh-invocation-list__item {
++  gap: 0.35rem;
++  grid-template-rows: minmax(0, auto) minmax(0, auto);
++  min-height: 4.25rem;
++}
++
++.vitehub-console__sessions .vh-invocation-list__context,
++.vitehub-console__sessions .vh-invocation-list__branch {
++  display: none;
++}
++
++.vitehub-console__sessions .vh-invocation-list__title,
++.vitehub-console__sessions .vh-invocation-list__meta {
++  width: 100%;
++}
++
++.vitehub-console__sessions .vh-invocation-list__meta {
++  gap: 0.55rem;
++}
++
++.vh-sidebar-status {
++  align-items: center;
++  display: flex;
++  flex: 1;
++  min-width: 0;
++  overflow: hidden;
++}
++
++.vh-sidebar-status .vh-invocation-list__state {
++  flex: none;
++  min-width: 0;
++}
++
++.vh-sidebar-status .vh-invocation-list__state time::before {
++  content: "·";
++  margin-inline-end: 0.3rem;
++}
++
++.vh-sidebar-status__detail {
++  flex: 1;
++  margin-inline-start: 0.4rem;
++  min-width: 0;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.vh-sidebar-status__detail::before {
++  content: "·";
++  margin-inline-end: 0.4rem;
++}
++
++.vitehub-console__sessions .vh-invocation-list__harness {
++  flex: none;
++  gap: 0.45rem;
++  margin-inline-start: auto;
++}
++
++.vh-sidebar-channel .vh-channel__logo {
++  height: 0.72rem;
++  margin: 0;
++  width: 0.72rem;
++}
++
++.vh-vitehub-effect {
++  background: transparent !important;
++  border: 0 !important;
++  border-radius: 0 !important;
++  margin-block: 0.65rem !important;
++  padding: 0 !important;
++}
++
++.vh-vitehub-effect .vh-invocation-event__summary {
++  color: var(--vh-ui-muted);
++  gap: 0.55rem;
++  min-height: 1.5rem;
++  padding: 0;
++}
++
++.vh-vitehub-effect .vh-invocation-event__summary:hover,
++.vh-vitehub-effect .vh-invocation-event__summary:focus-visible {
++  background: transparent;
++  color: var(--vh-ui-text);
++}
++
++.vh-vitehub-effect .vh-invocation-event__icon {
++  flex-basis: 1rem;
++  height: 1rem;
++  width: 1rem;
++}
++
++.vh-vitehub-effect .vh-vitehub-mark {
++  fill: currentColor;
++  height: 0.78rem;
++  opacity: 0.7;
++  stroke: none;
++  width: 0.86rem;
++}
++
++.vh-vitehub-effect .vh-invocation-event__title {
++  font-size: 0.8125rem;
++  font-weight: 450;
++}
++
++[data-slot="invocation"] .vh-vitehub-effect[data-selected="true"] {
++  background: transparent !important;
++  border-radius: 0;
 +}
 +
 +.vh-channel__separator {
@@ -1123,9 +1324,7 @@ index 0000000000000000000000000000000000000000..004601b1429a44032a1a07fdf871cfe5
 +}
 +
 +.vh-invocation-inspector__metrics > div + div::before {
-+  color: var(--vh-ui-dimmed);
-+  content: "·";
-+  margin-inline-end: 0.6rem;
++  content: none;
 +}
 +
 +.vh-invocation-inspector__metrics dt {
