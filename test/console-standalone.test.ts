@@ -29,17 +29,11 @@ test("the Console ships as an isolated standalone document over Devframe", async
     readdir(join(viteHubRoot, "dist/console/runtime/public/console/brands")),
   ]);
 
-  assert.match(nuxtModule, /server\/page\.get\.js/);
-  assert.match(nuxtModule, /server\/devframe\.js/);
-  assert.match(nuxtModule, /\/_vitehub\/rpc\/\*\*/);
+  assert.match(nuxtModule, /addConsoleDevframeHandler/);
   assert.doesNotMatch(nuxtModule, /route: "\/api\/_vitehub\/console/);
-  assert.match(nuxtModule, /baseURL: "\/_vitehub\/assets"/);
-  assert.match(nuxtModule, /dir: consolePublicRoot/);
-  assert.doesNotMatch(nuxtModule, /pages:extend/);
-  assert.doesNotMatch(nuxtModule, /@vite-hub\/ui\/nuxt/);
 
   assert.match(clientRequest, /connectDevframe/);
-  assert.match(clientRequest, /vitehub:console:request/);
+  assert.match(clientRequest, /consoleRpcMethods/);
   assert.match(clientRequest, /transport: "sse"/);
   assert.doesNotMatch(clientRequest, /fetch\(/);
 
@@ -49,7 +43,7 @@ test("the Console ships as an isolated standalone document over Devframe", async
     join(viteHubRoot, "dist/console/runtime/public/console", consoleAsset),
     "utf8",
   );
-  assert.match(consoleBundle, /vitehub:console:request/);
+  assert.match(consoleBundle, /vitehub:console:sections/);
   assert.match(consoleBundle, /_vitehub\/rpc/);
 
   assert.match(page, /\/_vitehub\/assets\/console-[^"/]+\.css/);

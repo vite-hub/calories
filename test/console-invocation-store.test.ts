@@ -6,17 +6,15 @@ import { createMemoryAgentInvocationStore, defineAgentInvocations } from "vite-h
 import {
   getConsoleInvocations,
   installConsoleAgentDefinitions,
-  installConsoleInvocations,
 } from "vite-hub/console/server";
 
 test("the Console uses the invocation journal configured on the discovered agent", () => {
-  const fallback = installConsoleInvocations(process.cwd());
   const configured = defineAgentInvocations({ store: createMemoryAgentInvocationStore() });
 
   installConsoleAgentDefinitions([{
     definition: { default: { invocations: configured } },
     fallbackName: "calories",
-  }], fallback);
+  }], { projectRoot: process.cwd() });
 
   assert.equal(getConsoleInvocations(), configured);
 });
@@ -24,7 +22,7 @@ test("the Console uses the invocation journal configured on the discovered agent
 test("the generated Console plugin defers its local invocation journal fallback", async () => {
   const plugin = await readFile(".vitehub/nitro/console/plugin.mjs", "utf8");
 
-  assert.match(plugin, /installConsoleAgentDefinitions\([^\n]+, \(\) => installConsoleInvocations\(/);
+  assert.match(plugin, /installConsoleAgentDefinitions\([^\n]+, \{ projectRoot:/);
   assert.doesNotMatch(plugin, /const vitehubConsoleInvocations = installConsoleInvocations\(/);
 });
 
@@ -33,18 +31,13 @@ test("a configured journal installs before the local fallback establishes a Cons
   const rootKey = Symbol.for("vitehub.console.invocations.root");
   const previousRoot = Reflect.get(globalThis, rootKey);
   Reflect.deleteProperty(globalThis, rootKey);
-  let fallbackEvaluated = false;
 
   try {
     installConsoleAgentDefinitions([{
       definition: { default: { invocations: configured } },
       fallbackName: "configured-calories",
-    }], () => {
-      fallbackEvaluated = true;
-      return defineAgentInvocations({ store: createMemoryAgentInvocationStore() });
-    }, "/configured-calories");
+    }], { projectRoot: "/configured-calories" });
 
-    assert.equal(fallbackEvaluated, false);
     assert.equal(getConsoleInvocations(), configured);
   } finally {
     if (previousRoot === undefined) Reflect.deleteProperty(globalThis, rootKey);
