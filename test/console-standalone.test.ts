@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -7,20 +8,49 @@ import { test } from "node:test";
 const require = createRequire(import.meta.url);
 const viteHubRoot = dirname(require.resolve("vite-hub/package.json"));
 
-test("the Console ships as an isolated standalone document", async () => {
-  const [nuxtModule, page, messageStyles, invocationEnhancer, brandFiles] = await Promise.all([
+test("Devframe can be imported without module-scope randomness", () => {
+  execFileSync(process.execPath, [
+    "--input-type=module",
+    "-e",
+    `Object.defineProperty(globalThis, "crypto", {
+      value: { getRandomValues() { throw new Error("module-scope randomness"); } },
+    });
+    await import("devframe/initiate");`,
+  ], { cwd: process.cwd() });
+});
+
+test("the Console ships as an isolated standalone document over Devframe", async () => {
+  const [nuxtModule, page, clientRequest, messageStyles, invocationEnhancer, brandFiles] = await Promise.all([
     readFile(join(viteHubRoot, "dist/nuxt.js"), "utf8"),
     readFile(join(viteHubRoot, "dist/console/runtime/server/page.get.js"), "utf8"),
+    readFile(join(viteHubRoot, "dist/console/runtime/client/request.js"), "utf8"),
     readFile(join(viteHubRoot, "dist/console/runtime/public/console/console-message-overrides.css"), "utf8"),
     readFile(join(viteHubRoot, "dist/console/runtime/public/console/console-invocation-overrides.js"), "utf8"),
     readdir(join(viteHubRoot, "dist/console/runtime/public/console/brands")),
   ]);
 
   assert.match(nuxtModule, /server\/page\.get\.js/);
+  assert.match(nuxtModule, /server\/devframe\.js/);
+  assert.match(nuxtModule, /\/_vitehub\/rpc\/\*\*/);
+  assert.doesNotMatch(nuxtModule, /route: "\/api\/_vitehub\/console/);
   assert.match(nuxtModule, /baseURL: "\/_vitehub\/assets"/);
   assert.match(nuxtModule, /dir: consolePublicRoot/);
   assert.doesNotMatch(nuxtModule, /pages:extend/);
   assert.doesNotMatch(nuxtModule, /@vite-hub\/ui\/nuxt/);
+
+  assert.match(clientRequest, /connectDevframe/);
+  assert.match(clientRequest, /vitehub:console:request/);
+  assert.match(clientRequest, /transport: "sse"/);
+  assert.doesNotMatch(clientRequest, /fetch\(/);
+
+  const consoleAsset = page.match(/type="module" src="\/_vitehub\/assets\/(console-[^"]+\.js)"/)?.[1];
+  assert.ok(consoleAsset, "missing the generated Console browser asset");
+  const consoleBundle = await readFile(
+    join(viteHubRoot, "dist/console/runtime/public/console", consoleAsset),
+    "utf8",
+  );
+  assert.match(consoleBundle, /vitehub:console:request/);
+  assert.match(consoleBundle, /_vitehub\/rpc/);
 
   assert.match(page, /\/_vitehub\/assets\/console-[^"/]+\.css/);
   assert.match(page, /\/_vitehub\/assets\/console-[^"/]+\.js/);

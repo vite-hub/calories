@@ -1,0 +1,56 @@
+diff --git a/dist/state-CeQQWzM-.mjs b/dist/state-CeQQWzM-.mjs
+index 6c75d2897b98b1bc36a7c79fd89edf7c006f3575..b8a445c7b57a8ed99e5d27d70d039a18e9e4aecb 100644
+--- a/dist/state-CeQQWzM-.mjs
++++ b/dist/state-CeQQWzM-.mjs
+@@ -1194,18 +1194,25 @@ const TEMP_AUTH_CODE_LENGTH = 6;
+ const TEMP_AUTH_CODE_TTL = 3e5;
+ /** Failed attempts allowed against a single code before it is rotated. */
+ const TEMP_AUTH_MAX_ATTEMPTS = 5;
+-let tempAuthCode = generateTempCode();
+-let tempAuthCodeExpiresAt = Date.now() + TEMP_AUTH_CODE_TTL;
++let tempAuthCode;
++let tempAuthCodeExpiresAt = 0;
+ let tempAuthFailedAttempts = 0;
+ function generateTempCode() {
+ 	return randomDigits(TEMP_AUTH_CODE_LENGTH);
+ }
++function ensureTempAuthCode() {
++	if (tempAuthCode === void 0) {
++		tempAuthCode = generateTempCode();
++		tempAuthCodeExpiresAt = Date.now() + TEMP_AUTH_CODE_TTL;
++	}
++	return tempAuthCode;
++}
+ /**
+ * The current one-time authentication code. Display this to the user (e.g. in
+ * the dev-server terminal) so they can type it into the browser to authenticate.
+ */
+ function getTempAuthCode() {
+-	return tempAuthCode;
++	return ensureTempAuthCode();
+ }
+ /**
+ * Rotate the authentication code, resetting its expiry window and failed-attempt
+@@ -1230,7 +1237,7 @@ function refreshTempAuthCode() {
+ * `Referer` header; the browser client reads it locally (see
+ * `consumeOtpFromUrl`). Any existing fragment parameters are preserved.
+ */
+-function buildOtpAuthUrl(baseUrl, code = tempAuthCode) {
++function buildOtpAuthUrl(baseUrl, code = getTempAuthCode()) {
+ 	const url = new URL(baseUrl);
+ 	const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
+ 	fragment.set(DEVFRAME_OTP_URL_PARAM, code);
+@@ -1264,11 +1271,12 @@ function verifyAuthToken(token, session, storage) {
+ * attacker cannot keep guessing against the same code.
+ */
+ function exchangeTempAuthCode(code, session, info, storage) {
++	const currentTempAuthCode = ensureTempAuthCode();
+ 	if (Date.now() > tempAuthCodeExpiresAt) {
+ 		refreshTempAuthCode();
+ 		return null;
+ 	}
+-	if (!timingSafeEqual(code, tempAuthCode)) {
++	if (!timingSafeEqual(code, currentTempAuthCode)) {
+ 		tempAuthFailedAttempts += 1;
+ 		if (tempAuthFailedAttempts >= TEMP_AUTH_MAX_ATTEMPTS) refreshTempAuthCode();
+ 		return null;

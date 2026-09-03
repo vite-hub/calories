@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { consoleSearchExcerpt } from "../server/api/_vitehub/console/search.get";
 import { publicObservation, publicRecord } from "../server/utils/agent-invocations";
 
 describe("publicObservation", () => {
@@ -590,7 +589,7 @@ describe("public Console metadata", () => {
     );
   });
 
-  it("searches retained message text but not private tool payloads", () => {
+  it("makes retained message text searchable without exposing private tool payloads", () => {
     const record = publicRecord({
       agentName: "calories",
       createdAt: "2026-08-26T10:19:58.587Z",
@@ -620,8 +619,9 @@ describe("public Console metadata", () => {
       updatedAt: "2026-08-26T10:20:25.290Z",
     });
 
-    assert.match(consoleSearchExcerpt(record, "db_query") ?? "", /db_query/);
-    assert.match(consoleSearchExcerpt(record, "two eggs") ?? "", /Two eggs/);
-    assert.equal(consoleSearchExcerpt(record, "private dinner"), undefined);
+    const searchableRecord = JSON.stringify(record);
+    assert.match(searchableRecord, /db_query/);
+    assert.match(searchableRecord, /Two eggs/);
+    assert.doesNotMatch(searchableRecord, /private dinner/);
   });
 });
