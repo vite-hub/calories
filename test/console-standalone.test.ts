@@ -4,6 +4,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 const viteHubRoot = dirname(require.resolve("vite-hub/package.json"));
@@ -20,9 +21,9 @@ test("Devframe can be imported without module-scope randomness", () => {
 });
 
 test("the Console ships as an isolated standalone document over Devframe", async () => {
-  const [nuxtModule, page, clientRequest, messageStyles, invocationEnhancer, brandFiles] = await Promise.all([
+  const [nuxtModule, { default: consolePageHandler }, clientRequest, messageStyles, invocationEnhancer, brandFiles] = await Promise.all([
     readFile(join(viteHubRoot, "dist/nuxt.js"), "utf8"),
-    readFile(join(viteHubRoot, "dist/console/runtime/server/page.get.js"), "utf8"),
+    import(pathToFileURL(join(viteHubRoot, "dist/console/runtime/server/page.get.js")).href),
     readFile(join(viteHubRoot, "dist/console/runtime/client/request.js"), "utf8"),
     readFile(join(viteHubRoot, "dist/console/runtime/public/console/console-message-overrides.css"), "utf8"),
     readFile(join(viteHubRoot, "dist/console/runtime/public/console/console-invocation-overrides.js"), "utf8"),
@@ -37,7 +38,11 @@ test("the Console ships as an isolated standalone document over Devframe", async
   assert.match(clientRequest, /transport: "sse"/);
   assert.doesNotMatch(clientRequest, /fetch\(/);
 
-  const consoleAsset = page.match(/type="module" src="\/_vitehub\/assets\/(console-[^"]+\.js)"/)?.[1];
+  const response = await consolePageHandler({ method: "GET" });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "text/html; charset=utf-8");
+  const page = await response.text();
+  const consoleAsset = page.match(/<script type="module" src="\/_vitehub\/assets\/(console-[^"]+\.js)"><\/script>/)?.[1];
   assert.ok(consoleAsset, "missing the generated Console browser asset");
   const consoleBundle = await readFile(
     join(viteHubRoot, "dist/console/runtime/public/console", consoleAsset),
@@ -49,8 +54,13 @@ test("the Console ships as an isolated standalone document over Devframe", async
   assert.match(page, /\/_vitehub\/assets\/console-[^"/]+\.css/);
   assert.match(page, /\/_vitehub\/assets\/console-[^"/]+\.js/);
   assert.match(page, /\/_vitehub\/assets\/console-message-overrides\.css/);
-  assert.match(page, /\/_vitehub\/assets\/console-invocation-overrides\.js/);
+  assert.match(page, /<script src="\/_vitehub\/assets\/console-invocation-overrides\.js"><\/script>/);
+  assert.doesNotMatch(page, /<\\\/script>/);
   assert.doesNotMatch(page, /\/_nuxt\//);
+
+  for (const stylesheet of page.matchAll(/<link rel="stylesheet" href="\/_vitehub\/assets\/([^"/]+\.css)">/g)) {
+    await readFile(join(viteHubRoot, "dist/console/runtime/public/console", stylesheet[1]), "utf8");
+  }
 
   assert.match(messageStyles, /\.vh-channel__logo/);
   assert.match(messageStyles, /\.vh-copy-link/);

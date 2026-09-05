@@ -7437,7 +7437,7 @@ index a2a673da1f42f2343a057e549016532d272a67e6..c0641b0f7f72446d5b39aaac4591dbb9
      <div id="app"></div>
 -    <script type="module" src="/_vitehub/assets/console-Ce-1dTYT.js"><\/script>
 +    <script type="module" src="/_vitehub/assets/console-BYGeC-sR.js"><\/script>
-+    <script src="/_vitehub/assets/console-invocation-overrides.js"><\\/script>
++    <script src="/_vitehub/assets/console-invocation-overrides.js"><\/script>
    </body>
  </html>`;
  function consolePageHandler(event) {
