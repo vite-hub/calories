@@ -1,8 +1,8 @@
 diff --git a/dist/index.js b/dist/index.js
-index 88ec5a5ae251655e49e641233cb5a2c055bd95b9..f1b54601b4bbd05744aed9de7051806776a5ed6f 100644
+index 40827514ad91e34856e70e1dacccabb49f7a684b..b2ed5c3969c312ad18b508e0d15a64057164f3ae 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -10901,18 +10901,19 @@ const messageRoleLabels = {
+@@ -11047,18 +11047,19 @@ const messageRoleLabels = {
  	assistant: "Assistant",
  	system: "System",
  	tool: "Tool",
@@ -25,7 +25,7 @@ index 88ec5a5ae251655e49e641233cb5a2c055bd95b9..f1b54601b4bbd05744aed9de70518067
  		h("div", {
  			class: "vh-invocation-message__content",
  			"data-collapsed": collapsible && !isExpanded ? "true" : void 0
-@@ -11081,7 +11082,13 @@ function renderEvent(activity, inspect) {
+@@ -11227,7 +11228,13 @@ function renderEvent(activity, inspect) {
  			onClick: () => inspect(inspectTarget),
  			type: "button"
  		}, `Inspect ${inspectTarget}`) : null
@@ -41,10 +41,10 @@ index 88ec5a5ae251655e49e641233cb5a2c055bd95b9..f1b54601b4bbd05744aed9de70518067
  function renderEventPayload(label, value) {
  	if (value === void 0) return null;
 diff --git a/dist/styles.css b/dist/styles.css
-index de0af2aa954d8ed95f03d1908366083c1f98a733..2830d00cf3539bd0a83d2642080ac823118e839f 100644
+index 633412e51706d7dcc4b7722088fff554038b5654..41eecb66bf084f77b9532389f0046b511c71f74e 100644
 --- a/dist/styles.css
 +++ b/dist/styles.css
-@@ -687,19 +687,35 @@
+@@ -732,19 +732,35 @@
  }
  
  .vh-invocation-message {
@@ -86,16 +86,7 @@ index de0af2aa954d8ed95f03d1908366083c1f98a733..2830d00cf3539bd0a83d2642080ac823
  }
  
  .vh-invocation-message__body {
-@@ -718,7 +734,7 @@
- }
- 
- .vh-invocation-message__content[data-collapsed="true"]::after {
--  background: linear-gradient(to bottom, transparent, var(--vh-ui-bg-elevated));
-+  background: linear-gradient(to bottom, transparent, var(--vh-invocation-message-bg));
-   bottom: 0;
-   content: "";
-   height: 3.5rem;
-@@ -1451,15 +1467,12 @@ details.vh-invocation-event > .vh-invocation-event__summary:hover {
+@@ -1487,15 +1503,12 @@ details.vh-invocation-event > .vh-invocation-event__summary:hover {
  }
  
  .vh-invocation-delivery__body {
@@ -115,7 +106,7 @@ index de0af2aa954d8ed95f03d1908366083c1f98a733..2830d00cf3539bd0a83d2642080ac823
  }
  
  .vh-invocation-event__body,
-@@ -2158,8 +2171,12 @@ summary.vh-invocation-inspector__group-heading:focus-visible,
+@@ -2475,8 +2488,12 @@ summary.vh-invocation-inspector__group-heading:focus-visible,
      padding: 1.5rem 1rem 3rem;
    }
  
@@ -130,7 +121,7 @@ index de0af2aa954d8ed95f03d1908366083c1f98a733..2830d00cf3539bd0a83d2642080ac823
    }
  }
  
-@@ -2168,8 +2185,12 @@ summary.vh-invocation-inspector__group-heading:focus-visible,
+@@ -2485,8 +2502,12 @@ summary.vh-invocation-inspector__group-heading:focus-visible,
      padding: 1.5rem 1rem 3rem;
    }
  
