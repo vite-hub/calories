@@ -1,11 +1,8 @@
 overrides:
   "@chat-adapter/telegram": 4.38.1
-  "@vite-hub/ui": https://pkg.pr.new/vite-hub/vitehub/@vite-hub/ui@cd1f9d79975ba110bae906f205f983d675610286
+  "@vite-hub/ui": https://pkg.pr.new/vite-hub/vitehub/@vite-hub/ui@1cff505aeaaa21be53f1194d89013761824e737e
   chat: 4.38.1
+# These patches retain Calories Console styling and DOM customizations.
 patchedDependencies:
-  '@vite-hub/agent@0.0.1': patches/@vite-hub__agent@0.0.1.patch
-  '@vite-hub/database@0.0.1': patches/@vite-hub__database@0.0.1.patch
   '@vite-hub/ui@0.0.1': patches/@vite-hub__ui@0.0.1.patch
-  '@vite-hub/workflow@0.0.1': patches/@vite-hub__workflow@0.0.1.patch
-  devframe@0.9.9: patches/devframe@0.9.9.patch
   vite-hub@0.0.1: patches/vite-hub@0.0.1.patch

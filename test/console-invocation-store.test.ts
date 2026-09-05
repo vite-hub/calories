@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 
+import { defineAgent } from "vite-hub/agent";
 import { createMemoryAgentInvocationStore, defineAgentInvocations } from "vite-hub/agent/server";
 import {
   getConsoleInvocations,
@@ -12,7 +15,7 @@ test("the Console uses the invocation journal configured on the discovered agent
   const configured = defineAgentInvocations({ store: createMemoryAgentInvocationStore() });
 
   installConsoleAgentDefinitions([{
-    definition: { default: { invocations: configured } },
+    definition: { default: defineAgent({ driver: { run: () => "done" }, invocations: configured }) },
     fallbackName: "calories",
   }], { projectRoot: process.cwd() });
 
@@ -26,21 +29,16 @@ test("the generated Console plugin defers its local invocation journal fallback"
   assert.doesNotMatch(plugin, /const vitehubConsoleInvocations = installConsoleInvocations\(/);
 });
 
-test("a configured journal installs before the local fallback establishes a Console root", () => {
+test("a configured journal does not create a local fallback database", async (context) => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "calories-console-"));
+  context.after(() => rm(projectRoot, { recursive: true, force: true }));
   const configured = defineAgentInvocations({ store: createMemoryAgentInvocationStore() });
-  const rootKey = Symbol.for("vitehub.console.invocations.root");
-  const previousRoot = Reflect.get(globalThis, rootKey);
-  Reflect.deleteProperty(globalThis, rootKey);
 
-  try {
-    installConsoleAgentDefinitions([{
-      definition: { default: { invocations: configured } },
-      fallbackName: "configured-calories",
-    }], { projectRoot: "/configured-calories" });
+  installConsoleAgentDefinitions([{
+    definition: { default: defineAgent({ driver: { run: () => "done" }, invocations: configured }) },
+    fallbackName: "configured-calories",
+  }], { projectRoot });
 
-    assert.equal(getConsoleInvocations(), configured);
-  } finally {
-    if (previousRoot === undefined) Reflect.deleteProperty(globalThis, rootKey);
-    else Reflect.set(globalThis, rootKey, previousRoot);
-  }
+  assert.equal(getConsoleInvocations(), configured);
+  await assert.rejects(access(join(projectRoot, ".vitehub")), { code: "ENOENT" });
 });

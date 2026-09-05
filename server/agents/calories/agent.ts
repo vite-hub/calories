@@ -6,9 +6,9 @@ import type { AgentChatStateResolver } from "vite-hub/agent/capabilities";
 import {
   audioBytes,
   blob,
-  cost,
   db as databaseCapability,
   transcribe,
+  usage,
 } from "vite-hub/agent/capabilities";
 import { telegram } from "vite-hub/agent/channels";
 import {
@@ -57,7 +57,7 @@ export default defineAgent({
         return text;
       },
     }),
-    cost(),
+    usage(),
   ],
   channels: {
     telegram: telegram({
@@ -69,7 +69,6 @@ export default defineAgent({
         delivery: "manual",
         fallbackStreamingPlaceholderText: null,
         lockScope: "channel",
-        replyAttachments: "content",
         state: cloudflareChatState,
         triggerHistory: {
           maxAgeMs: 30 * 60 * 1_000,

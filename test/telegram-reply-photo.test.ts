@@ -1,30 +1,11 @@
 import assert from "node:assert/strict";
-import { readdir } from "node:fs/promises";
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
 import test from "node:test";
 
 import { defineAgent } from "vite-hub/agent";
 import { telegram } from "vite-hub/agent/channels";
+import { createChannelWebhookRouteHandler } from "vite-hub/_internal/agent/server/internal";
 
-const require = createRequire(import.meta.url);
 let webhookRun = 0;
-
-async function createChannelWebhookRouteHandler(agent: unknown) {
-  const wrapper = require.resolve("vite-hub/_internal/agent/server/internal");
-  const agentRoot = dirname(require.resolve("@vite-hub/agent/package.json", {
-    paths: [wrapper],
-  }));
-  const routeFiles = (await readdir(join(agentRoot, "dist")))
-    .filter(entry => /^routes-.*\.js$/.test(entry));
-  for (const filename of routeFiles) {
-    const runtime = await import(join(agentRoot, "dist", filename));
-    if (runtime.n?.name === "createChannelWebhookRouteHandler") {
-      return runtime.n(agent);
-    }
-  }
-  assert.fail("missing ViteHub Agent channel webhook handler");
-}
 
 function capturingModel() {
   const calls: Array<{ prompt: unknown }> = [];
@@ -52,14 +33,14 @@ function capturingModel() {
   };
 }
 
-async function runTelegramPhotoReply(replyAttachments?: "content" | "reference") {
+async function runTelegramPhotoReply() {
   const runOffset = webhookRun++ * 10;
   const originalFetch = globalThis.fetch;
   const model = capturingModel();
   const backgroundTasks: Promise<unknown>[] = [];
   let downloadedPhoto = false;
 
-  globalThis.fetch = async (input, init) => {
+  globalThis.fetch = async (input) => {
     const url = String(input);
     if (url.includes("/getMe")) {
       return Response.json({
@@ -91,7 +72,7 @@ async function runTelegramPhotoReply(replyAttachments?: "content" | "reference")
         },
       });
     }
-    return originalFetch(input, init);
+    throw new Error(`Unexpected Telegram test request: ${url}`);
   };
 
   try {
@@ -104,7 +85,6 @@ async function runTelegramPhotoReply(replyAttachments?: "content" | "reference")
           messages: {
             delivery: "manual",
             fallbackStreamingPlaceholderText: null,
-            ...(replyAttachments ? { replyAttachments } : {}),
           },
           webhookSecret: "test-secret",
         }),
@@ -112,7 +92,7 @@ async function runTelegramPhotoReply(replyAttachments?: "content" | "reference")
       driver: { model: model as never },
       runtime: false,
     });
-    const handler = await createChannelWebhookRouteHandler(agent);
+    const handler = createChannelWebhookRouteHandler(agent);
     const response = await handler(new Request(
       "https://example.test/api/_vitehub/agents/calories/webhooks/telegram",
       {
@@ -165,17 +145,10 @@ async function runTelegramPhotoReply(replyAttachments?: "content" | "reference")
   }
 }
 
-test("Telegram photo replies remain metadata-only by default", async () => {
+test("Telegram photo replies include available content without a channel opt-in", async () => {
   const result = await runTelegramPhotoReply();
 
-  assert.equal(result.downloadedPhoto, false);
-  assert.match(result.prompt, /telegram-photo-id/);
-  assert.doesNotMatch(result.prompt, /AQID/);
-});
-
-test("Telegram photo replies expose content when the channel opts in", async () => {
-  const result = await runTelegramPhotoReply("content");
-
   assert.equal(result.downloadedPhoto, true);
-  assert.match(result.prompt, /AQID|telegram-photo-id/);
+  assert.match(result.prompt, /"data":\[1,2,3\]/);
+  assert.doesNotMatch(result.prompt, /telegram-photo-id/);
 });

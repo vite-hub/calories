@@ -1,32 +1,15 @@
 import assert from "node:assert/strict";
-import { readdir } from "node:fs/promises";
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
 import test from "node:test";
 
-import { runAgent, workflow } from "vite-hub/agent";
+import { portableAgentWorkflowInput, runAgent, workflow } from "vite-hub/agent";
+import { createRuntimeContext } from "vite-hub/runtime";
 import {
   createMemoryAgentInvocationStore,
   defineAgentInvocations,
 } from "vite-hub/agent/server";
 import { setAgentWorkflowRuntimeLoaders } from "vite-hub/_internal/agent/server/internal";
 
-const require = createRequire(import.meta.url);
-
-async function portableAgentWorkflowInput(input: unknown) {
-  const wrapper = require.resolve("vite-hub/_internal/agent/server/internal");
-  const agentRoot = dirname(require.resolve("@vite-hub/agent/package.json", {
-    paths: [wrapper],
-  }));
-  const filename = (await readdir(join(agentRoot, "dist")))
-    .find((entry) => /^src-.*\.js$/.test(entry));
-  assert.ok(filename, "missing ViteHub Agent runtime");
-  const runtime = await import(join(agentRoot, "dist", filename));
-  assert.equal(typeof runtime.s, "function", "missing workflow input serializer");
-  return runtime.s(input);
-}
-
-test("Agent Workflows remove runtime loaders from direct and replied-to photos", async () => {
+test("Agent Workflows materialize direct photos and preserve serializable reply metadata", async () => {
   let dataLoads = 0;
   let metadataLoads = 0;
   const input = await portableAgentWorkflowInput({
@@ -36,10 +19,6 @@ test("Agent Workflows remove runtime loaders from direct and replied-to photos",
         {
           data: {
             attachment: {
-              fetchMetadata: async () => {
-                metadataLoads += 1;
-                return { height: 480, width: 640 };
-              },
               mediaType: "image/jpeg",
               type: "image",
             },
@@ -65,7 +44,7 @@ test("Agent Workflows remove runtime loaders from direct and replied-to photos",
 
   assert.equal(dataLoads, 1);
   assert.equal(metadataLoads, 0);
-  assert.deepEqual(input.messages[0].parts[0], {
+  assert.deepEqual(input.messages?.[0]?.parts[0], {
     data: {
       attachment: {
         mediaType: "image/jpeg",
@@ -74,7 +53,7 @@ test("Agent Workflows remove runtime loaders from direct and replied-to photos",
     },
     type: "data-chat-reply-attachment",
   });
-  assert.deepEqual(input.messages[0].parts[1], {
+  assert.deepEqual(input.messages?.[0]?.parts[1], {
     data: "data:image/jpeg;base64,AQID",
     mediaType: "image/jpeg",
     type: "image",
@@ -106,10 +85,22 @@ test("Agent Workflows normalize cross-runtime channel delivery locks", async () 
     },
   });
 
-  assert.deepEqual(input.context["vitehub.channelDelivery"].steer.lock, {
-    expiresAt: 1_788_357_555_771,
-    threadId: "channel:calories:telegram",
-    token: "lock-token",
+  assert.deepEqual(input.context?.["vitehub.channelDelivery"], {
+    channelId: "telegram",
+    deliveryId: "delivery-id",
+    provider: "telegram",
+    state: "chat",
+    steer: {
+      claimId: "claim-id",
+      lock: {
+        expiresAt: 1_788_357_555_771,
+        threadId: "channel:calories:telegram",
+        token: "lock-token",
+      },
+      pendingQueue: "pending-queue",
+      queue: "queue",
+      ttlMs: 300_000,
+    },
   });
 });
 
@@ -140,10 +131,10 @@ test("Agent Workflows journal failures that occur before the provider run starts
   };
   const error = new TypeError("Agent Workflow inputs must contain only JSON-compatible values.");
 
-  await assert.rejects(runAgent(agent as never, {
+  await assert.rejects(runAgent(agent as never, createRuntimeContext({
     run: { runId: "telegram:photo-preflight" },
     runtime: "unknown",
-  }, {
+  }), {
     context: { nonportable: () => error },
   }), error);
 
