@@ -1,0 +1,54 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index d93aee6bbdb8383a1f0d07f1e20b8d1c9b7cc026..30a479430c7e4f080ff346bf7ecb742de2681899 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1,4 +1,4 @@
+-import { createRequire } from "node:module";
++import NodeProcess from "node:process";
+ import * as NodeFSP from "node:fs/promises";
+ import * as NodeOS from "node:os";
+ import * as NodePath from "node:path";
+@@ -57,7 +57,6 @@ import * as Config from "effect/Config";
+ import { DatabaseSync } from "node:sqlite";
+ //#region \0rolldown/runtime.js
+ var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+-var __require = /* #__PURE__ */ (() => createRequire(import.meta.url))();
+ //#endregion
+ //#region ../../apps/server/src/attachmentPaths.ts
+ function normalizeAttachmentRelativePath(rawRelativePath) {
+@@ -2822,7 +2821,7 @@ var require_stringifyPair = /* @__PURE__ */ __commonJSMin(((exports) => {
+ //#endregion
+ //#region ../../node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/dist/log.js
+ var require_log = /* @__PURE__ */ __commonJSMin(((exports) => {
+-	var node_process$2 = __require("process");
++	var node_process$2 = NodeProcess;
+ 	function debug(logLevel, ...messages) {
+ 		if (logLevel === "debug") console.log(...messages);
+ 	}
+@@ -3570,7 +3569,7 @@ var require_schema$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+ //#endregion
+ //#region ../../node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/dist/schema/yaml-1.1/binary.js
+ var require_binary = /* @__PURE__ */ __commonJSMin(((exports) => {
+-	var node_buffer = __require("buffer");
++	var node_buffer = NodeBuffer;
+ 	var Scalar = require_Scalar();
+ 	var stringifyString = require_stringifyString();
+ 	exports.binary = {
+@@ -5746,7 +5745,7 @@ var require_compose_doc = /* @__PURE__ */ __commonJSMin(((exports) => {
+ //#endregion
+ //#region ../../node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/dist/compose/composer.js
+ var require_composer = /* @__PURE__ */ __commonJSMin(((exports) => {
+-	var node_process$1 = __require("process");
++	var node_process$1 = NodeProcess;
+ 	var directives = require_directives();
+ 	var Document = require_Document();
+ 	var errors = require_errors();
+@@ -7012,7 +7011,7 @@ var require_line_counter = /* @__PURE__ */ __commonJSMin(((exports) => {
+ //#endregion
+ //#region ../../node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/dist/parse/parser.js
+ var require_parser = /* @__PURE__ */ __commonJSMin(((exports) => {
+-	var node_process = __require("process");
++	var node_process = NodeProcess;
+ 	var cst = require_cst();
+ 	var lexer = require_lexer();
+ 	function includesToken(list, type) {

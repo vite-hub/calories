@@ -10,6 +10,9 @@ overrides:
   chat: 4.38.1
 
 patchedDependencies:
+  '@t3tools/provider-runtime@0.0.33':
+    hash: 3a42fc14126655cdf803f79654352e77206f5b55acb081a6e74122b0e2be045a
+    path: patches/@t3tools__provider-runtime@0.0.33.patch
   '@vite-hub/ui@0.0.1':
     hash: 4c36c1accad380941e638e7af966a874179adcce464facf5e24f0e28f07d4d63
     path: patches/@vite-hub__ui@0.0.1.patch
@@ -11818,7 +11821,7 @@ snapshots:
     dependencies:
       effect: 4.0.0-beta.103
 
-  '@t3tools/provider-runtime@https://pkg.pr.new/vite-hub/t3code/@t3tools/provider-runtime@d51cae5616d8e0689aeb164f9505a517e29457b3(ioredis@5.11.1)':
+  '@t3tools/provider-runtime@https://pkg.pr.new/vite-hub/t3code/@t3tools/provider-runtime@d51cae5616d8e0689aeb164f9505a517e29457b3(patch_hash=3a42fc14126655cdf803f79654352e77206f5b55acb081a6e74122b0e2be045a)(ioredis@5.11.1)':
     dependencies:
       '@effect/platform-node': 4.0.0-beta.103(effect@4.0.0-beta.103)(ioredis@5.11.1)
       '@t3tools/contracts': https://pkg.pr.new/vite-hub/t3code/@t3tools/contracts@d51cae5616d8e0689aeb164f9505a517e29457b3(effect@4.0.0-beta.103)
@@ -12425,7 +12428,7 @@ snapshots:
       '@libsql/client': 0.18.0
       '@modelcontextprotocol/sdk': 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
       '@standard-schema/spec': 1.1.0
-      '@t3tools/provider-runtime': https://pkg.pr.new/vite-hub/t3code/@t3tools/provider-runtime@d51cae5616d8e0689aeb164f9505a517e29457b3(ioredis@5.11.1)
+      '@t3tools/provider-runtime': https://pkg.pr.new/vite-hub/t3code/@t3tools/provider-runtime@d51cae5616d8e0689aeb164f9505a517e29457b3(patch_hash=3a42fc14126655cdf803f79654352e77206f5b55acb081a6e74122b0e2be045a)(ioredis@5.11.1)
       '@types/json-schema': 7.0.15
       '@types/mdast': 4.0.4
       '@vercel/connect': 2.0.1(@ai-sdk/mcp@2.0.36(zod@4.4.3))(ai@7.0.58(zod@4.4.3))(better-auth@1.7.2(@cloudflare/workers-types@5.20260825.1)(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260825.1)(@libsql/client@0.18.0)(@opentelemetry/api@1.9.1)(bun-types@1.4.0)(kysely@0.29.5)(sql.js@1.14.2))(react@19.2.8)(vue@3.5.40(typescript@6.0.3)))
