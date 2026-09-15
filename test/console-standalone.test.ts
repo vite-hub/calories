@@ -33,10 +33,7 @@ test("the Console ships as an isolated standalone document over Devframe", async
   assert.match(nuxtModule, /addConsoleDevframeHandler/);
   assert.doesNotMatch(nuxtModule, /route: "\/api\/_vitehub\/console/);
 
-  assert.match(clientRequest, /connectDevframe/);
   assert.match(clientRequest, /consoleRpcMethods/);
-  assert.match(clientRequest, /transport: "sse"/);
-  assert.doesNotMatch(clientRequest, /fetch\(/);
 
   const response = await consolePageHandler({ method: "GET" });
   assert.equal(response.status, 200);

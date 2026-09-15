@@ -1,3 +1,70 @@
+diff --git a/dist/console/runtime/client/request.js b/dist/console/runtime/client/request.js
+index bccbd70b24a1b3b18d1b36fbc25463181c40139b..281721cca84bb079e3080e0573c814ee736889c7 100644
+--- a/dist/console/runtime/client/request.js
++++ b/dist/console/runtime/client/request.js
+@@ -1,9 +1,7 @@
+ import { consoleRpcMethods } from "../rpc.js";
+-import { connectDevframe } from "devframe/client";
+ //#region src/console/runtime/client/request.ts
+ const consoleApiMarker = "/api/_vitehub/console/";
+ const consoleDevframePath = "/_vitehub/rpc/";
+-const clients = /* @__PURE__ */ new Map();
+ var ConsoleRequestError = class extends Error {
+ 	status;
+ 	constructor(status, message = `Console request failed with status ${status}.`) {
+@@ -35,31 +33,6 @@ function consoleRpcCall(path) {
+ 	if (!method) throw new ConsoleRequestError(404, "Console operation not found.");
+ 	return { method };
+ }
+-function consoleDevframeClient(baseURL) {
+-	let client = clients.get(baseURL);
+-	if (!client) {
+-		client = connectDevframe({
+-			baseURL,
+-			otpParam: false,
+-			simpleAuth: false,
+-			transport: "sse"
+-		}).catch((error) => {
+-			clients.delete(baseURL);
+-			throw error;
+-		});
+-		clients.set(baseURL, client);
+-	}
+-	return client;
+-}
+-function abortable(value, signal) {
+-	if (!signal) return value;
+-	signal.throwIfAborted();
+-	return new Promise((resolve, reject) => {
+-		const abort = () => reject(signal.reason);
+-		signal.addEventListener("abort", abort, { once: true });
+-		value.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort)).catch(() => void 0);
+-	});
+-}
+ function isRetryableConsoleRequestError(error) {
+ 	return !(error instanceof ConsoleRequestError) || error.status === 408 || error.status === 429 || error.status >= 500;
+ }
+@@ -82,8 +55,18 @@ async function requestConsole(path, options = {}) {
+ 	if (call.agent !== void 0) input.agent = call.agent;
+ 	if (call.id !== void 0) input.id = call.id;
+ 	if (options.body !== void 0) input.body = options.body;
+-	const response = await abortable((await abortable(consoleDevframeClient(consoleDevframeBase(path)), options.signal)).call(call.method, input), options.signal);
+-	if (!response.ok) throw new ConsoleRequestError(response.status, response.message);
++	options.signal?.throwIfAborted();
++	// Cloudflare can route consecutive requests to different Worker instances.
++	const http = await fetch(`${consoleDevframeBase(path)}__call`, {
++		method: "POST",
++		headers: { "content-type": "application/json" },
++		cache: "no-store",
++		credentials: "same-origin",
++		signal: options.signal,
++		body: JSON.stringify({ method: call.method, input })
++	});
++	const response = await http.json();
++	if (!http.ok || !response.ok) throw new ConsoleRequestError(response.status ?? http.status, response.message);
+ 	return response.value;
+ }
+ function appendUniqueConsoleKeys(existing, page) {
 diff --git a/dist/console/runtime/public/console/brands/LICENSE.lobe-icons.txt b/dist/console/runtime/public/console/brands/LICENSE.lobe-icons.txt
 new file mode 100644
 index 0000000000000000000000000000000000000000..1dd53d2a9d99e5f91113831a850276ef530cb9d2
@@ -1827,6 +1894,62 @@ index 0000000000000000000000000000000000000000..4908cb5ae90511cc63aaf546b2ac8c3f
 +    transform: none;
 +  }
 +}
+diff --git a/dist/console/runtime/server/devframe.js b/dist/console/runtime/server/devframe.js
+index ddd7993a30afd6cfcadaa05bc21a35afcca59228..f935292cca7bcb99dd707e3454bb48293e03fad4 100644
+--- a/dist/console/runtime/server/devframe.js
++++ b/dist/console/runtime/server/devframe.js
+@@ -147,14 +147,19 @@ function createDevframeH3Handler(definition, options) {
+ 	const { responseHeaders, ...initOptions } = options;
+ 	let instance;
+ 	const handler = fromWebHandler(async (request) => {
+-		instance ??= initDevframe(definition, initOptions);
+ 		const url = new URL(request.url);
+-		const marker = url.pathname.indexOf(instance.base);
+-		if (marker > 0) {
+-			url.pathname = url.pathname.slice(marker);
+-			request = new Request(url, request);
++		let response;
++		if (url.pathname.endsWith(`${consoleDevframeBase}__call`)) {
++			response = await handleConsoleHttpRequest(request);
++		} else {
++			instance ??= initDevframe(definition, initOptions);
++			const marker = url.pathname.indexOf(instance.base);
++			if (marker > 0) {
++				url.pathname = url.pathname.slice(marker);
++				request = new Request(url, request);
++			}
++			response = await instance.handler(request);
+ 		}
+-		const response = await instance.handler(request);
+ 		if (!responseHeaders) return response;
+ 		const headers = new Headers(response.headers);
+ 		for (const [name, value] of new Headers(responseHeaders)) headers.set(name, value);
+@@ -229,6 +234,25 @@ const operations = {
+ 	[consoleRpcMethods.sections]: (input) => consoleSectionsHandler(requestEvent("sections", input)),
+ 	[consoleRpcMethods.usage]: (input) => usageHandler(requestEvent("usage", input))
+ };
++// Each Console call is complete within one request; no in-memory session affinity.
++async function handleConsoleHttpRequest(request) {
++	const body = await result(async () => {
++		if (request.method !== "POST") throw consoleError(405, "Method not allowed");
++		let payload;
++		try {
++			payload = record(await consoleRequestJSON({ req: request }));
++		} catch (error) {
++			if (error?.statusCode === 413) throw error;
++			throw consoleError(400, "Malformed Console request.");
++		}
++		if (!payload || typeof payload.method !== "string") throw consoleError(400, "Invalid Console request.");
++		if (!Object.hasOwn(operations, payload.method)) throw consoleError(404, "Console operation not found.");
++		const input = record(payload.input ?? {});
++		if (!input) throw consoleError(400, "Invalid Console input.");
++		return operations[payload.method](input);
++	});
++	return Response.json(body, { status: body.ok ? 200 : body.status });
++}
+ const consoleDevframe = defineDevframe({
+ 	description: "Live inspection transport for the ViteHub Console.",
+ 	homepage: "https://vitehub.dev",
 diff --git a/dist/console/runtime/server/page.get.js b/dist/console/runtime/server/page.get.js
 index 44a493b9fb246db37547fe0a4a5b36b436cd08e2..65ac862fb93f53a8b7e1106b3e546c6d3fd0ab76 100644
 --- a/dist/console/runtime/server/page.get.js
