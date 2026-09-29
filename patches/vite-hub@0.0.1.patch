@@ -1,3 +1,110 @@
+diff --git a/dist/agent/invocations/database.d.ts b/dist/agent/invocations/database.d.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..accc860947fa3de1836b4efc46e275f484c33ed9
+--- /dev/null
++++ b/dist/agent/invocations/database.d.ts
+@@ -0,0 +1,12 @@
++import type { AgentInvocationStore } from "@vite-hub/agent";
++import type { D1AgentInvocationStoreOptions } from "@vite-hub/agent/invocations/d1";
++
++//#region src/agent/invocations/database.d.ts
++interface DatabaseAgentInvocationStoreOptions extends Omit<D1AgentInvocationStoreOptions, "database"> {
++  /** ViteHub database name. Defaults to "default". */
++  database?: string;
++}
++/** Agent Invocation store in a ViteHub database. It creates its table on first use. */
++declare function createDatabaseAgentInvocationStore(options?: DatabaseAgentInvocationStoreOptions): AgentInvocationStore;
++//#endregion
++export { DatabaseAgentInvocationStoreOptions, createDatabaseAgentInvocationStore };
+diff --git a/dist/agent/invocations/database.js b/dist/agent/invocations/database.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..4e41d22ab744099edf020cb15349c124bdb1e634
+--- /dev/null
++++ b/dist/agent/invocations/database.js
+@@ -0,0 +1,56 @@
++import { sql } from "drizzle-orm";
++import { useDatabase } from "@vite-hub/database/drizzle";
++import { createD1AgentInvocationStore, d1AgentInvocationSchema } from "@vite-hub/agent/invocations/d1";
++//#region src/agent/invocations/database.ts
++const writeStatement = /^\s*(?:INSERT|UPDATE|DELETE)\b/i;
++const returningClause = /\bRETURNING\b/i;
++function statementSql(query, values) {
++	const parts = query.split("?");
++	if (parts.length - 1 !== values.length) throw new TypeError("[vitehub] Database Agent Invocation statement parameters do not match its placeholders.");
++	return sql.join(parts.map((part, index) => index === 0 ? sql.raw(part) : sql`${values[index - 1]}${sql.raw(part)}`));
++}
++function statementResult(rows) {
++	if (rows.some(Array.isArray)) throw new TypeError("[vitehub] Database Agent Invocations require a driver that returns named columns. The Cloudflare D1 HTTP driver is not supported.");
++	return {
++		meta: { changes: rows.length },
++		results: rows
++	};
++}
++/** Adapts a ViteHub SQLite database to the statement contract of the D1 invocation store. */
++function invocationDatabase(db) {
++	const prepare = (query) => {
++		const text = writeStatement.test(query) && !returningClause.test(query) ? `${query} RETURNING 1 AS vitehub_changed` : query;
++		const statement = (values) => ({
++			all: async () => statementResult(await db.all(statementSql(text, values))),
++			bind: (...next) => statement(next),
++			query: () => db.all(statementSql(text, values))
++		});
++		return statement([]);
++	};
++	return {
++		async batch(statements) {
++			return (await db.batch(statements.map((statement) => statement.query()))).map(statementResult);
++		},
++		prepare
++	};
++}
++/** Agent Invocation store in a ViteHub database. It creates its table on first use. */
++function createDatabaseAgentInvocationStore(options = {}) {
++	const { database: name = "default", ...storeOptions } = options;
++	const schema = d1AgentInvocationSchema(storeOptions).map((statement) => sql.raw(statement));
++	let ready;
++	return createD1AgentInvocationStore({
++		...storeOptions,
++		async database() {
++			const { db } = useDatabase(name);
++			ready ??= db.batch(schema.map((statement) => db.run(statement))).catch((error) => {
++				ready = void 0;
++				throw error;
++			});
++			await ready;
++			return invocationDatabase(db);
++		}
++	});
++}
++//#endregion
++export { createDatabaseAgentInvocationStore };
+diff --git a/dist/agent.js b/dist/agent.js
+index 2188910d4ace065846576554daad0ddc0c00c6e2..9f233cdf483f295128c5a05e456e27bc082f5c11 100644
+--- a/dist/agent.js
++++ b/dist/agent.js
+@@ -1,9 +1,22 @@
+ import { h as resolveConsoleInvocations, n as consoleInvocationsFallbackKey } from "./internal-DzLLx0iR.js";
++import { createDatabaseAgentInvocationStore } from "./agent/invocations/database.js";
+ import { defineAgent as defineAgent$1 } from "@vite-hub/agent";
++import { defineAgentInvocations } from "@vite-hub/agent/server";
++import { databases } from "@vite-hub/database/drizzle";
+ export * from "@vite-hub/agent";
+ //#region src/agent.ts
++let databaseInvocations;
++/** Agents without an explicit journal record invocations in the app's default database. */
++function defaultDatabaseInvocations() {
++	if (!Object.keys(databases.default?.schema ?? {}).length) return;
++	return databaseInvocations ??= defineAgentInvocations({ store: createDatabaseAgentInvocationStore() });
++}
+ const defineAgent = ((options) => {
+ 	const agent = defineAgent$1(options);
++	if (agent.invocations === void 0) {
++		const invocations = defaultDatabaseInvocations();
++		if (invocations) agent.invocations = invocations;
++	}
+ 	if (agent.invocations !== void 0) return agent;
+ 	let assignedInvocations;
+ 	Object.defineProperty(agent, consoleInvocationsFallbackKey, {
 diff --git a/dist/console/runtime/client/request.js b/dist/console/runtime/client/request.js
 index bccbd70b24a1b3b18d1b36fbc25463181c40139b..281721cca84bb079e3080e0573c814ee736889c7 100644
 --- a/dist/console/runtime/client/request.js
@@ -1967,3 +2074,15 @@ index 44a493b9fb246db37547fe0a4a5b36b436cd08e2..65ac862fb93f53a8b7e1106b3e546c6d
    </body>
  </html>`;
  function consolePageHandler(event) {
+diff --git a/package.json b/package.json
+index 9b7bedb1c83d4386467ff70a75ce324bacdeaa1a..3f6d6afe5b220ea684fc48f3d8d4a8914f722ef6 100644
+--- a/package.json
++++ b/package.json
+@@ -73,6 +73,7 @@
+     "./agent/cloudflare": "./dist/agent/cloudflare.js",
+     "./agent/eval": "./dist/agent/eval.js",
+     "./agent/invocations/d1": "./dist/agent/invocations/d1.js",
++    "./agent/invocations/database": "./dist/agent/invocations/database.js",
+     "./agent/invocations/sqlite": "./dist/agent/invocations/sqlite.js",
+     "./agent/mcp": "./dist/agent/mcp.js",
+     "./agent/runtime/process": "./dist/agent/runtime/process.js",

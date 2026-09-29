@@ -18,7 +18,6 @@ import {
 } from "vite-hub/agent/cloudflare";
 import { useDatabase } from "vite-hub/database/drizzle";
 import { useServerEnv } from "#vitehub/env/server";
-import { caloriesAgentInvocations } from "../../utils/agent-invocations";
 
 import renderReply from "./reply.template.md";
 import { verifiedMealId } from "./result";
@@ -38,7 +37,6 @@ const cloudflareChatState = Object.assign(
 ) as AgentChatStateResolver;
 
 export default defineAgent({
-  invocations: caloriesAgentInvocations,
   capabilities: [
     blob({ mode: "write" }),
     databaseCapability({ mode: "write" }),
