@@ -76,7 +76,7 @@ pnpm telegram:webhook        # preview the change
 pnpm telegram:webhook:apply  # apply after the deployment is live
 ```
 
-See the [host support matrix](https://vitehub.dev/docs/frameworks-hosts/support-matrix) when changing providers. Original photos stay private; only the read-only meal dashboard is public. The Console runs locally at `http://127.0.0.1:3000/_vitehub` during development.
+See the [host support matrix](https://vitehub.dev/docs/frameworks-hosts/support-matrix) when changing providers. The read-only dashboard shows public photo previews, resized to at most 768 pixels and re-encoded without camera metadata. Originals and their storage paths stay private. The Console runs locally at `http://127.0.0.1:3000/_vitehub` during development.
 
 ## Export data
 
@@ -105,6 +105,8 @@ pnpm build
 GitHub Actions runs Doctor with strict Nuxt, Vue, Nitro, Vite, and TypeScript presets before the other checks. Doctor and ViteHub use pinned `pkg.pr.new` builds. Nuxt Skill Hub refreshes the repository's Codex guidance during `nuxt prepare`.
 
 The dashboard uses Nuxt `useCookie` for saved goals, a local Nuxt UI `UForm` draft for edits, and `useState` for its journal timestamp. VueUse's Nuxt module auto-imports the timer and disposes it when the page unmounts. Meals come from ViteHub's typed `useCollection`; the database supplies the totals.
+
+The photo route resolves a saved meal's photo through ViteHub Blob and caches a JPEG preview in the same store. Photon processes images in Node and Cloudflare without another service. JPEG, PNG, and WebP inputs are supported, up to 10 MB and 8 megapixels.
 
 This template uses Nuxt 5 nightly. Development uses its separate Nitro builder to avoid a Vue CommonJS loading error in the Vite dev runner; production uses the default Nitro Vite environment.
 

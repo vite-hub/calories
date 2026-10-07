@@ -27,12 +27,14 @@
     "doctor": "vite-doctor . --max-warnings 0"
   },
   "dependencies": {
+    "@cf-wasm/photon": "0.4.0",
     "@nuxt/ui": "4.11.3",
     "@openrouter/ai-sdk-provider": "3.1.0",
     "@vueuse/core": "15.0.0",
     "@vueuse/nuxt": "15.0.0",
     "ai": "7.0.130",
     "drizzle-orm": "0.45.3",
+    "image-meta": "0.3.0",
     "nuxt": "npm:nuxt-nightly@5.0.0-2610062145-85b8d54",
     "tailwindcss": "4.3.3",
     "vite-hub": "https://pkg.pr.new/vite-hub/vitehub/vite-hub@7f4c0cbfa5d850f43a5a29d7ecca15b04a255797",

@@ -49,6 +49,8 @@ watchPostEffect(async () => {
       </div>
     </template>
 
+    <MealPhoto v-if="meal.photoUrl" class="mt-3 mb-1" :src="meal.photoUrl" :title="getMealTitle(meal)" />
+
     <table v-if="meal.items.length" class="w-full text-sm">
       <caption class="sr-only">Items in {{ getMealTitle(meal) }}</caption>
       <thead class="sr-only">

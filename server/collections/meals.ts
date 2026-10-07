@@ -17,10 +17,11 @@ export const meals = defineCollection({
     },
     table: schema.meals,
   }),
-  transform({ photoPath: _photoPath, ...meal }: typeof schema.meals.$inferSelect) {
+  transform({ photoPath, ...meal }: typeof schema.meals.$inferSelect) {
     return {
       ...meal,
       createdAt: meal.createdAt.toISOString(),
+      photoUrl: photoPath ? `/api/meals/${encodeURIComponent(meal.id)}/photo` : undefined,
       items: meal.items.map((item) => ({
         calories: item.calories ?? item.kcal ?? 0,
         name: item.name ?? item.item ?? "Food",

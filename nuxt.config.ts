@@ -59,6 +59,8 @@ export default defineNuxtConfig({
   },
   devtools: { enabled: false },
   nitro: {
+    // Photon initializes synchronously and needs the compiled WebAssembly module.
+    wasm: { lazy: false },
     cloudflare: {
       wrangler: {
         observability: { enabled: true },
