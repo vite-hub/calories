@@ -1,7 +1,9 @@
 import { useDatabase } from "vite-hub/database/drizzle";
 import { defineCollection, table } from "vite-hub/source";
+import database from "../databases/config.ts";
 
-const { db, schema } = useDatabase("default");
+const { db } = useDatabase("default");
+const { schema } = database;
 
 export const meals = defineCollection({
   source: table({
@@ -15,7 +17,7 @@ export const meals = defineCollection({
     },
     table: schema.meals,
   }),
-  transform({ photoPath, ...meal }) {
+  transform({ photoPath: _photoPath, ...meal }: typeof schema.meals.$inferSelect) {
     return {
       ...meal,
       createdAt: meal.createdAt.toISOString(),
@@ -26,9 +28,6 @@ export const meals = defineCollection({
           ?? (item.portion_g === undefined ? "Estimated portion" : `${item.portion_g} g`),
         protein: item.protein,
       })),
-      photoUrl: photoPath
-        ? `/photos/${photoPath.split("/").map(encodeURIComponent).join("/")}`
-        : undefined,
     };
   },
 });

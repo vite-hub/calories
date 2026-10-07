@@ -1,6 +1,7 @@
-import { vitehubServerEnv } from "./vitehub.env";
+import { vitehubServerEnv } from "./vitehub.env.ts";
 
 export default defineNuxtConfig({
+  buildDir: ".nuxt",
   compatibilityDate: "2026-07-24",
   app: {
     head: {
@@ -9,13 +10,16 @@ export default defineNuxtConfig({
       title: "Calories",
     },
   },
-  modules: ["@nuxt/ui", "vite-hub/nuxt"],
+  modules: ["@nuxt/ui", "vite-hub/nuxt", "nuxt-skill-hub"],
+  skillHub: {
+    targets: ["codex"],
+  },
   vitehub: {
     preset: "cloudflare",
     agent: true,
-    console: { exposure: "host-managed" },
+    console: false,
     blob: {
-      serve: { route: "/photos" },
+      serve: false,
     },
     database: {
       driver: "d1",
@@ -25,34 +29,32 @@ export default defineNuxtConfig({
   css: ["~/assets/main.css"],
   ui: {
     colorMode: true,
+    fonts: false,
   },
   ssr: false,
   icon: {
     clientBundle: {
-      scan: {
-        globInclude: [
-          "app/**/*.{vue,jsx,tsx,md,mdc,mdx,yml,yaml}",
-          "layers/**/*.{vue,jsx,tsx,md,mdc,mdx,yml,yaml}",
-          "modules/**/*.{vue,jsx,tsx,md,mdc,mdx,yml,yaml}",
-          "node_modules/vite-hub/dist/console/runtime/**/*.{vue,js,ts}",
-        ],
-        globExclude: [
-          ".nuxt",
-          ".output",
-          ".vitehub",
-          "build",
-          "coverage",
-          "dist",
-          "test",
-          "tests",
-        ],
-      },
+      scan: true,
     },
     provider: "none",
   },
   vite: {
+    root: import.meta.dirname,
     env: {
       server: vitehubServerEnv,
+    },
+  },
+  $development: {
+    experimental: {
+      // Nuxt 5's Vite dev runner currently evaluates Vue's CommonJS entry as ESM.
+      nitroViteEnvironment: false,
+    },
+    vitehub: {
+      preset: "node",
+      console: true,
+    },
+    nitro: {
+      preset: "node-server",
     },
   },
   devtools: { enabled: false },

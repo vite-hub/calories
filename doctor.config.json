@@ -1,0 +1,10 @@
+{
+  "extends": [
+    "nuxt/strict",
+    "vue/strict",
+    "nitro/strict",
+    "vite/strict",
+    "typescript/strict",
+    "package/recommended"
+  ]
+}

@@ -1,12 +1,7 @@
 <script setup lang="ts">
-useHead({
+useSeoMeta({
   title: "ViteHub Calories",
-  meta: [
-    {
-      name: "description",
-      content: "A read-only record of meals estimated from Telegram photos.",
-    },
-  ],
+  description: "A read-only meal journal with calorie and protein estimates.",
 });
 </script>
 

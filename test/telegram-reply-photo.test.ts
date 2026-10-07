@@ -149,6 +149,6 @@ test("Telegram photo replies include available content without a channel opt-in"
   const result = await runTelegramPhotoReply();
 
   assert.equal(result.downloadedPhoto, true);
-  assert.match(result.prompt, /"data":\[1,2,3\]/);
+  assert.match(result.prompt, /"mediaType":"image\/jpeg","data":\{"0":1,"1":2,"2":3\}/);
   assert.doesNotMatch(result.prompt, /telegram-photo-id/);
 });

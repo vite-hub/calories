@@ -2,12 +2,11 @@
 .DS_Store
 .nuxt
 .output
-.patches
 .pnpm-store
-.pnpm_patches
 .swc
 .vercel
-.vitehub
+.vitehub/*
+!.vitehub/provision.json
 .wrangler
 dist
 node_modules

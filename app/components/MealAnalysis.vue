@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import {
-  formatMealTime,
-  formatUsageCostUsd,
-  getMealTitle,
-  parseUsageCostUsd,
-  type Meal,
-} from "../utils/meal";
+import type { Meal } from "../utils/meal";
 
 const props = defineProps<{ meal: Meal }>();
 const usageCost = computed(() => parseUsageCostUsd(props.meal.usageCost));
@@ -24,11 +18,13 @@ const usageCost = computed(() => parseUsageCostUsd(props.meal.usageCost));
   >
     <template #header>
       <div class="meal-card-header">
-        <span class="meal-photo"><MealPhoto :meal="meal" /></span>
+        <span class="meal-photo">
+          <span class="meal-photo-fallback" aria-hidden="true">{{ getMealTitle(meal).charAt(0).toUpperCase() || "M" }}</span>
+        </span>
 
         <div class="meal-heading">
           <div class="meal-meta">
-            <span class="meal-time">{{ formatMealTime(meal.createdAt) }}</span>
+            <NuxtTime class="meal-time" :datetime="meal.createdAt" hour="numeric" minute="2-digit" />
             <UBadge
               v-if="meal.confidence"
               class="confidence-badge"

@@ -37,7 +37,7 @@ This template picks Telegram and OpenRouter. Choose the ViteHub deployment prese
 
 ## Start
 
-Requires Node.js 24+ and pnpm 10.
+Requires Node.js 24.15+ and pnpm 10.
 
 ```sh
 git clone https://github.com/vite-hub/calories.git
@@ -57,7 +57,7 @@ Open <http://localhost:3000>. Start customizing in `server/agents/calories/agent
 
 ## Deploy
 
-ViteHub supports five deployment presets. Pick one in `nuxt.config.ts`, then configure durable database and Blob storage for that host.
+Choose a preset in `nuxt.config.ts` and configure its durable storage.
 
 | Host | Preset | Production state |
 | --- | --- | --- |
@@ -67,42 +67,43 @@ ViteHub supports five deployment presets. Pick one in `nuxt.config.ts`, then con
 | Deno Deploy | `deno` | Explicit remote database and Blob drivers |
 | Node or a container | `node` | SQLite and files on a persistent disk, or hosted stores |
 
-Not every ViteHub Capability has native output on every host. Check the [host support matrix](https://vitehub.dev/docs/frameworks-hosts/support-matrix), update the provider-specific configuration and deployment scripts, then build:
-
-```sh
-pnpm build
-```
-
-The repository currently includes Cloudflare, D1, and R2 configuration as one working deployment example—not as ViteHub's default. The generated Wrangler configuration publishes the Worker only at `https://calories.onmax.me`:
+This example uses Cloudflare, D1, and R2. Replace the domain in `nuxt.config.ts` and the production URLs in `package.json` and the Agent hooks before deploying:
 
 ```sh
 pnpm db:migrate:remote
 pnpm run deploy
+pnpm telegram:webhook        # preview the change
+pnpm telegram:webhook:apply  # apply after the deployment is live
 ```
 
-Register the Telegram webhook after the deployment is live. Inspecting the plan is read-only; the second command applies it:
+See the [host support matrix](https://vitehub.dev/docs/frameworks-hosts/support-matrix) when changing providers. Original photos stay private; only the read-only meal dashboard is public. The Console runs locally at `http://127.0.0.1:3000/_vitehub` during development.
 
-```sh
-pnpm telegram:webhook
-pnpm telegram:webhook:apply
-```
+## Export data
 
-Create one timestamped recovery bundle containing a production D1 export and the retained Telegram conversation with its attachments:
+Export production D1 and retained Telegram history with attachments to `.backups/`:
 
 ```sh
 pnpm data:export
+pnpm data:export:database         # D1 only
+pnpm data:export -- --thread 42:123
+pnpm data:export -- --webhook telegram-webhook-id
 ```
 
-The bundle is written under `.backups/`. It requires the production Telegram values in `.env`. If those values are unavailable, back up the authoritative database on its own with `pnpm data:export:database`.
+The full bundle needs production Telegram values in `.env`. ViteHub CLI provides channel history export with thread and webhook filters; database export still uses Wrangler. These filters affect the Telegram archive, not the full D1 dump. `pnpm telegram:history` exports only the channel archive.
 
-Telegram retains a bounded history window, so export it before attempting recovery. The Bot API cannot replay a user's old message: compare the archive with D1, then resend only confirmed gaps through the configured private chat. This avoids duplicating a meal when a database write succeeded but the bot's final reply failed. `pnpm telegram:history` remains available when only the retained channel archive is needed.
+Export before recovery: Telegram retains a bounded history window. Compare the archive with D1 and resend only confirmed missing meals to avoid duplicates.
 
-## Agent session reader
-
-The ViteHub option is `console: true`. Calories keeps the merged console page in production and backs it with D1, so it is available at [`https://calories.onmax.me/_vitehub`](https://calories.onmax.me/_vitehub). Start the app to use the same page locally at `http://127.0.0.1:3000/_vitehub`:
+## Checks and guidance
 
 ```sh
-pnpm dev
+pnpm run doctor
+pnpm typecheck
+pnpm test
+pnpm build
 ```
 
-The production journal retains up to 20 recent user and assistant messages from the configured 30-minute Telegram history window, plus the delivered reply, so the read-only console can show the conversation in order. It strips original photo and audio bytes, intermediate model text, private tool values, channel and thread identifiers, annotations, and raw errors before persistence. The console and its API are read-only.
+GitHub Actions runs Doctor with strict Nuxt, Vue, Nitro, Vite, and TypeScript presets before the other checks. Doctor and ViteHub use pinned `pkg.pr.new` builds. Nuxt Skill Hub refreshes the repository's Codex guidance during `nuxt prepare`.
+
+This template uses Nuxt 5 nightly. Development uses its separate Nitro builder to avoid a Vue CommonJS loading error in the Vite dev runner; production uses the default Nitro Vite environment.
+
+The local Console shows recent Agent sessions. The journal strips original media bytes, private tool values, channel identifiers, and raw errors before persistence.

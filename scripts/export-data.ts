@@ -5,6 +5,8 @@ import { pathToFileURL } from "node:url";
 
 export interface ExportOptions {
   databaseOnly: boolean;
+  thread?: string;
+  webhook?: string;
   output: string;
 }
 
@@ -14,10 +16,13 @@ function defaultOutput(now = new Date()): string {
 
 export function parseExportArgs(args: string[], now = new Date()): ExportOptions {
   let databaseOnly = false;
+  let thread: string | undefined;
+  let webhook: string | undefined;
   let output = defaultOutput(now);
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
+    if (index === 0 && argument === "--") continue;
     if (argument === "--database-only") {
       databaseOnly = true;
       continue;
@@ -29,10 +34,18 @@ export function parseExportArgs(args: string[], now = new Date()): ExportOptions
       index += 1;
       continue;
     }
+    if (argument === "--thread" || argument === "--webhook") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) throw new Error(`${argument} requires an id`);
+      if (argument === "--thread") thread = value;
+      else webhook = value;
+      index += 1;
+      continue;
+    }
     throw new Error(`Unknown argument: ${argument}`);
   }
 
-  return { databaseOnly, output };
+  return { databaseOnly, output, thread, webhook };
 }
 
 function run(command: string, args: string[]): void {
@@ -64,7 +77,7 @@ export function exportData(options: ExportOptions): string {
   ]);
 
   if (!options.databaseOnly) {
-    run(process.execPath, [
+    const historyArgs = [
       "--env-file=.env",
       "node_modules/vite-hub/dist/bin.js",
       "channels",
@@ -79,7 +92,10 @@ export function exportData(options: ExportOptions): string {
       "https://calories.onmax.me",
       "--output",
       resolve(output, "telegram"),
-    ]);
+      ...(options.thread ? ["--thread", options.thread] : []),
+      ...(options.webhook ? ["--webhook", options.webhook] : []),
+    ];
+    run(process.execPath, historyArgs);
   }
 
   writeFileSync(resolve(output, "manifest.json"), `${JSON.stringify({

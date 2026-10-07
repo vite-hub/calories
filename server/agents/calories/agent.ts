@@ -2,7 +2,6 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
 import { eq } from "drizzle-orm";
 import { defineAgent } from "vite-hub/agent";
-import type { AgentChatStateResolver } from "vite-hub/agent/capabilities";
 import {
   audioBytes,
   blob,
@@ -11,30 +10,9 @@ import {
   usage,
 } from "vite-hub/agent/capabilities";
 import { telegram } from "vite-hub/agent/channels";
-import {
-  createCloudflareAgentState,
-  getActiveCloudflareEnv,
-  type ViteHubAgentStateDurableObjectNamespace,
-} from "vite-hub/agent/cloudflare";
 import { useDatabase } from "vite-hub/database/drizzle";
 import { useServerEnv } from "#vitehub/env/server";
-
-import renderReply from "./reply.template.md";
-import { verifiedMealId } from "./result";
-
-function openRouter() {
-  return createOpenRouter({ apiKey: useServerEnv().openrouter.apiKey });
-}
-
-const cloudflareChatState = Object.assign(
-  () => {
-    const namespace = getActiveCloudflareEnv()?.CHAT_STATE as
-      | ViteHubAgentStateDurableObjectNamespace
-      | undefined;
-    return namespace ? createCloudflareAgentState({ namespace }) : undefined;
-  },
-  { workflowCustody: true as const },
-) as AgentChatStateResolver;
+import { z } from "zod";
 
 export default defineAgent({
   capabilities: [
@@ -43,7 +21,9 @@ export default defineAgent({
     transcribe({
       async execute({ audio }) {
         const { text } = await generateText({
-          model: openRouter()("mistralai/voxtral-small-24b-2507"),
+          model: createOpenRouter({ apiKey: useServerEnv().openrouter.apiKey })(
+            "mistralai/voxtral-small-24b-2507",
+          ),
           messages: [{
             role: "user",
             content: [
@@ -67,7 +47,6 @@ export default defineAgent({
         delivery: "manual",
         fallbackStreamingPlaceholderText: null,
         lockScope: "channel",
-        state: cloudflareChatState,
         triggerHistory: {
           maxAgeMs: 30 * 60 * 1_000,
           maxMessages: 20,
@@ -79,15 +58,14 @@ export default defineAgent({
   },
   driver: {
     maxRetries: 0,
-    model: () => openRouter()("z-ai/glm-5v-turbo"),
+    model: () => createOpenRouter({ apiKey: useServerEnv().openrouter.apiKey })(
+      "z-ai/glm-5.3-flashx",
+    ),
   },
   hooks: {
     "agent:error"(event) {
       console.error("[calories] Agent invocation failed", event.error);
-      const traceId = event.input.context?.["agent.invocation.traceId"];
-      const reference = typeof traceId === "string"
-        ? traceId
-        : event.invocation.run?.runId;
+      const reference = event.invocation.traceId ?? event.invocation.run?.runId;
 
       return event.reply([
         "Sorry, I couldn't finish that reply. I may have saved the meal before the failure, so check the dashboard before retrying.",
@@ -97,13 +75,15 @@ export default defineAgent({
     },
     async "agent:finish"(event) {
       const usageCost = event.invocation.usage?.cost?.display ?? "Cost unavailable";
-      const mealId = verifiedMealId(event.toolResults);
+      const verification = z.array(z.object({ id: z.string().trim().min(1) })).length(1).safeParse(
+        event.toolResults.findLast((result) => (result.toolName ?? result.name) === "db_query")?.output,
+      );
+      const mealId = verification.success ? verification.data[0]?.id : undefined;
       const dashboardUrl = event.runtime?.request
         ? new URL("/", event.runtime.request.url)
         : undefined;
       if (dashboardUrl && mealId) {
         dashboardUrl.searchParams.set("meal", mealId);
-        dashboardUrl.hash = `day-${mealId}`;
       }
       if (mealId && usageCost !== "Cost unavailable") {
         try {
@@ -116,11 +96,11 @@ export default defineAgent({
           console.error("[calories] Failed to record usage cost", error);
         }
       }
-      return event.reply(await renderReply({
-        cost: usageCost,
-        dashboardUrl: dashboardUrl?.toString() ?? "",
-        text: event.text?.trim() || "Done.",
-      }));
+      return event.reply([
+        event.text?.trim() || "Done.",
+        "Dashboard: " + (dashboardUrl?.toString() ?? "https://calories.onmax.me/"),
+        usageCost,
+      ].join("\n\n"));
     },
   },
 });

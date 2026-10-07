@@ -136,17 +136,16 @@ test("Agent Workflows journal failures that occur before the provider run starts
     runtime: "unknown",
   }), {
     context: { nonportable: () => error },
-  }), error);
+  }), { code: "AGENT_R0596", message: error.message });
 
   const page = await store.list({ limit: 1 });
   assert.equal(page.invocations.length, 1);
   const record = page.invocations[0];
   assert.equal(record?.agentName, "calories");
   assert.equal(record?.status, "failed");
-  assert.deepEqual(record?.error, {
-    message: error.message,
-    name: "TypeError",
-  });
+  assert.equal(record?.error?.message, error.message);
+  assert.equal(record?.error?.name, "AGENT_R0596");
+  assert.equal(record?.error?.code, "AGENT_R0596");
   assert.match(record?.id ?? "", /^sha256_/);
   assert.match(record?.traceId ?? "", /^sha256_/);
 });

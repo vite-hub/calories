@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import {
-  formatUsageCostUsd,
-  parseUsageCostUsd,
-  type Meal,
-} from "~/utils/meal";
-import { useCollection } from "vite-hub/source/client";
+import type { Meal } from "~/utils/meal";
 
 const route = useRoute();
-const selectedMealId = typeof route.query.meal === "string" ? route.query.meal : undefined;
+const selectedMealId = computed(() => Array.isArray(route.query.meal)
+  ? route.query.meal[0]
+  : route.query.meal ?? undefined);
 const {
   error: loadError,
   items: meals,
@@ -18,43 +15,14 @@ const {
   limit: 50,
 });
 const settingsOpen = ref(false);
-const calorieGoal = ref(2_000);
-const proteinGoal = ref(150);
-
-function dayKey(value: string): string {
-  const date = new Date(value);
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
-function dayLabel(value: string): string {
-  const date = new Date(value);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  if (dayKey(value) === dayKey(today.toISOString())) return "Today";
-  if (dayKey(value) === dayKey(yesterday.toISOString())) return "Yesterday";
-  return new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "long",
-    weekday: "long",
-    year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
-  }).format(date);
-}
-
-function dayDateLabel(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "long",
-    weekday: "long",
-    year: new Date(value).getFullYear() === new Date().getFullYear() ? undefined : "numeric",
-  }).format(new Date(value));
-}
-
-function dayNavLabel(value: string): string {
-  return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" }).format(
-    new Date(value),
-  );
-}
+const savedGoals = useCookie<{ calories: number; protein: number } | null>("calories-goals", {
+  default: () => null,
+  maxAge: 60 * 60 * 24 * 365,
+  sameSite: "lax",
+});
+const calorieGoal = useState("calorie-goal", () => Number(savedGoals.value?.calories) || 2_000);
+const proteinGoal = useState("protein-goal", () => Number(savedGoals.value?.protein) || 150);
+const journalNow = useState("journal-now", () => Date.now());
 
 function goalDelta(value: number, goal: number, unit: string): string {
   const difference = goal - value;
@@ -63,71 +31,30 @@ function goalDelta(value: number, goal: number, unit: string): string {
     : `${Math.abs(difference).toLocaleString()} ${unit} over`;
 }
 
-const days = computed(() => {
-  const groups = new Map<
-    string,
-    {
-      calories: number;
-      cost: number;
-      date: string;
-      hasCost: boolean;
-      meals: Meal[];
-      protein: number;
-    }
-  >();
-  for (const meal of meals.value) {
-    const key = dayKey(meal.createdAt);
-    const day = groups.get(key) ?? {
-      calories: 0,
-      cost: 0,
-      date: meal.createdAt,
-      hasCost: false,
-      meals: [],
-      protein: 0,
-    };
-    const cost = parseUsageCostUsd(meal.usageCost);
-    day.meals.push(meal);
-    day.calories += meal.totalCalories ?? 0;
-    day.protein += meal.totalProtein ?? meal.items.reduce((sum, item) => sum + (item.protein ?? 0), 0);
-    if (cost !== undefined) {
-      day.cost += cost;
-      day.hasCost = true;
-    }
-    groups.set(key, day);
-  }
-  return [...groups.entries()].map(([key, day]) => ({
-    ...day,
-    cost: day.hasCost ? day.cost : undefined,
-    key,
-    label: dayLabel(day.date),
-  }));
-});
+const days = computed(() => groupMealsByDay(meals.value, journalNow.value));
 
 function saveGoals() {
   calorieGoal.value = Math.max(1, Math.round(Number(calorieGoal.value) || 2_000));
   proteinGoal.value = Math.max(1, Math.round(Number(proteinGoal.value) || 150));
-  localStorage.setItem(
-    "calories-goals",
-    JSON.stringify({ calories: calorieGoal.value, protein: proteinGoal.value }),
-  );
+  savedGoals.value = { calories: calorieGoal.value, protein: proteinGoal.value };
   settingsOpen.value = false;
 }
 
-watch(meals, async (loadedMeals: Meal[]) => {
-  if (!selectedMealId) return;
-  const selectedMeal = loadedMeals.find((meal: Meal) => meal.id === selectedMealId);
-  if (!selectedMeal) return;
-
+watch([meals, selectedMealId], async ([loadedMeals, mealId]) => {
+  if (!mealId || !loadedMeals.some((meal: Meal) => meal.id === mealId)) return;
   await nextTick();
-  document.getElementById(`meal-${selectedMealId}`)?.scrollIntoView({ block: "center" });
-}, { immediate: true });
+  document.getElementById(`meal-${mealId}`)?.scrollIntoView({ block: "center" });
+}, { immediate: true, flush: "post" });
 
 onMounted(() => {
-  // ponytail: goals stay device-local until the dashboard has authentication.
+  journalNow.value = Date.now();
+  if (savedGoals.value) return;
+  // Migrate goals saved before the dashboard used Nuxt cookies.
   try {
     const goals = JSON.parse(localStorage.getItem("calories-goals") || "null");
     if (Number.isFinite(goals?.calories) && goals.calories > 0) calorieGoal.value = goals.calories;
     if (Number.isFinite(goals?.protein) && goals.protein > 0) proteinGoal.value = goals.protein;
+    saveGoals();
   } catch {}
 });
 </script>
@@ -135,9 +62,9 @@ onMounted(() => {
 <template>
   <main class="calories-app">
     <AppHeader
-      :calorie-goal="calorieGoal"
-      :protein-goal="proteinGoal"
-      :settings-open="settingsOpen"
+      :calorie-goal
+      :protein-goal
+      :settings-open
       @settings="settingsOpen = !settingsOpen"
     />
 
@@ -148,9 +75,8 @@ onMounted(() => {
       aria-label="Daily goals"
       @submit.prevent="saveGoals"
     >
-      <div>
-        <label for="calorie-goal">Calories</label>
-        <input
+      <UFormField label="Calories" name="calories">
+        <UInput
           id="calorie-goal"
           v-model.number="calorieGoal"
           inputmode="numeric"
@@ -158,10 +84,9 @@ onMounted(() => {
           step="50"
           type="number"
         />
-      </div>
-      <div>
-        <label for="protein-goal">Protein (g)</label>
-        <input
+      </UFormField>
+      <UFormField label="Protein (g)" name="protein">
+        <UInput
           id="protein-goal"
           v-model.number="proteinGoal"
           inputmode="numeric"
@@ -169,8 +94,8 @@ onMounted(() => {
           step="5"
           type="number"
         />
-      </div>
-      <button class="goal-save" type="submit">Save</button>
+      </UFormField>
+      <UButton class="goal-save" color="neutral" type="submit">Save</UButton>
     </form>
 
     <div class="dashboard-content">
@@ -182,15 +107,15 @@ onMounted(() => {
         </div>
 
         <nav v-if="days.length" class="date-nav" aria-label="Jump to a day">
-          <a
+          <NuxtLink
             v-for="day in days.slice(0, 7)"
             :key="day.key"
-            :href="`#day-${day.key}`"
+            :to="`#day-${day.key}`"
             :class="{ 'is-current': day.label === 'Today' }"
           >
             <span>{{ day.label }}</span>
-            <strong>{{ dayNavLabel(day.date) }}</strong>
-          </a>
+            <strong><NuxtTime :datetime="day.date" day="numeric" month="short" /></strong>
+          </NuxtLink>
         </nav>
       </section>
 
@@ -204,7 +129,7 @@ onMounted(() => {
           <header class="day-heading">
             <div>
               <span>{{ day.label }}</span>
-              <h2>{{ dayDateLabel(day.date) }}</h2>
+              <h2><NuxtTime :datetime="day.date" day="numeric" month="long" weekday="long" :year="day.year" /></h2>
             </div>
             <div class="day-heading-meta">
               <span v-if="day.cost !== undefined">AI · {{ formatUsageCostUsd(day.cost) }}</span>
@@ -223,10 +148,10 @@ onMounted(() => {
             >
               <div class="day-progress">
                 <NutritionRings
-                  :calorie-goal="calorieGoal"
+                  :calorie-goal
                   :calories="day.calories"
                   :protein="day.protein"
-                  :protein-goal="proteinGoal"
+                  :protein-goal
                 />
 
                 <dl class="day-metrics tabular-nums">
@@ -256,11 +181,13 @@ onMounted(() => {
                 :id="`meal-${meal.id}`"
                 :key="meal.id"
                 :class="{ 'is-selected': meal.id === selectedMealId }"
-                :meal="meal"
+                :meal
               />
             </div>
           </div>
         </section>
+
+        <UEmpty v-if="!loading && !loadError && !meals.length" icon="i-lucide-utensils" title="No meals yet" description="Send a meal to your configured private chat to start your journal." />
 
         <div v-if="loading || loadError" class="feed-sentinel" aria-live="polite">
           <span v-if="loading">Loading meals…</span>

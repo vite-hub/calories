@@ -16,3 +16,7 @@ Calories is a runnable ViteHub Agent template, not a prescribed application arch
 - Treat production deploys, webhook changes, and remote data migrations as separate mutations that require an explicit request.
 - Match proof to the changed boundary: `git diff --check` for documentation; focused tests and typecheck for code; the real provider path for provider behavior. Keep local, build, deployment, and live-service proof distinct.
 - Push verified changes directly to current `main` unless the user requests a branch or pull request. Fetch first, require a clean fast-forward, and never force-push.
+
+<!-- nuxt-skill-hub:start -->
+Use the nuxt-vitehub-calories skill as the Nuxt router/entrypoint for tasks in this repository.
+<!-- nuxt-skill-hub:end -->
