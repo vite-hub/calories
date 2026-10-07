@@ -10,7 +10,7 @@ export default defineNuxtConfig({
       title: "Calories",
     },
   },
-  modules: ["@nuxt/ui", "vite-hub/nuxt", "nuxt-skill-hub"],
+  modules: ["@nuxt/ui", "@vueuse/nuxt", "vite-hub/nuxt", "nuxt-skill-hub"],
   skillHub: {
     targets: ["codex"],
   },

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import type { Meal } from "~/utils/meal";
+definePageMeta({
+  scrollToTop: (to) => !to.query.meal,
+});
 
 const route = useRoute();
 const selectedMealId = computed(() => Array.isArray(route.query.meal)
@@ -14,15 +16,13 @@ const {
   all: true,
   limit: 50,
 });
-const settingsOpen = ref(false);
-const savedGoals = useCookie<{ calories: number; protein: number } | null>("calories-goals", {
-  default: () => null,
-  maxAge: 60 * 60 * 24 * 365,
-  sameSite: "lax",
-});
-const calorieGoal = useState("calorie-goal", () => Number(savedGoals.value?.calories) || 2_000);
-const proteinGoal = useState("protein-goal", () => Number(savedGoals.value?.protein) || 150);
+const { goals, saveGoals } = useDailyGoals();
 const journalNow = useState("journal-now", () => Date.now());
+const { resume } = useIntervalFn(() => journalNow.value = Date.now(), 60_000, {
+  immediate: false,
+  immediateCallback: true,
+});
+onMounted(resume);
 
 function goalDelta(value: number, goal: number, unit: string): string {
   const difference = goal - value;
@@ -31,171 +31,141 @@ function goalDelta(value: number, goal: number, unit: string): string {
     : `${Math.abs(difference).toLocaleString()} ${unit} over`;
 }
 
-const days = computed(() => groupMealsByDay(meals.value, journalNow.value));
-
-function saveGoals() {
-  calorieGoal.value = Math.max(1, Math.round(Number(calorieGoal.value) || 2_000));
-  proteinGoal.value = Math.max(1, Math.round(Number(proteinGoal.value) || 150));
-  savedGoals.value = { calories: calorieGoal.value, protein: proteinGoal.value };
-  settingsOpen.value = false;
+function isRelativeDay(label: string): boolean {
+  return label === "Today" || label === "Yesterday";
 }
 
-watch([meals, selectedMealId], async ([loadedMeals, mealId]) => {
-  if (!mealId || !loadedMeals.some((meal: Meal) => meal.id === mealId)) return;
-  await nextTick();
-  document.getElementById(`meal-${mealId}`)?.scrollIntoView({ block: "center" });
-}, { immediate: true, flush: "post" });
+function dayMetrics(day: { calories: number; protein: number }) {
+  return [
+    { color: "primary", dot: "bg-primary", goal: goals.value.calories, label: "Calories", unit: "kcal", value: day.calories },
+    { color: "secondary", dot: "bg-secondary", goal: goals.value.protein, label: "Protein", unit: "g", value: day.protein },
+  ] as const;
+}
 
-onMounted(() => {
-  journalNow.value = Date.now();
-  if (savedGoals.value) return;
-  // Migrate goals saved before the dashboard used Nuxt cookies.
-  try {
-    const goals = JSON.parse(localStorage.getItem("calories-goals") || "null");
-    if (Number.isFinite(goals?.calories) && goals.calories > 0) calorieGoal.value = goals.calories;
-    if (Number.isFinite(goals?.protein) && goals.protein > 0) proteinGoal.value = goals.protein;
-    saveGoals();
-  } catch {}
-});
+const days = computed(() => groupMealsByDay(meals.value, journalNow.value));
 </script>
 
 <template>
-  <main class="calories-app">
-    <AppHeader
-      :calorie-goal
-      :protein-goal
-      :settings-open
-      @settings="settingsOpen = !settingsOpen"
-    />
+  <div class="min-h-dvh">
+    <AppHeader :goals @save="saveGoals" />
 
-    <form
-      v-if="settingsOpen"
-      id="goal-editor"
-      class="goal-editor"
-      aria-label="Daily goals"
-      @submit.prevent="saveGoals"
-    >
-      <UFormField label="Calories" name="calories">
-        <UInput
-          id="calorie-goal"
-          v-model.number="calorieGoal"
-          inputmode="numeric"
-          min="50"
-          step="50"
-          type="number"
-        />
-      </UFormField>
-      <UFormField label="Protein (g)" name="protein">
-        <UInput
-          id="protein-goal"
-          v-model.number="proteinGoal"
-          inputmode="numeric"
-          min="5"
-          step="5"
-          type="number"
-        />
-      </UFormField>
-      <UButton class="goal-save" color="neutral" type="submit">Save</UButton>
-    </form>
+    <main class="mx-auto max-w-3xl px-4 pb-16 sm:px-6">
+      <div class="pt-8 pb-6 sm:pt-10">
+        <h1 class="text-2xl font-semibold tracking-tight text-highlighted">Meal journal</h1>
+        <p class="mt-1 text-sm text-muted">Calories and protein from your saved meals.</p>
 
-    <div class="dashboard-content">
-      <section class="dashboard-heading" aria-labelledby="dashboard-title">
-        <div>
-          <span class="dashboard-eyebrow">Nutrition overview</span>
-          <h1 id="dashboard-title">Meal history</h1>
-          <p>Calories and protein from your saved meals.</p>
-        </div>
-
-        <nav v-if="days.length" class="date-nav" aria-label="Jump to a day">
-          <NuxtLink
+        <nav
+          v-if="days.length"
+          class="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0"
+          aria-label="Jump to a day"
+        >
+          <UButton
             v-for="day in days.slice(0, 7)"
             :key="day.key"
+            class="shrink-0"
+            color="neutral"
+            exact-hash
+            :aria-current="route.hash === `#day-${day.key}` ? 'location' : undefined"
+            size="sm"
             :to="`#day-${day.key}`"
-            :class="{ 'is-current': day.label === 'Today' }"
+            variant="outline"
           >
-            <span>{{ day.label }}</span>
-            <strong><NuxtTime :datetime="day.date" day="numeric" month="short" /></strong>
-          </NuxtLink>
+            <template v-if="isRelativeDay(day.label)">{{ day.label }}</template>
+            <NuxtTime v-else :datetime="day.date" day="numeric" month="short" weekday="short" />
+          </UButton>
         </nav>
+      </div>
+
+      <UAlert
+        v-if="loadError && !loading"
+        class="mb-6"
+        color="error"
+        icon="i-lucide-circle-alert"
+        title="Meals could not be loaded"
+        description="The journal could not reach the server. Check the connection, then try again."
+        variant="subtle"
+        :actions="[{ label: 'Try again', color: 'error', variant: 'outline', onClick: () => refresh() }]"
+      />
+
+      <section
+        v-for="day in days"
+        :id="`day-${day.key}`"
+        :key="day.key"
+        class="scroll-mt-20 border-t border-default py-6"
+        :aria-labelledby="`day-${day.key}-title`"
+      >
+        <header class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 :id="`day-${day.key}-title`" class="text-base font-semibold text-highlighted">
+            <template v-if="isRelativeDay(day.label)">
+              {{ day.label }}
+              <NuxtTime class="ms-1 font-normal text-muted" :datetime="day.date" day="numeric" month="long" weekday="long" :year="day.year" />
+            </template>
+            <NuxtTime v-else :datetime="day.date" day="numeric" month="long" weekday="long" :year="day.year" />
+          </h2>
+          <p class="flex gap-3 text-xs text-muted tabular-nums">
+            <span>{{ day.meals.length }} {{ day.meals.length === 1 ? "meal" : "meals" }}</span>
+            <span v-if="day.cost !== undefined">AI cost {{ formatUsageCostUsd(day.cost) }}</span>
+          </p>
+        </header>
+
+        <UCard
+          class="mt-3"
+          variant="subtle"
+          :ui="{ body: 'grid grid-cols-2 divide-x divide-default p-0 sm:p-0' }"
+        >
+          <div v-for="metric in dayMetrics(day)" :key="metric.label" class="min-w-0 p-4">
+            <p class="flex items-center gap-1.5 text-xs font-medium text-muted">
+              <span class="size-2 rounded-full" :class="metric.dot" aria-hidden="true" />
+              {{ metric.label }}
+            </p>
+            <p class="mt-1.5 tabular-nums">
+              <span class="text-xl font-semibold tracking-tight text-highlighted">{{ metric.value.toLocaleString() }}</span>
+              <span class="ms-1 text-xs text-muted">of {{ metric.goal.toLocaleString() }} {{ metric.unit }}</span>
+            </p>
+            <!-- The text around the bar states the same values for assistive technology. -->
+            <UProgress
+              aria-hidden="true"
+              class="mt-3"
+              :color="metric.value > metric.goal ? 'warning' : metric.color"
+              :max="metric.goal"
+              :model-value="Math.min(metric.value, metric.goal)"
+              size="sm"
+            />
+            <p
+              class="mt-2 text-xs tabular-nums"
+              :class="metric.value > metric.goal ? 'font-medium text-highlighted' : 'text-muted'"
+            >
+              {{ goalDelta(metric.value, metric.goal, metric.unit) }}
+            </p>
+          </div>
+        </UCard>
+
+        <div class="mt-3 grid gap-3">
+          <MealAnalysis
+            v-for="meal in day.meals"
+            :id="`meal-${meal.id}`"
+            :key="meal.id"
+            :meal
+            :selected="meal.id === selectedMealId"
+          />
+        </div>
       </section>
 
-      <div class="daily-log">
-        <section
-          v-for="day in days"
-          :id="`day-${day.key}`"
-          :key="day.key"
-          class="day-section"
-        >
-          <header class="day-heading">
-            <div>
-              <span>{{ day.label }}</span>
-              <h2><NuxtTime :datetime="day.date" day="numeric" month="long" weekday="long" :year="day.year" /></h2>
-            </div>
-            <div class="day-heading-meta">
-              <span v-if="day.cost !== undefined">AI · {{ formatUsageCostUsd(day.cost) }}</span>
-              <UBadge color="neutral" size="sm" variant="soft">
-                {{ day.meals.length }} {{ day.meals.length === 1 ? "meal" : "meals" }}
-              </UBadge>
-            </div>
-          </header>
-
-          <div class="day-layout">
-            <UCard
-              as="aside"
-              class="day-summary-card"
-              variant="outline"
-              :ui="{ body: 'p-0 sm:p-0' }"
-            >
-              <div class="day-progress">
-                <NutritionRings
-                  :calorie-goal
-                  :calories="day.calories"
-                  :protein="day.protein"
-                  :protein-goal
-                />
-
-                <dl class="day-metrics tabular-nums">
-                  <div>
-                    <dt><i class="calorie-dot" />Calories</dt>
-                    <dd>
-                      <strong>{{ day.calories.toLocaleString() }}</strong>
-                      <span>of {{ calorieGoal.toLocaleString() }} kcal</span>
-                    </dd>
-                    <small>{{ goalDelta(day.calories, calorieGoal, "kcal") }}</small>
-                  </div>
-                  <div>
-                    <dt><i class="protein-dot" />Protein</dt>
-                    <dd>
-                      <strong>{{ day.protein }}</strong>
-                      <span>of {{ proteinGoal }} g</span>
-                    </dd>
-                    <small>{{ goalDelta(day.protein, proteinGoal, "g") }}</small>
-                  </div>
-                </dl>
-              </div>
-            </UCard>
-
-            <div class="meal-list">
-              <MealAnalysis
-                v-for="meal in day.meals"
-                :id="`meal-${meal.id}`"
-                :key="meal.id"
-                :class="{ 'is-selected': meal.id === selectedMealId }"
-                :meal
-              />
-            </div>
-          </div>
-        </section>
-
-        <UEmpty v-if="!loading && !loadError && !meals.length" icon="i-lucide-utensils" title="No meals yet" description="Send a meal to your configured private chat to start your journal." />
-
-        <div v-if="loading || loadError" class="feed-sentinel" aria-live="polite">
-          <span v-if="loading">Loading meals…</span>
-          <UButton v-else color="error" variant="soft" @click="refresh">
-            Try again
-          </UButton>
-        </div>
+      <div v-if="loading && !meals.length" role="status" class="grid gap-3 border-t border-default py-6">
+        <span class="sr-only">Loading meals</span>
+        <USkeleton class="h-5 w-48 motion-reduce:animate-none" />
+        <USkeleton class="h-32 w-full rounded-lg motion-reduce:animate-none" />
+        <USkeleton class="h-28 w-full rounded-lg motion-reduce:animate-none" />
       </div>
-    </div>
-  </main>
+      <p v-else-if="loading" role="status" class="py-6 text-center text-xs text-muted">Loading more meals…</p>
+
+      <UEmpty
+        v-if="!loading && !loadError && !meals.length"
+        icon="i-lucide-utensils"
+        title="No meals yet"
+        description="Send a meal as text, a photo, or a voice note to your private chat. It appears here after it is saved."
+        variant="outline"
+      />
+    </main>
+  </div>
 </template>

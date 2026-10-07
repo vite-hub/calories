@@ -33,7 +33,7 @@ This template picks Telegram and OpenRouter. Choose the ViteHub deployment prese
 
 ## Stack
 
-[ViteHub](https://vitehub.dev) · Nuxt · Vue · Nuxt UI · AI SDK · OpenRouter · Drizzle · Nitro
+[ViteHub](https://vitehub.dev) · Nuxt · Vue · VueUse · Nuxt UI · AI SDK · OpenRouter · Drizzle · Nitro
 
 ## Start
 
@@ -103,6 +103,8 @@ pnpm build
 ```
 
 GitHub Actions runs Doctor with strict Nuxt, Vue, Nitro, Vite, and TypeScript presets before the other checks. Doctor and ViteHub use pinned `pkg.pr.new` builds. Nuxt Skill Hub refreshes the repository's Codex guidance during `nuxt prepare`.
+
+The dashboard uses Nuxt `useCookie` for saved goals, a local Nuxt UI `UForm` draft for edits, and `useState` for its journal timestamp. VueUse's Nuxt module auto-imports the timer and disposes it when the page unmounts. Meals come from ViteHub's typed `useCollection`; the database supplies the totals.
 
 This template uses Nuxt 5 nightly. Development uses its separate Nitro builder to avoid a Vue CommonJS loading error in the Vite dev runner; production uses the default Nitro Vite environment.
 
