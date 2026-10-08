@@ -55,6 +55,17 @@ pnpm dev
 
 Open <http://localhost:3000>. Start customizing in `server/agents/calories/agent.ts`, its `instructions.md`, and `nuxt.config.ts`.
 
+| Change | File |
+| --- | --- |
+| Channel, models, Capabilities, and reply hooks | `server/agents/calories/agent.ts` |
+| Meal estimation and database verification | `server/agents/calories/instructions.md` |
+| Database schema | `server/databases/config.ts` |
+| Read-only dashboard data | `server/collections/meals.ts` |
+| Public photo preview | `server/api/meals/[id]/photo.get.ts` |
+| Host, storage, and Nuxt modules | `nuxt.config.ts` |
+
+The finish hook formats replies and invocation cost. It does not parse SQL results or write meal data. The instructions require saving and checking items, totals, and the presentation payload before confirming success.
+
 ## Deploy
 
 Choose a preset in `nuxt.config.ts` and configure its durable storage.
@@ -67,13 +78,14 @@ Choose a preset in `nuxt.config.ts` and configure its durable storage.
 | Deno Deploy | `deno` | Explicit remote database and Blob drivers |
 | Node or a container | `node` | SQLite and files on a persistent disk, or hosted stores |
 
-This example uses Cloudflare, D1, and R2. Replace the domain in `nuxt.config.ts` and the production URLs in `package.json` and the Agent hooks before deploying:
+For Cloudflare, replace the domain in `nuxt.config.ts`. Set provider credentials, `VITEHUB_DEPLOYMENT_URL` to your production HTTPS origin, and `TELEGRAM_WEBHOOK_SECRET` in `.env`. Provision your stores below, or set `CLOUDFLARE_D1_DATABASE_ID` and use an existing R2 bucket. Git ignores local provision state.
 
 ```sh
+pnpm provision:cloudflare
 pnpm db:migrate:remote
 pnpm run deploy
-pnpm telegram:webhook        # preview the change
-pnpm telegram:webhook:apply  # apply after the deployment is live
+pnpm telegram:webhook --url https://your-app.example
+pnpm telegram:webhook:apply --url https://your-app.example --confirm-origin https://your-app.example
 ```
 
 See the [host support matrix](https://vitehub.dev/docs/frameworks-hosts/support-matrix) when changing providers. The read-only dashboard shows public photo previews, resized to at most 768 pixels and re-encoded without camera metadata. Originals and their storage paths stay private. The Console runs locally at `http://127.0.0.1:3000/_vitehub` during development.
@@ -89,7 +101,7 @@ pnpm data:export -- --thread 42:123
 pnpm data:export -- --webhook telegram-webhook-id
 ```
 
-The full bundle needs production Telegram values in `.env`. ViteHub CLI provides channel history export with thread and webhook filters; database export still uses Wrangler. These filters affect the Telegram archive, not the full D1 dump. `pnpm telegram:history` exports only the channel archive.
+The full bundle needs production Telegram values and `VITEHUB_DEPLOYMENT_URL` in `.env`. ViteHub CLI provides channel history export with thread and webhook filters; database export still uses Wrangler. These filters affect the Telegram archive, not the full D1 dump. `pnpm telegram:history --url https://your-app.example` exports only the channel archive.
 
 Export before recovery: Telegram retains a bounded history window. Compare the archive with D1 and resend only confirmed missing meals to avoid duplicates.
 
@@ -104,10 +116,12 @@ pnpm build
 
 GitHub Actions runs Doctor with strict Nuxt, Vue, Nitro, Vite, and TypeScript presets before the other checks. Doctor and ViteHub use pinned `pkg.pr.new` builds. Nuxt Skill Hub refreshes the repository's Codex guidance during `nuxt prepare`.
 
-The dashboard uses Nuxt `useCookie` for saved goals, a local Nuxt UI `UForm` draft for edits, and `useState` for its journal timestamp. VueUse's Nuxt module auto-imports the timer and disposes it when the page unmounts. Meals come from ViteHub's typed `useCollection`; the database supplies the totals.
+The dashboard uses Nuxt `useCookie` for saved goals and a local Nuxt UI `UForm` draft for edits. VueUse's auto-imported `useNow` keeps local calendar days current and stops when the page unmounts. Meals come from ViteHub's typed `useCollection`; the database supplies the totals. Vue refs hold the page and component state.
 
-The photo route resolves a saved meal's photo through ViteHub Blob and caches a JPEG preview in the same store. Photon processes images in Node and Cloudflare without another service. JPEG, PNG, and WebP inputs are supported, up to 10 MB and 8 megapixels.
+The photo route looks up the saved meal and calls ViteHub `blob.serve` with a versioned preview transform. ViteHub handles caching and conditional requests; Photon validates and re-encodes the image in Node and Cloudflare. JPEG, PNG, and WebP inputs are supported, up to 10 MB and 8 megapixels.
 
 This template uses Nuxt 5 nightly. Development uses its separate Nitro builder to avoid a Vue CommonJS loading error in the Vite dev runner; production uses the default Nitro Vite environment.
+
+Cloudflare builds need a D1 ID or local provision state. CI uses a placeholder ID to validate the Worker without creating or deploying resources.
 
 The local Console shows recent Agent sessions. The journal strips original media bytes, private tool values, channel identifiers, and raw errors before persistence.

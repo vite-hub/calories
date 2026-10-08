@@ -2,8 +2,13 @@ import { PhotonImage, SamplingFilter, fliph, flipv, resize, rotate } from "@cf-w
 import { imageMeta } from "image-meta";
 
 /** Build a resized public JPEG without the original camera metadata. */
-export function createMealPhotoPreview(bytes: Uint8Array): Uint8Array {
-  if (bytes.byteLength > 10 * 1024 * 1024) throw new Error("Photo is too large");
+export async function createMealPhotoPreview(original: Blob): Promise<Blob> {
+  if (original.size > 10 * 1024 * 1024) throw new Error("Photo is too large");
+  const bytes = new Uint8Array(await original.arrayBuffer());
+  return new Blob([new Uint8Array(encodePreview(bytes))], { type: "image/jpeg" });
+}
+
+function encodePreview(bytes: Uint8Array): Uint8Array {
   const { type, width, height, orientation = 1 } = imageMeta(bytes);
   if (!type || !["jpg", "png", "webp"].includes(type)) throw new Error("Unsupported photo format");
   if (width < 1 || height < 1 || width * height > 8_000_000) throw new Error("Photo is too large");

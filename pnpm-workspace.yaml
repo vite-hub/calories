@@ -1,3 +1,5 @@
 overrides:
   # Nuxt and UI components must share one Vue rendering instance.
   vue: 3.5.43
+  # blob.serve preview transforms: https://github.com/vite-hub/vitehub/pull/1939
+  '@vite-hub/blob': https://pkg.pr.new/vite-hub/vitehub/@vite-hub/blob@ec8b1777255f3da066cebc0dfc778784dd1ee704

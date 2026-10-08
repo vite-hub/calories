@@ -17,7 +17,7 @@ function meal(id: string, createdAt: string, values: Partial<Meal> = {}): Meal {
   };
 }
 
-test("daily totals use persisted meal totals and combine only available costs", () => {
+test("daily totals use persisted meal totals", () => {
   const now = new Date("2026-10-07T12:00:00Z").getTime();
   const days = groupMealsByDay([
     meal("lunch", "2026-10-07T11:00:00Z", {
@@ -34,9 +34,9 @@ test("daily totals use persisted meal totals and combine only available costs", 
     meal("dinner", "2026-10-06T19:00:00Z", { totalCalories: 700, totalProtein: 50 }),
   ], now);
 
-  assert.deepEqual(days.map(({ label, calories, protein, cost }) => ({ label, calories, protein, cost })), [
-    { label: "Today", calories: 900, protein: 60, cost: 0.012 },
-    { label: "Yesterday", calories: 700, protein: 50, cost: undefined },
+  assert.deepEqual(days.map(({ label, calories, protein }) => ({ label, calories, protein })), [
+    { label: "Today", calories: 900, protein: 60 },
+    { label: "Yesterday", calories: 700, protein: 50 },
   ]);
 });
 

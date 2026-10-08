@@ -17,12 +17,7 @@ const {
   limit: 50,
 });
 const { goals, saveGoals } = useDailyGoals();
-const journalNow = useState("journal-now", () => Date.now());
-const { resume } = useIntervalFn(() => journalNow.value = Date.now(), 60_000, {
-  immediate: false,
-  immediateCallback: true,
-});
-onMounted(resume);
+const journalNow = useNow({ scheduler: callback => useIntervalFn(callback, 60_000) });
 
 function goalDelta(value: number, goal: number, unit: string): string {
   const difference = goal - value;
@@ -42,7 +37,7 @@ function dayMetrics(day: { calories: number; protein: number }) {
   ] as const;
 }
 
-const days = computed(() => groupMealsByDay(meals.value, journalNow.value));
+const days = computed(() => groupMealsByDay(meals.value, journalNow.value.getTime()));
 </script>
 
 <template>
@@ -102,10 +97,7 @@ const days = computed(() => groupMealsByDay(meals.value, journalNow.value));
             </template>
             <NuxtTime v-else :datetime="day.date" day="numeric" month="long" weekday="long" :year="day.year" />
           </h2>
-          <p class="flex gap-3 text-xs text-muted tabular-nums">
-            <span>{{ day.meals.length }} {{ day.meals.length === 1 ? "meal" : "meals" }}</span>
-            <span v-if="day.cost !== undefined">AI cost {{ formatUsageCostUsd(day.cost) }}</span>
-          </p>
+          <p class="text-xs text-muted tabular-nums">{{ day.meals.length }} {{ day.meals.length === 1 ? "meal" : "meals" }}</p>
         </header>
 
         <UCard

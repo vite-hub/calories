@@ -23,6 +23,7 @@ export default defineNuxtConfig({
     },
     database: {
       driver: "d1",
+      databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID,
       databaseName: "vitehub-calories",
     },
   },
@@ -31,6 +32,7 @@ export default defineNuxtConfig({
     colorMode: true,
     fonts: false,
   },
+  // Calendar days use the visitor's local timezone.
   ssr: false,
   icon: {
     clientBundle: {

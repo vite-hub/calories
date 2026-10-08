@@ -55,8 +55,17 @@ function run(command: string, args: string[]): void {
 }
 
 export function exportData(options: ExportOptions): string {
+  let deploymentUrl: string | undefined;
   if (!options.databaseOnly && !existsSync(resolve(".env"))) {
     throw new Error("Full export requires .env with the production Telegram credentials. Use --database-only to export D1 alone.");
+  }
+  if (!options.databaseOnly) {
+    process.loadEnvFile(".env");
+    const url = new URL(process.env.VITEHUB_DEPLOYMENT_URL ?? "http://localhost:3000");
+    if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
+      throw new Error("Full export requires VITEHUB_DEPLOYMENT_URL to be the production HTTPS origin.");
+    }
+    deploymentUrl = url.origin;
   }
 
   const output = resolve(options.output);
@@ -89,7 +98,7 @@ export function exportData(options: ExportOptions): string {
       "--stage",
       "production",
       "--url",
-      "https://calories.onmax.me",
+      deploymentUrl!,
       "--output",
       resolve(output, "telegram"),
       ...(options.thread ? ["--thread", options.thread] : []),

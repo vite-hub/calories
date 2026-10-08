@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
-import { parseExportArgs } from "../scripts/export-data";
+import { exportData, parseExportArgs } from "../scripts/export-data";
 
 test("data export defaults to a timestamped full recovery bundle", () => {
   assert.deepEqual(parseExportArgs([], new Date("2026-08-24T12:34:56.789Z")), {
@@ -39,4 +42,21 @@ test("data export accepts channel filters", () => {
 
 test("data export accepts the pnpm argument separator", () => {
   assert.equal(parseExportArgs(["--", "--thread", "42:7"]).thread, "42:7");
+});
+
+test("a full export rejects the development URL before starting a remote command", () => {
+  const directory = mkdtempSync(join(tmpdir(), "calories-export-"));
+  const previousDirectory = process.cwd();
+  const previousUrl = process.env.VITEHUB_DEPLOYMENT_URL;
+  try {
+    writeFileSync(join(directory, ".env"), "VITEHUB_DEPLOYMENT_URL=http://localhost:3000\n");
+    delete process.env.VITEHUB_DEPLOYMENT_URL;
+    process.chdir(directory);
+    assert.throws(() => exportData(parseExportArgs([])), /production HTTPS origin/);
+  } finally {
+    process.chdir(previousDirectory);
+    if (previousUrl === undefined) delete process.env.VITEHUB_DEPLOYMENT_URL;
+    else process.env.VITEHUB_DEPLOYMENT_URL = previousUrl;
+    rmSync(directory, { recursive: true });
+  }
 });

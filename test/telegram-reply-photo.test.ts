@@ -33,7 +33,7 @@ function capturingModel() {
   };
 }
 
-async function runTelegramPhotoReply() {
+async function runTelegramPhotoReply(secretHeader: string | null = "test-secret") {
   const runOffset = webhookRun++ * 10;
   const originalFetch = globalThis.fetch;
   const model = capturingModel();
@@ -121,7 +121,7 @@ async function runTelegramPhotoReply() {
         }),
         headers: {
           "content-type": "application/json",
-          "x-telegram-bot-api-secret-token": "test-secret",
+          ...(secretHeader ? { "x-telegram-bot-api-secret-token": secretHeader } : {}),
         },
         method: "POST",
       },
@@ -133,12 +133,12 @@ async function runTelegramPhotoReply() {
       },
     });
 
-    assert.equal(response.status, 200);
     await Promise.all(backgroundTasks);
-    assert.equal(model.calls.length, 1);
     return {
       downloadedPhoto,
-      prompt: JSON.stringify(model.calls[0]?.prompt),
+      modelCalls: model.calls.length,
+      prompt: JSON.stringify(model.calls[0]?.prompt) ?? "",
+      status: response.status,
     };
   } finally {
     globalThis.fetch = originalFetch;
@@ -148,7 +148,18 @@ async function runTelegramPhotoReply() {
 test("Telegram photo replies include available content without a channel opt-in", async () => {
   const result = await runTelegramPhotoReply();
 
+  assert.equal(result.status, 200);
+  assert.equal(result.modelCalls, 1);
   assert.equal(result.downloadedPhoto, true);
   assert.match(result.prompt, /"mediaType":"image\/jpeg","data":\{"0":1,"1":2,"2":3\}/);
   assert.doesNotMatch(result.prompt, /telegram-photo-id/);
+});
+
+test("Telegram rejects missing or incorrect webhook secrets before invoking the model", async () => {
+  for (const header of [null, "incorrect-secret"]) {
+    const result = await runTelegramPhotoReply(header);
+    assert.equal(result.status, 401);
+    assert.equal(result.modelCalls, 0);
+    assert.equal(result.downloadedPhoto, false);
+  }
 });

@@ -6,7 +6,6 @@
 .swc
 .vercel
 .vitehub/*
-!.vitehub/provision.json
 .wrangler
 dist
 node_modules

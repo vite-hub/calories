@@ -31,17 +31,19 @@ function photo(width = 64, height = 32, orientation = 1) {
   }
 }
 
-test("public meal previews resize photos and discard embedded camera metadata", () => {
+test("public meal previews resize photos and discard embedded camera metadata", async () => {
   const original = photo(1200, 900, 6);
   assert.equal(imageMeta(original).orientation, 6);
-  const preview = createMealPhotoPreview(original);
+  const result = await createMealPhotoPreview(new Blob([new Uint8Array(original)]));
+  assert.equal(result.type, "image/jpeg");
+  const preview = new Uint8Array(await result.arrayBuffer());
   assert.deepEqual(imageMeta(preview), { type: "jpg", width: 576, height: 768 });
   assert.ok(preview.byteLength < original.byteLength);
   assert.ok(!Buffer.from(preview).includes(Buffer.from("Exif")));
   assert.ok(!Buffer.from(preview).includes(Buffer.from("private-camera-location")));
 });
 
-test("public meal previews preserve camera orientation, including mirrored photos", () => {
+test("public meal previews preserve camera orientation, including mirrored photos", async () => {
   const expected = [
     ["red", "green", "blue", "yellow"], ["green", "red", "yellow", "blue"],
     ["yellow", "blue", "green", "red"], ["blue", "yellow", "red", "green"],
@@ -49,7 +51,8 @@ test("public meal previews preserve camera orientation, including mirrored photo
     ["yellow", "green", "blue", "red"], ["green", "yellow", "red", "blue"],
   ];
   for (let orientation = 1; orientation <= 8; orientation++) {
-    const image = PhotonImage.new_from_byteslice(createMealPhotoPreview(photo(64, 32, orientation)));
+    const preview = await createMealPhotoPreview(new Blob([new Uint8Array(photo(64, 32, orientation))]));
+    const image = PhotonImage.new_from_byteslice(new Uint8Array(await preview.arrayBuffer()));
     try {
       const width = image.get_width();
       const height = image.get_height();
@@ -68,15 +71,15 @@ test("public meal previews preserve camera orientation, including mirrored photo
   }
 });
 
-test("public meal previews reject active content, oversized images, and invalid bytes", () => {
-  assert.throws(() => createMealPhotoPreview(Buffer.from('<svg width="10" height="10"></svg>')));
-  assert.throws(() => createMealPhotoPreview(new Uint8Array(10 * 1024 * 1024 + 1)));
-  assert.throws(() => createMealPhotoPreview(Buffer.from("not an image")));
+test("public meal previews reject active content, oversized images, and invalid bytes", async () => {
+  await assert.rejects(createMealPhotoPreview(new Blob(['<svg width="10" height="10"></svg>'])));
+  await assert.rejects(createMealPhotoPreview(new Blob([new Uint8Array(10 * 1024 * 1024 + 1)])), /too large/);
+  await assert.rejects(createMealPhotoPreview(new Blob(["not an image"])));
   const oversized = photo();
   // A JPEG SOF marker supplies dimensions before its pixel data is decoded.
   const marker = oversized.indexOf(Buffer.from([0xff, 0xc0]));
   assert.ok(marker > 0);
   oversized.writeUInt16BE(10_000, marker + 5);
   oversized.writeUInt16BE(10_000, marker + 7);
-  assert.throws(() => createMealPhotoPreview(oversized), /too large/);
+  await assert.rejects(createMealPhotoPreview(new Blob([new Uint8Array(oversized)])), /too large/);
 });

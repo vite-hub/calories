@@ -8,17 +8,6 @@ export function useDailyGoals() {
   });
   const goals = computed(() => dailyGoalsSchema.safeParse(savedGoals.value).data ?? defaultDailyGoals);
 
-  onMounted(() => {
-    if (savedGoals.value !== null) return;
-    // Keep preferences saved before the dashboard switched to Nuxt cookies.
-    try {
-      const legacy = dailyGoalsSchema.safeParse(JSON.parse(localStorage.getItem("calories-goals") || "null"));
-      if (legacy.success) savedGoals.value = legacy.data;
-    } catch {
-      // Defaults still work when browser storage is unavailable or malformed.
-    }
-  });
-
   function saveGoals(value: DailyGoals) {
     savedGoals.value = dailyGoalsSchema.parse(value);
   }

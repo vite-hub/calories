@@ -2,7 +2,6 @@
 import type { Meal } from "../utils/meal";
 
 const props = defineProps<{ meal: Meal; selected?: boolean }>();
-const usageCost = computed(() => parseUsageCostUsd(props.meal.usageCost));
 const header = useTemplateRef("header");
 
 const confidenceLabels: Record<NonNullable<Meal["confidence"]>, string> = {
@@ -12,13 +11,8 @@ const confidenceLabels: Record<NonNullable<Meal["confidence"]>, string> = {
   "user-stated": "User-stated amounts",
 };
 
-watchPostEffect(async () => {
-  const element = header.value;
-  if (!props.selected || !element) return;
-  await nextTick();
-  if (props.selected && header.value === element) {
-    element.scrollIntoView({ behavior: "instant", block: "center" });
-  }
+watchPostEffect(() => {
+  if (props.selected) header.value?.scrollIntoView({ behavior: "instant", block: "center" });
 });
 </script>
 
@@ -73,7 +67,7 @@ watchPostEffect(async () => {
     </table>
     <p v-else class="py-2.5 text-xs text-muted">No item breakdown was saved for this meal.</p>
 
-    <template v-if="meal.confidence || usageCost !== undefined" #footer>
+    <template v-if="meal.confidence" #footer>
       <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
         <UBadge
           v-if="meal.confidence"
@@ -83,7 +77,6 @@ watchPostEffect(async () => {
         >
           {{ confidenceLabels[meal.confidence] }}
         </UBadge>
-        <span v-if="usageCost !== undefined" class="ms-auto tabular-nums">AI cost {{ formatUsageCostUsd(usageCost) }}</span>
       </div>
     </template>
   </UCard>
