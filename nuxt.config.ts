@@ -17,7 +17,7 @@ export default defineNuxtConfig({
   vitehub: {
     preset: "cloudflare",
     agent: true,
-    console: false,
+    console: process.env.NODE_ENV === "development",
     blob: {
       serve: false,
     },
@@ -53,7 +53,7 @@ export default defineNuxtConfig({
     },
     vitehub: {
       preset: "node",
-      console: true,
+      database: { driver: "sqlite" },
     },
     nitro: {
       preset: "node-server",

@@ -12,6 +12,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Validate Cloudflare output without provisioning or targeting a real database.
+      CLOUDFLARE_D1_DATABASE_ID: 00000000-0000-0000-0000-000000000000
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -24,6 +27,3 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-        env:
-          # Build the Worker without targeting a real database or creating resources.
-          CLOUDFLARE_D1_DATABASE_ID: 00000000-0000-0000-0000-000000000000

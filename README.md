@@ -122,6 +122,6 @@ The photo route looks up the saved meal and calls ViteHub `blob.serve` with a ve
 
 This template uses Nuxt 5 nightly. Development uses its separate Nitro builder to avoid a Vue CommonJS loading error in the Vite dev runner; production uses the default Nitro Vite environment.
 
-Cloudflare builds need a D1 ID or local provision state. CI uses a placeholder ID to validate the Worker without creating or deploying resources.
+Installation and standalone typechecking prepare the Node/SQLite development configuration without Cloudflare resources. Cloudflare builds need a D1 ID or local provision state. CI uses a placeholder ID to validate the Worker without creating or deploying resources.
 
 The local Console shows recent Agent sessions. The journal strips original media bytes, private tool values, channel identifiers, and raw errors before persistence.
