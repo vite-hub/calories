@@ -38,7 +38,7 @@
     "image-meta": "0.3.0",
     "nuxt": "npm:nuxt-nightly@5.0.0-2610071710-0296ca4",
     "tailwindcss": "4.3.3",
-    "vite-hub": "https://pkg.pr.new/vite-hub/vitehub/vite-hub@7f4c0cbfa5d850f43a5a29d7ecca15b04a255797",
+    "vite-hub": "https://pkg.pr.new/vite-hub/vitehub/vite-hub@5fabe01c2e9faa990bbe4014bc1e5ef144530435",
     "vue-router": "5.3.1",
     "zod": "4.4.3"
   },

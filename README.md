@@ -66,6 +66,10 @@ Open <http://localhost:3000>. Start customizing in `server/agents/calories/agent
 
 The finish hook formats replies and invocation cost. It does not parse SQL results or write meal data. The instructions require saving and checking items, totals, and the presentation payload before confirming success.
 
+The Agent records invocation metadata in the default ViteHub Database, even when the Console is disabled. ViteHub creates the journal tables on first use. Default retention is 30 days and about 10,000 terminal records. Set the journal `content`, `configuration`, and store retention options in `server/agents/calories/agent.ts` when you need more trace detail or a different retention policy.
+
+Local development uses SQLite; the Cloudflare preset uses the D1 binding. This store does not support D1 over HTTP. Configure a different invocation store when you use that database access path.
+
 ## Deploy
 
 Choose a preset in `nuxt.config.ts` and configure its durable storage.
