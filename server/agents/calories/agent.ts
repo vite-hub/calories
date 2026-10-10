@@ -1,6 +1,8 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
 import { defineAgent } from "vite-hub/agent";
+import { createDatabaseAgentInvocationStore } from "vite-hub/agent/invocations/database";
+import { defineAgentInvocations } from "vite-hub/agent/server";
 import {
   audioBytes,
   blob,
@@ -12,6 +14,7 @@ import { telegram } from "vite-hub/agent/channels";
 import { useServerEnv } from "#vitehub/env/server";
 
 export default defineAgent({
+  invocations: defineAgentInvocations({ store: createDatabaseAgentInvocationStore() }),
   capabilities: [
     blob({ mode: "write" }),
     databaseCapability({ mode: "write" }),

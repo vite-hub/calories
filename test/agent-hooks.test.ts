@@ -30,6 +30,10 @@ function replyFor(overrides: Record<string, unknown> = {}) {
   } as unknown as Parameters<typeof finish>[0]);
 }
 
+test("the Agent has an explicit invocation journal outside the Console runtime", () => {
+  assert.ok(agent.invocations);
+});
+
 test("the finish hook formats the reply, configured dashboard, and invocation cost", async () => {
   assert.equal(await replyFor({ invocation: { usage: { cost: { display: "$0.002" } } } }),
     "Meal recorded.\n\nDashboard: https://calories.example\n\n$0.002");
