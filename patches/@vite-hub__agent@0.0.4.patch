@@ -1,0 +1,368 @@
+diff --git a/dist/ai-sdk.js b/dist/ai-sdk.js
+index 2226356962e3d33c6cda386fb176a86e3daf4b96..09fa90d57139ed51f909983ea07fec1fc5848067 100644
+--- a/dist/ai-sdk.js
++++ b/dist/ai-sdk.js
+@@ -55,11 +55,14 @@ function toUserModelMessageContent(parts) {
+ 	}
+ 	return content.length ? content : void 0;
+ }
++function dataPartModelText(part) {
++	return typeof part.data?.modelText === "string" ? part.data.modelText : JSON.stringify(part.data);
++}
+ function toTextModelMessageContent(parts) {
+ 	return parts.map((part) => {
+ 		if (part.type === "text") return part.text;
+ 		if (part.type === "error") return part.error;
+-		if (isDataMessagePart(part)) return JSON.stringify(part.data);
++		if (isDataMessagePart(part)) return dataPartModelText(part);
+ 		if (part.type === "tool-call") return JSON.stringify({
+ 			input: part.input,
+ 			toolCallId: part.id,
+@@ -126,10 +129,13 @@ function toAssistantModelMessagePart(part) {
+ 		text: part.text,
+ 		type: "text"
+ 	};
+-	if (isDataMessagePart(part) && (part.type.startsWith("data-chat-reply-") || part.type === "data-chat-user-message-context")) return {
+-		text: JSON.stringify(part.data),
+-		type: "text"
+-	};
++	if (isDataMessagePart(part) && (part.type.startsWith("data-chat-reply-") || part.type === "data-chat-user-message-context")) {
++		const text = dataPartModelText(part);
++		return text ? {
++			text,
++			type: "text"
++		} : void 0;
++	}
+ 	if (part.type === "tool-call") return {
+ 		input: part.input ?? {},
+ 		toolCallId: part.id,
+@@ -351,12 +357,12 @@ async function resolveModelAttachments(messages, options, currentMessageId) {
+ 				continue;
+ 			}
+ 			if (currentMessageId !== void 0 && (currentMessageId === null ? messageIndex !== currentMessageIndex : message.id !== currentMessageId)) {
+-				const { fetchData: _fetchData, fetchMetadata: _fetchMetadata, url: _url, ...reference } = part;
+-				if (reference.data) {
+-					const resolved = await resolveModelAttachmentPart(reference, remainingBytes);
++				if (!part.data && !part.fetchData) continue;
++				try {
++					const resolved = await resolveModelAttachmentPart(part, remainingBytes);
+ 					remainingBytes -= resolved.byteLength;
+ 					if (resolved.part) parts.push(resolved.part);
+-				}
++				} catch {}
+ 				continue;
+ 			}
+ 			const resolved = await resolveModelAttachmentPart(part, remainingBytes);
+diff --git a/dist/channels-Dx8sG3R8.js b/dist/channels-Dx8sG3R8.js
+index c7f82682deb7e17b7f6efed03aca397a43803e74..6178771cb703a652e31e2722e4796f5996c56a5a 100644
+--- a/dist/channels-Dx8sG3R8.js
++++ b/dist/channels-Dx8sG3R8.js
+@@ -4228,7 +4228,7 @@ async function messageChannelReplyEffect(context) {
+ 			if (adapter.stream && await adapter.stream(threadId, stream) !== null) return;
+ 			let body = "";
+ 			for await (const chunk of stream) body += chunk;
+-			if (body) await adapter.postMessage(threadId, { markdown: body });
++			if (body) await postChannelReply(adapter, threadId, context.run.messageId, { markdown: body });
+ 		}
+ 		return;
+ 	}
+@@ -4278,7 +4278,7 @@ async function messageChannelReplyEffect(context) {
+ 	const adapter = context.channel.adapter ? await resolveEffectOption(context.channel.adapter, context) : void 0;
+ 	if (adapter && context.run?.threadId) {
+ 		try {
+-			await adapter.postMessage(context.run.threadId, message);
++			await postChannelReply(adapter, context.run.threadId, context.run.messageId, message);
+ 		} catch (error) {
+ 			if (context.effect.intent === "chat.final-reply") clearChatFinalReplyText(context.context);
+ 			throw error;
+@@ -4286,6 +4286,10 @@ async function messageChannelReplyEffect(context) {
+ 		if (context.effect.intent === "chat.final-reply" && body) setChatFinalReplyText(context.context, body.trim());
+ 	}
+ }
++async function postChannelReply(adapter, threadId, messageId, message) {
++	if (typeof adapter.reply === "function" && typeof messageId === "string" && messageId && !messageId.includes("#vitehub-retry")) return await adapter.reply(threadId, messageId, message);
++	return await adapter.postMessage(threadId, message);
++}
+ function titleEffectPayloadTitle(value) {
+ 	const title = hasRuntimeType(value, "string") ? value : isRecord(value) ? value.title : void 0;
+ 	return hasRuntimeType(title, "string") ? maybeString(title.trim()) : void 0;
+diff --git a/dist/chat-message-input-kNY4sZ1X.js b/dist/chat-message-input-kNY4sZ1X.js
+index c8a86c06ca0804039c3921b1c3cd874d33aee277..351139e7fb568d15dd5ba938b1d69fb06124561a 100644
+--- a/dist/chat-message-input-kNY4sZ1X.js
++++ b/dist/chat-message-input-kNY4sZ1X.js
+@@ -283,7 +283,7 @@ function createChatMessageTriggerInput(options, triggerInput) {
+ 	const messages = Array.isArray(triggerInput?.messages) ? triggerInput.messages : [];
+ 	if (!messages.length) throw agentDiagnostics.AGENT_R0375({ message: "[vitehub] chat.message trigger requires at least one UI message." });
+ 	let selectedMessages = selectChatHistory(messages, resolveChatTriggerHistory(options, triggerInput?.triggerHistory), options.sessions, triggerInput?.session);
+-	if (options.concurrency === "queue") {
++	if (options.concurrency === "queue" || options.concurrency === "steer") {
+ 		const metadata = v.safeParse(retainedQueueMetadataSchema, messages.at(-1)?.metadata);
+ 		if (metadata.success) {
+ 			const retained = messages.slice(-Math.min(messages.length, metadata.output.chat.skippedCount + 1));
+diff --git a/dist/routes-pCb0YgV1.js b/dist/routes-pCb0YgV1.js
+index f3a4fb13568381f6d7bba47702b649df601b266b..81b4ed9630db6d6c3b4e8610308b9d92d7243949 100644
+--- a/dist/routes-pCb0YgV1.js
++++ b/dist/routes-pCb0YgV1.js
+@@ -1,7 +1,7 @@
+ import { n as isAgentTypeDiagnostic, t as agentDiagnostics } from "./agent-diagnostics-BLcBqWLc.js";
+ import { a as isRuntimeRecord, n as hasRuntimeType } from "./runtime-type-VTnJJ_sX.js";
+ import { F as resolveAgentInvoker, I as resolveInputAgentInvoker, J as toAgentPublicError, R as withResolvedAgentInvokerInput, T as agentInvokerLabel, k as hasResolvedAgentInvokerInput } from "./trace-DFGLS3WP.js";
+-import { attachmentStringBytes, isAttachmentData } from "./messages.js";
++import { attachmentStringBytes, isAttachmentData, isAttachmentPart } from "./messages.js";
+ import { c as isAsyncIterable, t as deliveryArtifactAttachments } from "./delivery-artifacts-sKMFHNtZ.js";
+ import { p as messageChannelStateContextKey } from "./channels-Du6xtNp1.js";
+ import { Z as createAgentInvocationContextStore, d as normalizeCapabilities, rt as parseStandardSchema, s as channelDeliveryFinishEffectsContextKey } from "./capability-runtime-BekIK5JH.js";
+@@ -3207,7 +3207,10 @@ function createChatSdkConfig(adapterName, adapter, state, options) {
+ 	const concurrency = chatSdkOption(options, "concurrency");
+ 	return objectWithoutUndefined({
+ 		adapters: { [adapterName]: adapter },
+-		concurrency: concurrency === "parallel" || concurrency === "steer" ? "concurrent" : concurrency === "serial" ? "queue" : concurrency,
++		concurrency: concurrency === "steer" && isRuntimeNumber(chatSdkOption(options, "debounceMs")) ? {
++			debounceMs: chatSdkOption(options, "debounceMs"),
++			strategy: "burst"
++		} : concurrency === "parallel" || concurrency === "steer" ? "concurrent" : concurrency === "serial" ? "queue" : concurrency,
+ 		dedupeTtlMs: chatSdkOption(options, "dedupeTtlMs"),
+ 		fallbackStreamingPlaceholderText,
+ 		identity,
+@@ -3476,14 +3479,140 @@ function chatMessageMetadata(thread, message, messageContext) {
+ 		totalSinceLastHandler: messageContext?.totalSinceLastHandler
+ 	}) });
+ }
++const chatUiMessageSources = /* @__PURE__ */ new WeakMap();
+ async function chatSdkMessageToUiMessage(message, metadata, options) {
+-	return {
++	const uiMessage = {
+ 		createdAt: isoDate(message.metadata.dateSent),
+ 		id: message.id,
+ 		...metadata ? { metadata } : {},
+ 		parts: await chatMessagePartsWithReply(message, options),
+ 		role: message.author.isMe ? "assistant" : "user"
+ 	};
++	chatUiMessageSources.set(uiMessage, message);
++	return uiMessage;
++}
++function rehydrateChatHistoryMessage(thread, message) {
++	const rehydrate = thread.adapter?.rehydrateAttachment?.bind(thread.adapter);
++	if (!rehydrate || !Array.isArray(message?.attachments) || !message.attachments.length) return message;
++	message.attachments = message.attachments.map((attachment) => attachment.fetchData || attachment.data || attachment.url ? attachment : rehydrate(attachment));
++	return message;
++}
++function chatMessageTime(value) {
++	const time = value instanceof Date ? value.getTime() : isRuntimeString(value) ? Date.parse(value) : NaN;
++	return Number.isFinite(time) ? time : void 0;
++}
++function chatHeaderTimeZone(options) {
++	const timeZone = isRuntimeString(options?.timeZone) && options.timeZone ? options.timeZone : "UTC";
++	try {
++		new Intl.DateTimeFormat("en-US", { timeZone });
++		return timeZone;
++	} catch {
++		return "UTC";
++	}
++}
++function formatChatHeaderTime(time, timeZone, short = false) {
++	const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
++		day: "2-digit",
++		hour: "2-digit",
++		hourCycle: "h23",
++		minute: "2-digit",
++		month: "2-digit",
++		second: "2-digit",
++		timeZone,
++		timeZoneName: "longOffset",
++		weekday: "short",
++		year: "numeric"
++	}).formatToParts(new Date(time)).map((part) => [part.type, part.value]));
++	if (short) return `${parts.weekday} ${parts.hour}:${parts.minute}`;
++	const offset = parts.timeZoneName === "GMT" ? "+00:00" : parts.timeZoneName.replace("GMT", "");
++	return `${parts.weekday} ${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second} ${offset}`;
++}
++function chatHeaderMessageId(id) {
++	return isRuntimeString(id) ? id.split(":").pop() : void 0;
++}
++function chatHeaderName(value) {
++	return String(value).replace(/[\[\]]/g, "").replace(/\s+/g, " ").trim();
++}
++function chatHeaderAttachmentLabel(attachment) {
++	const mediaType = isRuntimeString(attachment?.mimeType) ? attachment.mimeType : "";
++	const label = attachment?.type === "image" || mediaType.startsWith("image/") ? "photo" : attachment?.type === "audio" || mediaType.startsWith("audio/") ? "voice" : attachment?.type === "video" ? "video" : "file";
++	const uniqueId = attachment?.fetchMetadata?.fileUniqueId;
++	return isRuntimeString(uniqueId) && uniqueId ? `${label} ${uniqueId}` : label;
++}
++function chatHeaderQuote(text) {
++	const quote = text.replace(/\s+/g, " ").trim();
++	return quote.length > 280 ? `${quote.slice(0, 279)}…` : quote;
++}
++function isChatReplyModelPart(part) {
++	return isRecord(part) && isRuntimeString(part.type) && (part.type.startsWith("data-chat-reply-") || part.type === "data-chat-user-message-context");
++}
++function decorateChatTriggerMessages(thread, message, options, messageContext, messages) {
++	const timeZone = chatHeaderTimeZone(options);
++	const triggerHistory = resolveChatTriggerHistory(options);
++	const maxImages = isRecord(triggerHistory) && isRuntimeNumber(triggerHistory.maxImages) ? Math.max(0, Math.floor(triggerHistory.maxImages)) : 0;
++	const maxImageAgeMs = isRecord(triggerHistory) && isRuntimeNumber(triggerHistory.maxAgeMs) ? triggerHistory.maxAgeMs : Infinity;
++	const currentTime = chatMessageTime(message.metadata?.dateSent) ?? Date.now();
++	const retainedIds = new Set([message.id, ...(messageContext?.skipped ?? []).map((item) => item.id)].filter(Boolean));
++	const visibleIds = new Set(messages.map((item) => item.id).filter(Boolean));
++	let remainingImages = maxImages;
++	const decorated = messages.slice().reverse().map((uiMessage) => {
++		const parts = Array.isArray(uiMessage.parts) ? uiMessage.parts.filter((part) => part?.type !== "data-chat-message-header") : [];
++		if (uiMessage.role !== "user") return { ...uiMessage, parts: parts.filter((part) => !isChatReplyModelPart(part)) };
++		const source = chatUiMessageSources.get(uiMessage);
++		const time = chatMessageTime(uiMessage.createdAt) ?? chatMessageTime(source?.metadata?.dateSent);
++		const retained = retainedIds.has(uiMessage.id);
++		const kept = parts.filter((part) => {
++			if (retained || !isAttachmentPart(part) || part.id?.startsWith("reply-input-")) return true;
++			const recent = time !== void 0 && currentTime - time <= maxImageAgeMs;
++			if (part.type === "image" && recent && remainingImages > 0) {
++				remainingImages--;
++				return true;
++			}
++			return false;
++		});
++		const keptIds = new Set(kept.map((part) => part?.id).filter(Boolean));
++		const attachments = Array.isArray(source?.attachments) ? source.attachments : [];
++		const media = attachments.map((attachment, index) => {
++			const label = chatHeaderAttachmentLabel(attachment);
++			return keptIds.has(`attachment-${index + 1}`) ? label : `${label} (not shown)`;
++		});
++		const author = source?.author;
++		const sender = !thread.isDM && author ? `from ${chatHeaderName(author.fullName || author.userName || "unknown")} (id ${chatHeaderName(author.userId)})` : void 0;
++		const header = [
++			time === void 0 ? void 0 : formatChatHeaderTime(time, timeZone),
++			chatHeaderMessageId(uiMessage.id) ? `msg ${chatHeaderMessageId(uiMessage.id)}` : void 0,
++			sender,
++			...media,
++			source?.metadata?.edited ? "edited" : void 0
++		].filter(Boolean).join(" · ");
++		const replyTo = source?.replyTo;
++		const replyLine = replyTo ? (() => {
++			const replyAuthor = replyTo.author?.isMe ? "your" : replyTo.author?.isBot ? "bot" : `${chatHeaderName(replyTo.author?.fullName || replyTo.author?.userName || "user")}'s`;
++			const replyTime = chatMessageTime(replyTo.metadata?.dateSent);
++			const replyId = chatHeaderMessageId(replyTo.id);
++			const replyMedia = (replyTo.attachments ?? []).map((attachment, index) => `${chatHeaderAttachmentLabel(attachment)}${keptIds.has(`reply-input-attachment-${index + 1}`) ? " attached below" : " (not shown)"}`);
++			const quoted = visibleIds.has(replyTo.id) ? "(shown above)" : replyTo.text ? `"${chatHeaderQuote(replyTo.text)}"` : "";
++			return [`↪ replying to ${replyAuthor} msg ${replyId ?? "unknown"}${replyTime === void 0 ? "" : ` (${formatChatHeaderTime(replyTime, timeZone, true)})`}${quoted ? `: ${quoted}` : ""}`, ...replyMedia].join(" · ");
++		})() : void 0;
++		return {
++			...uiMessage,
++			parts: [{
++				data: { modelText: header ? `[${header}]` : "" },
++				id: "message-header",
++				type: "data-chat-message-header"
++			}, ...kept.map((part) => {
++				if (!isChatReplyModelPart(part)) return part;
++				return {
++					...part,
++					data: {
++						...part.data,
++						modelText: part.type === "data-chat-reply-context" && replyLine ? replyLine : ""
++					}
++				};
++			})]
++		};
++	});
++	return decorated.reverse();
+ }
+ function chatAuthorizationUiMessage(thread, message, messageContext) {
+ 	const metadata = chatMessageMetadata(thread, message, messageContext);
+@@ -3514,11 +3643,14 @@ async function durableChatThreadMessages(thread, limit) {
+ 	}
+ }
+ async function chatTriggerMessages(thread, message, options, messageContext, historyThroughCurrent = false, previousMessages) {
++	return decorateChatTriggerMessages(thread, message, options, messageContext, await chatTriggerMessagesUndecorated(thread, message, options, messageContext, historyThroughCurrent, previousMessages));
++}
++async function chatTriggerMessagesUndecorated(thread, message, options, messageContext, historyThroughCurrent = false, previousMessages) {
+ 	const current = await chatSdkMessageToUiMessage(message, chatMessageMetadata(thread, message, messageContext), {
+ 		includeReplyAttachmentInput: true,
+ 		rejectOversizedTextAttachments: true
+ 	});
+-	const queued = options?.concurrency === "queue" ? await Promise.all((messageContext?.skipped ?? []).map((item) => chatSdkMessageToUiMessage(item, void 0, {
++	const queued = options?.concurrency === "queue" || options?.concurrency === "steer" ? await Promise.all((messageContext?.skipped ?? []).map((item) => chatSdkMessageToUiMessage(item, void 0, {
+ 		includeReplyAttachmentInput: true,
+ 		rejectOversizedTextAttachments: true
+ 	}))) : [];
+@@ -3533,12 +3665,12 @@ async function chatTriggerMessages(thread, message, options, messageContext, his
+ 		for await (const item of thread.messages) {
+ 			if (!reachedCurrent) {
+ 				if (item.id !== message.id) {
+-					if (!historyThroughCurrent && unindexedNewestFirst.length < limit) unindexedNewestFirst.push(await chatSdkMessageToUiMessage(item));
++					if (!historyThroughCurrent && unindexedNewestFirst.length < limit) unindexedNewestFirst.push(await chatSdkMessageToUiMessage(rehydrateChatHistoryMessage(thread, item)));
+ 					continue;
+ 				}
+ 				reachedCurrent = true;
+ 			}
+-			fetchedNewestFirst.push(item.id && message.id && item.id === message.id ? current : await chatSdkMessageToUiMessage(item));
++			fetchedNewestFirst.push(item.id && message.id && item.id === message.id ? current : await chatSdkMessageToUiMessage(rehydrateChatHistoryMessage(thread, item)));
+ 			if (fetchedNewestFirst.length >= limit) break;
+ 		}
+ 	} catch {}
+@@ -3548,7 +3680,7 @@ async function chatTriggerMessages(thread, message, options, messageContext, his
+ 		const currentIndex = durable.findIndex((item) => item.id === message.id);
+ 		durable = currentIndex >= 0 ? durable.slice(0, currentIndex + 1) : [];
+ 	}
+-	let messages = [...await Promise.all(durable.map((item) => item.id && message.id && item.id === message.id ? current : chatSdkMessageToUiMessage(item))), ...fetchedNewestFirst.slice().reverse()].reduce((deduped, item) => {
++	let messages = [...await Promise.all(durable.map((item) => item.id && message.id && item.id === message.id ? current : chatSdkMessageToUiMessage(rehydrateChatHistoryMessage(thread, item)))), ...fetchedNewestFirst.slice().reverse()].reduce((deduped, item) => {
+ 		if (!item.id) {
+ 			deduped.push(item);
+ 			return deduped;
+@@ -3653,6 +3785,16 @@ function chatMessageDeliveryArtifacts(message) {
+ 	const artifacts = message.artifacts;
+ 	return Array.isArray(artifacts) ? artifacts : [];
+ }
++function chatReplyTarget(thread) {
++	const target = thread?._currentMessage;
++	if (!target || !isRuntimeString(target.id) || !target.id || target.id.includes(interruptedChatRetrySuffix) || target.author?.isMe) return;
++	if (!isRuntimeFunction(thread.reply) || !isRuntimeFunction(thread.adapter?.reply)) return;
++	return target;
++}
++async function postChatReply(thread, postable) {
++	const target = chatReplyTarget(thread);
++	return target ? await thread.reply(target, postable) : await thread.post(postable);
++}
+ async function postChatMessage(thread, message, abortSignal) {
+ 	message = formatChannelCitationMessage(message);
+ 	if (isAsyncIterable(message)) {
+@@ -3671,25 +3813,25 @@ async function postChatMessage(thread, message, abortSignal) {
+ 	}
+ 	if (!isRuntimeObject(message) || message === null) {
+ 		if (await postDiscordSplitContent(thread, message, abortSignal)) return;
+-		await removeAbortedChatDelivery(await thread.post(message), abortSignal);
++		await removeAbortedChatDelivery(await postChatReply(thread, message), abortSignal);
+ 		return;
+ 	}
+ 	const attachments = deliveryArtifactAttachments(chatMessageDeliveryArtifacts(message));
+ 	if (!attachments.length) {
+ 		const postable = isTextChatMessage(message) ? message.text : message;
+ 		if (await postDiscordSplitContent(thread, postable, abortSignal)) return;
+-		await removeAbortedChatDelivery(await thread.post(postable), abortSignal);
++		await removeAbortedChatDelivery(await postChatReply(thread, postable), abortSignal);
+ 		return;
+ 	}
+ 	if (isTextChatMessage(message)) {
+-		await removeAbortedChatDelivery(await thread.post({
++		await removeAbortedChatDelivery(await postChatReply(thread, {
+ 			attachments,
+ 			raw: message.text
+ 		}), abortSignal);
+ 		return;
+ 	}
+ 	const { artifacts: _artifacts, ...postable } = message;
+-	await removeAbortedChatDelivery(await thread.post({
++	await removeAbortedChatDelivery(await postChatReply(thread, {
+ 		...postable,
+ 		attachments: [...Array.isArray(postable.attachments) ? postable.attachments : [], ...attachments]
+ 	}), abortSignal);
+diff --git a/dist/types-BkQE6Rdu.d.ts b/dist/types-BkQE6Rdu.d.ts
+index 0ade0cec2baced3c1adf7ec7ef1ae398bfa99f9a..772d9e25597f03d2e8ed36ba30a6e590084c8e27 100644
+--- a/dist/types-BkQE6Rdu.d.ts
++++ b/dist/types-BkQE6Rdu.d.ts
+@@ -3556,6 +3556,8 @@ interface AgentChatAgentBindingOptions {
+ }
+ type AgentChatTriggerHistory = "none" | {
+   maxAgeMs?: number;
++  /** Send this many recent history images within maxAgeMs back to the model. Defaults to 0. */
++  maxImages?: number;
+   maxMessages: number;
+   source: "thread";
+ };

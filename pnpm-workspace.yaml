@@ -1,5 +1,8 @@
 overrides:
-  # Nuxt and UI components must share one Vue rendering instance.
-  vue: 3.5.43
   # blob.serve preview transforms: https://github.com/vite-hub/vitehub/pull/1939
   '@vite-hub/blob': https://pkg.pr.new/vite-hub/vitehub/@vite-hub/blob@d1c7bc53593edd8f9eea5f4095ec6214f5ff156b
+  # Nuxt and UI components must share one Vue rendering instance.
+  vue: 3.5.43
+patchedDependencies:
+  # Message headers, history photos, burst grouping, and native replies for Telegram input.
+  '@vite-hub/agent@0.0.4': patches/@vite-hub__agent@0.0.4.patch
