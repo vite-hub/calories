@@ -46,6 +46,16 @@ test("the finish hook does not depend on a particular SQL result shape", async (
   }
 });
 
+test("the finish hook removes message headers and reply lines the model copied", async () => {
+  const text = [
+    "[Tue 2026-10-13 18:27:00 +02:00 · msg 109320 · photo AQAD]",
+    "↪ replying to your msg 109315 (Tue 18:07): \"Both?\"",
+    "[Tue 2026-10-13 18:27:01 +02:00 · msg 109321] Saved the red lemonade.",
+  ].join("\n");
+  assert.equal(await replyFor({ text }),
+    "Saved the red lemonade.\n\nDashboard: https://calories.example\n\nCost unavailable");
+});
+
 test("an empty model reply does not claim that a meal was saved", async () => {
   assert.equal(await replyFor({ text: " " }),
     "No reply was returned. Check the dashboard for the result.\n\nDashboard: https://calories.example\n\nCost unavailable");

@@ -10,6 +10,8 @@ export default defineDatabase({
         id: text("id").primaryKey(),
         caption: text("caption"),
         photoPath: text("photo_path"),
+        // Telegram's file_unique_id: the same photo always has the same value.
+        photoFileId: text("photo_file_id"),
         items: text("items", { mode: "json" })
           .$type<
             Array<{
@@ -32,7 +34,10 @@ export default defineDatabase({
           .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
           .notNull(),
       },
-      (table) => [index("meals_created_idx").on(table.createdAt)],
+      (table) => [
+        index("meals_created_idx").on(table.createdAt),
+        index("meals_photo_file_idx").on(table.photoFileId),
+      ],
     ),
   },
 });

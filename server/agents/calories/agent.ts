@@ -13,6 +13,14 @@ import {
 import { telegram } from "vite-hub/agent/channels";
 import { useServerEnv } from "#vitehub/env/server";
 
+// Models sometimes copy the message headers and reply lines they receive.
+function withoutMessageMetadata(text: string) {
+  return text
+    .replace(/^\[(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{4}-\d{2}-\d{2} [^\]\n]*\][ \t]*\n?/gm, "")
+    .replace(/^↪ replying to .*$\n?/gm, "")
+    .trim();
+}
+
 export default defineAgent({
   invocations: defineAgentInvocations({ store: createDatabaseAgentInvocationStore() }),
   capabilities: [
@@ -44,11 +52,16 @@ export default defineAgent({
       webhookSecret: () => useServerEnv().telegram.webhookSecret,
       messages: {
         concurrency: "steer",
+        // Messages sent within this window start one run; later ones steer into it.
+        debounceMs: 2_000,
         delivery: "manual",
         fallbackStreamingPlaceholderText: null,
         lockScope: "channel",
+        // Message headers show this local time. Madrid and Stockholm share one clock.
+        timeZone: "Europe/Stockholm",
         triggerHistory: {
           maxAgeMs: 30 * 60 * 1_000,
+          maxImages: 3,
           maxMessages: 20,
           source: "thread",
         },
@@ -76,7 +89,7 @@ export default defineAgent({
     "agent:finish"(event) {
       const cost = event.invocation.usage?.cost?.display ?? "Cost unavailable";
       return event.reply([
-        event.text?.trim() || "No reply was returned. Check the dashboard for the result.",
+        withoutMessageMetadata(event.text ?? "") || "No reply was returned. Check the dashboard for the result.",
         "Dashboard: " + useServerEnv().app.url,
         cost,
       ].join("\n\n"));
