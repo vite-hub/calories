@@ -1,5 +1,7 @@
 import { vitehubServerEnv } from "./vitehub.env.ts";
 
+const domain = "calories.onmax.me";
+
 export default defineNuxtConfig({
   buildDir: ".nuxt",
   compatibilityDate: "2026-07-24",
@@ -67,7 +69,9 @@ export default defineNuxtConfig({
       wrangler: {
         observability: { enabled: true },
         preview_urls: false,
-        routes: [{ pattern: "calories.onmax.me", custom_domain: true }],
+        routes: [{ pattern: domain, custom_domain: true }],
+        // Telegram replies link to the dashboard from Workflows, where no request URL exists.
+        vars: { VITEHUB_DEPLOYMENT_URL: `https://${domain}` },
         workers_dev: false,
       },
     },

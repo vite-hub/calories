@@ -82,7 +82,7 @@ Choose a preset in `nuxt.config.ts` and configure its durable storage.
 | Deno Deploy | `deno` | Explicit remote database and Blob drivers |
 | Node or a container | `node` | SQLite and files on a persistent disk, or hosted stores |
 
-For Cloudflare, replace the domain in `nuxt.config.ts`. Set provider credentials, `VITEHUB_DEPLOYMENT_URL` to your production HTTPS origin, and `TELEGRAM_WEBHOOK_SECRET` in `.env`. Provision your stores below, or set `CLOUDFLARE_D1_DATABASE_ID` and use an existing R2 bucket. Git ignores local provision state.
+For Cloudflare, replace the domain in `nuxt.config.ts`; the Worker gets `VITEHUB_DEPLOYMENT_URL` from it. Set provider credentials and `TELEGRAM_WEBHOOK_SECRET` in `.env`, plus `VITEHUB_DEPLOYMENT_URL` for local exports. Provision your stores below, or set `CLOUDFLARE_D1_DATABASE_ID` and use an existing R2 bucket. Git ignores local provision state.
 
 ```sh
 pnpm provision:cloudflare
