@@ -99,6 +99,19 @@ index c8a86c06ca0804039c3921b1c3cd874d33aee277..351139e7fb568d15dd5ba938b1d69fb0
  		const metadata = v.safeParse(retainedQueueMetadataSchema, messages.at(-1)?.metadata);
  		if (metadata.success) {
  			const retained = messages.slice(-Math.min(messages.length, metadata.output.chat.skippedCount + 1));
+diff --git a/dist/invocations-D1VUjbf2.js b/dist/invocations-D1VUjbf2.js
+index 0f2e9cede8a558e0e24092e5dc8f6d2e39115478..13c7df744203ce20168ed57c523715e2e96f632c 100644
+--- a/dist/invocations-D1VUjbf2.js
++++ b/dist/invocations-D1VUjbf2.js
+@@ -739,7 +739,7 @@ const TERMINAL_RETRY_INTERVAL_MS = 1e3;
+ const TERMINAL_RETRY_TIMEOUT_MS = 6e4;
+ const CANCELLATION_VERIFICATION_TIMEOUT_MS = 5e3;
+ const CANCELLATION_VERIFICATION_INTERVAL_MS = 100;
+-const STORE_OPERATION_TIMEOUT_MS = 1e3;
++const STORE_OPERATION_TIMEOUT_MS = 1e4;
+ const storeOperationTimedOut = Symbol("vitehub.storeOperationTimedOut");
+ const defaultObservationLimits = {
+ 	maxCount: MAX_OBSERVATIONS,
 diff --git a/dist/routes-pCb0YgV1.js b/dist/routes-pCb0YgV1.js
 index f3a4fb13568381f6d7bba47702b649df601b266b..81b4ed9630db6d6c3b4e8610308b9d92d7243949 100644
 --- a/dist/routes-pCb0YgV1.js
