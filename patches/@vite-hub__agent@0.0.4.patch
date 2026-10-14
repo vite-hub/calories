@@ -100,7 +100,7 @@ index c8a86c06ca0804039c3921b1c3cd874d33aee277..351139e7fb568d15dd5ba938b1d69fb0
  		if (metadata.success) {
  			const retained = messages.slice(-Math.min(messages.length, metadata.output.chat.skippedCount + 1));
 diff --git a/dist/invocations-D1VUjbf2.js b/dist/invocations-D1VUjbf2.js
-index 0f2e9cede8a558e0e24092e5dc8f6d2e39115478..13c7df744203ce20168ed57c523715e2e96f632c 100644
+index 0f2e9cede8a558e0e24092e5dc8f6d2e39115478..7b85ff470cb76e5f5b6685725c41360b0a23f63a 100644
 --- a/dist/invocations-D1VUjbf2.js
 +++ b/dist/invocations-D1VUjbf2.js
 @@ -739,7 +739,7 @@ const TERMINAL_RETRY_INTERVAL_MS = 1e3;
@@ -112,6 +112,63 @@ index 0f2e9cede8a558e0e24092e5dc8f6d2e39115478..13c7df744203ce20168ed57c523715e2
  const storeOperationTimedOut = Symbol("vitehub.storeOperationTimedOut");
  const defaultObservationLimits = {
  	maxCount: MAX_OBSERVATIONS,
+@@ -1912,6 +1912,7 @@ function defineAgentInvocations(options) {
+ 	if (options.metadataContent?.some((key) => !isTraceContentAttributeKey(key))) throw agentDiagnostics.AGENT_R0626({ message: "[vitehub] Agent Invocations metadataContent entries must name content attributes." });
+ 	if (options.redact !== void 0 && !hasRuntimeType(options.redact, "function")) throw agentDiagnostics.AGENT_R0624({ message: "[vitehub] Agent Invocations redact must be a function." });
+ 	if (options.redactError !== void 0 && !hasRuntimeType(options.redactError, "function")) throw agentDiagnostics.AGENT_R0624({ message: "[vitehub] Agent Invocations redactError must be a function." });
++	if (options.enforcement !== void 0 && options.enforcement !== "best-effort" && options.enforcement !== "strict") throw agentDiagnostics.AGENT_R0624({ message: "[vitehub] Agent Invocations enforcement must be \"best-effort\" or \"strict\"." });
+ 	const redact = (observation) => {
+ 		if (!options.redact) return observation;
+ 		try {
+@@ -1973,6 +1974,13 @@ function defineAgentInvocations(options) {
+ 			const runId = context.run?.runId || createInvocationId();
+ 			const agentName = bindOptions.agentName || context.agentIdentity?.name;
+ 			const recordId = await agentInvocationId(runId, agentName);
++			const strict = (bindOptions.enforcement ?? options.enforcement) === "strict";
++			let unconfirmedWarned = false;
++			const warnUnconfirmed = (operation) => {
++				if (unconfirmedWarned) return;
++				unconfirmedWarned = true;
++				console.warn(`[vitehub] Agent Invocation ${JSON.stringify(recordId)} continues without a confirmed ${operation}. Its journal record can be missing or stale until a retry succeeds.`);
++			};
+ 			let claimId = createInvocationId();
+ 			let claimConfirmed = false;
+ 			let claimUncertain = false;
+@@ -2043,6 +2051,10 @@ function defineAgentInvocations(options) {
+ 			const pollCancellationRequest = async (initial = false) => {
+ 				if (!unregisterCancellation || finished || cancellation.signal.aborted) return;
+ 				const summary = await boundedStoreOperation(() => store.getSummary(recordId));
++				if (initial && (summary === storeOperationTimedOut || summary === void 0) && !strict) {
++					warnUnconfirmed("cancellation check");
++					return;
++				}
+ 				if (initial && (summary === storeOperationTimedOut || summary === void 0)) throw agentDiagnostics.AGENT_R0973({ message: summary === storeOperationTimedOut ? "[vitehub] Initial Agent Invocation cancellation check timed out." : "[vitehub] Initial Agent Invocation cancellation check failed." });
+ 				if (summary && summary !== storeOperationTimedOut) readCancellationRequest(summary);
+ 			};
+@@ -2565,8 +2577,9 @@ function defineAgentInvocations(options) {
+ 					};
+ 					if (await markRunning()) return true;
+ 					const latest = await boundedStoreOperation(() => store.getSummary(recordId));
++					if (!strict && latest && latest !== storeOperationTimedOut) readCancellationRequest(latest);
+ 					if (latest && latest !== storeOperationTimedOut && terminalStatus(latest.status) && !latest.cancelRequestedAt) return true;
+-					if (cancellationDriver?.enforced === false && !cancellationWarningPrepared && latest && latest !== storeOperationTimedOut && !terminalStatus(latest.status)) throw agentDiagnostics.AGENT_R0973({ message: "[vitehub] Initial custom Driver cancellation state could not be persisted." });
++					if (strict && cancellationDriver?.enforced === false && !cancellationWarningPrepared && latest && latest !== storeOperationTimedOut && !terminalStatus(latest.status)) throw agentDiagnostics.AGENT_R0973({ message: "[vitehub] Initial custom Driver cancellation state could not be persisted." });
+ 					if (runningRetry) return false;
+ 					runningRetry = (async () => {
+ 						const deadline = Date.now() + TERMINAL_RETRY_TIMEOUT_MS;
+@@ -2581,6 +2594,12 @@ function defineAgentInvocations(options) {
+ 					registerAgentInvocationRecovery(context, runningRetry);
+ 					return false;
+ 				},
++				startsUnconfirmed() {
++					const conflict = !ownsRecord && !claimUnavailable;
++					if (strict || conflict || cancellation.signal.aborted) return false;
++					warnUnconfirmed("running state");
++					return true;
++				},
+ 				driverStarted() {
+ 					if (finished || finishing || driverDispatched) return;
+ 					driverDispatched = true;
 diff --git a/dist/routes-pCb0YgV1.js b/dist/routes-pCb0YgV1.js
 index f3a4fb13568381f6d7bba47702b649df601b266b..81b4ed9630db6d6c3b4e8610308b9d92d7243949 100644
 --- a/dist/routes-pCb0YgV1.js
@@ -366,11 +423,84 @@ index f3a4fb13568381f6d7bba47702b649df601b266b..81b4ed9630db6d6c3b4e8610308b9d92
  		...postable,
  		attachments: [...Array.isArray(postable.attachments) ? postable.attachments : [], ...attachments]
  	}), abortSignal);
+diff --git a/dist/src-CaILxud9.js b/dist/src-CaILxud9.js
+index b6be48a273fe1ced89ed636f64f769e8037886b5..dd556090537ef966eaa6e49e82ac6fb21a6d13b2 100644
+--- a/dist/src-CaILxud9.js
++++ b/dist/src-CaILxud9.js
+@@ -1158,6 +1158,7 @@ async function reserveAgentChannelItem(agent, context) {
+ 		}
+ 	}, {
+ 		agentName: agentInvocationName(agent, context),
++		enforcement: "strict",
+ 		recoverPending: true
+ 	});
+ 	if (journal?.claimStatus !== "owned") {
+@@ -1216,6 +1217,7 @@ async function runAgentAsWorkflow(agent, context, input, options = {}) {
+ 			}
+ 		}, {
+ 			agentName: agentInvocationName(agent, context),
++			enforcement: "strict",
+ 			recoverPending: true,
+ 			replaceClaimToken: context[inheritedAgentInvocationClaim]
+ 		}) : void 0;
+@@ -5864,6 +5866,7 @@ async function executeAgentInvocation(agent, context, input, options) {
+ 		}, {
+ 			agentName: agentInvocationName(definition, context),
+ 			cancellationDriver: invocationCancellationDriver(definition),
++			...exclusive || inheritedClaim ? { enforcement: "strict" } : {},
+ 			...inheritedClaim ? { replaceClaimToken: inheritedClaim } : {}
+ 		}) : void 0;
+ 		if ((exclusive || inheritedClaim) && invocationJournal?.claimStatus !== "owned") {
+@@ -5896,7 +5899,7 @@ async function executeAgentInvocation(agent, context, input, options) {
+ 		if (preparedInvocation?.handledResponse) {
+ 			const runningPersisted = await invocationJournal?.running();
+ 			input.abortSignal?.throwIfAborted();
+-			if (invocationJournal && !runningPersisted && !invocationJournal.reusedTerminal) throw new Error("Could not persist the Invocation running state.");
++			if (invocationJournal && !runningPersisted && !invocationJournal.reusedTerminal && !invocationJournal.startsUnconfirmed()) throw new Error("Could not persist the Invocation running state.");
+ 			await activity?.update("running");
+ 			return await executeAgentInvocationWithCapacityLease(agent, context, input, options, preparedInvocation, invocationJournal, activity);
+ 		}
+@@ -5914,7 +5917,7 @@ async function executeAgentInvocation(agent, context, input, options) {
+ 	if (!release) try {
+ 		const runningPersisted = await invocationJournal?.running();
+ 		input.abortSignal?.throwIfAborted();
+-		if (invocationJournal && !runningPersisted && !invocationJournal.reusedTerminal) throw new Error("Could not persist the Invocation running state.");
++		if (invocationJournal && !runningPersisted && !invocationJournal.reusedTerminal && !invocationJournal.startsUnconfirmed()) throw new Error("Could not persist the Invocation running state.");
+ 		await activity?.update("running");
+ 		input.abortSignal?.throwIfAborted();
+ 		return await executeAgentInvocationWithCapacityLease(agent, context, input, options, preparedInvocation, invocationJournal, activity);
+@@ -5933,7 +5936,7 @@ async function executeAgentInvocation(agent, context, input, options) {
+ 	try {
+ 		const runningPersisted = await invocationJournal?.running();
+ 		input.abortSignal?.throwIfAborted();
+-		if (invocationJournal && !runningPersisted && !invocationJournal.reusedTerminal) throw new Error("Could not persist the Invocation running state.");
++		if (invocationJournal && !runningPersisted && !invocationJournal.reusedTerminal && !invocationJournal.startsUnconfirmed()) throw new Error("Could not persist the Invocation running state.");
+ 		await activity?.update("running");
+ 		return await executeAgentInvocationWithCapacityLease(agent, context, input, {
+ 			...options,
 diff --git a/dist/types-BkQE6Rdu.d.ts b/dist/types-BkQE6Rdu.d.ts
-index 0ade0cec2baced3c1adf7ec7ef1ae398bfa99f9a..772d9e25597f03d2e8ed36ba30a6e590084c8e27 100644
+index 0ade0cec2baced3c1adf7ec7ef1ae398bfa99f9a..a7990ee5ac4dedd174cbafb1e860cd1b2f453b9a 100644
 --- a/dist/types-BkQE6Rdu.d.ts
 +++ b/dist/types-BkQE6Rdu.d.ts
-@@ -3556,6 +3556,8 @@ interface AgentChatAgentBindingOptions {
+@@ -639,6 +639,8 @@ interface AgentInvocationObservationOptions {
+   flushTimeoutMs?: number;
+ }
+ interface AgentInvocationsOptions {
++  /** How journal storage failures affect a run. Defaults to "best-effort". Channel replay is always strict. */
++  enforcement?: "best-effort" | "strict";
+   /** Retain resolved instructions and tool contracts independently of other trace content. Defaults to metadata. */
+   configuration?: TraceEventContentPolicy;
+   content?: TraceEventContentPolicy;
+@@ -3366,7 +3368,7 @@ type AgentSharedSettings<TRuntimeConfig extends AgentRuntimeConfig = AgentRuntim
+   /** Finishes the Invocation before the Driver runs when it returns a value other than `undefined`. */
+   intercept?: AgentInterceptHandler<TRuntimeConfig, CALL_OPTIONS, TContextValues, TData, TIntercept>;
+   invoker?: AgentInvokerOptions<TRuntimeConfig, CALL_OPTIONS, TInvokerProfile, TContextValues>;
+-  invocations?: AgentInvocations;
++  invocations?: AgentInvocations | "database" | "memory" | false | (Omit<AgentInvocationsOptions, "store"> & { store: "database"; database?: string }) | (Omit<AgentInvocationsOptions, "store"> & { store: "memory"; database?: never }) | AgentInvocationsOptions;
+   messages?: AgentMessageChannelSettings<TRuntimeConfig>;
+   name?: string;
+   runtime?: AgentRuntimeBinding;
+@@ -3556,6 +3558,8 @@ interface AgentChatAgentBindingOptions {
  }
  type AgentChatTriggerHistory = "none" | {
    maxAgeMs?: number;

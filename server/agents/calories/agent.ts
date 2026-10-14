@@ -1,8 +1,6 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
 import { defineAgent } from "vite-hub/agent";
-import { createDatabaseAgentInvocationStore } from "vite-hub/agent/invocations/database";
-import { defineAgentInvocations } from "vite-hub/agent/server";
 import {
   audioBytes,
   blob,
@@ -22,7 +20,8 @@ function withoutMessageMetadata(text: string) {
 }
 
 export default defineAgent({
-  invocations: defineAgentInvocations({ store: createDatabaseAgentInvocationStore() }),
+  // Run history for the Console and CLI. A failed history write does not stop a meal.
+  invocations: "database",
   capabilities: [
     blob({ mode: "write" }),
     databaseCapability({ mode: "write" }),

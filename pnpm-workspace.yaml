@@ -5,4 +5,7 @@ overrides:
   vue: 3.5.43
 patchedDependencies:
   # Message headers, history photos, burst grouping, and native replies for Telegram input.
+  # Also: 10 s journal store timeout (vite-hub/vitehub#2406), best-effort journal failures (#2409), short invocations types (#2414).
   '@vite-hub/agent@0.0.4': patches/@vite-hub__agent@0.0.4.patch
+  # Per-Agent `invocations: "database"` (vite-hub/vitehub#2414).
+  vite-hub@0.0.4: patches/vite-hub@0.0.4.patch

@@ -1,0 +1,78 @@
+diff --git a/dist/agent.js b/dist/agent.js
+index 97a726c1004b129a3329264d6695751ee5e65f6e..32e121d9c569dedb7327b32638935f0a23f57db1 100644
+--- a/dist/agent.js
++++ b/dist/agent.js
+@@ -1,10 +1,71 @@
+ import { n as consoleInvocationsFallbackKey, y as resolveConsoleInvocations } from "./internal-f-IUtHIN.js";
+ import { defineAgent as defineAgent$1 } from "@vite-hub/agent";
++import { createMemoryAgentInvocationStore, defineAgentInvocations } from "@vite-hub/agent/server";
+ export * from "@vite-hub/agent";
++//#region src/_internal/agent/invocations.ts (port of vite-hub/vitehub#2414, per-Agent settings only)
++/** A Database store that loads the Database runtime on its first operation. */
++function deferredDatabaseStore(options) {
++	let pending;
++	const store = () => pending ??= import("./agent/invocations/database.js").then((module) => module.createDatabaseAgentInvocationStore(options)).catch((error) => {
++		pending = void 0;
++		throw error;
++	});
++	return {
++		claim: async (...args) => await (await store()).claim(...args),
++		create: async (input) => await (await store()).create(input),
++		delete: async (id) => {
++			const target = await store();
++			if (!target.delete) throw new TypeError("[vitehub] The Database Invocation store does not support delete.");
++			return await target.delete(id);
++		},
++		get: async (...args) => await (await store()).get(...args),
++		getClaimToken: async (id) => await (await store()).getClaimToken(id),
++		getSummary: async (id) => await (await store()).getSummary(id),
++		list: async (options) => await (await store()).list(options),
++		listAgentNames: async () => await (await store()).listAgentNames?.() ?? [],
++		listCapabilityIds: async (agentName) => await (await store()).listCapabilityIds?.(agentName) ?? [],
++		listTriggeredBy: async (agentName) => await (await store()).listTriggeredBy?.(agentName) ?? [],
++		prune: async (options) => {
++			const target = await store();
++			if (!target.prune) throw new TypeError("[vitehub] The Database Invocation store does not support prune.");
++			return await target.prune(options);
++		},
++		release: async (...args) => await (await store()).release(...args),
++		update: async (...args) => await (await store()).update(...args)
++	};
++}
++function journal(setting) {
++	if (setting === "database" || setting === "memory") return journal({ store: setting });
++	const { database, store, ...options } = setting;
++	return defineAgentInvocations({
++		...options,
++		store: store === "database" ? deferredDatabaseStore(database === void 0 ? {} : { database }) : createMemoryAgentInvocationStore()
++	});
++}
++function resolveAgentInvocationsSetting(setting) {
++	if (setting === void 0 || setting === false) return void 0;
++	if (setting === "database" || setting === "memory") return journal(setting);
++	if (!("store" in setting)) return setting;
++	if ("database" in setting && setting.database !== void 0 && setting.store !== "database") throw new TypeError("[vitehub] Agent invocations accept `database` only with `store: \"database\"`.");
++	if (setting.store === "database" || setting.store === "memory") return journal(setting);
++	return defineAgentInvocations(setting);
++}
++//#endregion
+ //#region src/agent.ts
+ const defineAgent = ((options) => {
+-	const agent = defineAgent$1(options);
+-	if (agent.invocations !== void 0) return agent;
++	const setting = options.invocations;
++	const disabled = setting === false;
++	const invocations = resolveAgentInvocationsSetting(setting);
++	let agentOptions = options;
++	if (setting !== invocations) {
++		const { invocations: _setting, ...rest } = options;
++		agentOptions = invocations ? {
++			...rest,
++			invocations
++		} : rest;
++	}
++	const agent = defineAgent$1(agentOptions);
++	if (agent.invocations !== void 0 || disabled) return agent;
+ 	let assignedInvocations;
+ 	Object.defineProperty(agent, consoleInvocationsFallbackKey, {
+ 		configurable: true,
