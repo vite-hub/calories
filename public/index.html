@@ -22,7 +22,7 @@
     Footer: Built by ViteHub, MIT, GitHub, caveat.
 
   The one memorable thing
-    The cursor is a thermal scanner over a shader-drawn breakfast; the lens shows calorie density
+    The cursor is a thermal scanner over a flat, sticker-style lunch; the lens shows calorie density
     and the callout reads the item under it.
 
   Review against defaults: no cream, no black+neon, no eyebrows, no middle-dot meta, no arrows,
@@ -52,10 +52,12 @@
   --mono:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;background:var(--cobalt)}
-body{margin:0;background:var(--cobalt);color:var(--paper);font:400 18px/1.5 var(--text);overflow-x:hidden}
+html{-webkit-text-size-adjust:100%;background:var(--paper);overflow-x:clip}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 18px/1.5 var(--text);overflow-x:clip}
+.band{background:var(--cobalt);color:var(--paper);border-radius:0 0 44px 44px;box-shadow:0 12px 0 var(--ink)}
 a{color:inherit}
-:focus-visible{outline:3px solid var(--yolk);outline-offset:4px;border-radius:6px}
+:focus-visible{outline:3px solid var(--cobalt);outline-offset:4px;border-radius:6px}
+.band :focus-visible{outline-color:var(--yolk)}
 h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;letter-spacing:-.005em}
 p{margin:0}
 code{font-family:var(--mono)}
@@ -88,10 +90,7 @@ h1 span{display:block}
 
 .plate-wrap{--S:min(calc(100svh - 150px), max(calc(100vw - 720px), 46vw), 800px);display:flex;flex-direction:column;align-items:center;min-width:0}
 .plate-stage{position:relative;width:var(--S);height:var(--S);touch-action:pan-y;cursor:crosshair}
-.plate-stage canvas,.plate-stage .fallback{position:absolute;inset:0;width:100%;height:100%;display:block}
-.plate-stage .fallback{display:none}
-.no-gl .plate-stage .fallback{display:block}
-.no-gl .plate-stage canvas{display:none}
+.plate-stage .scene{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
 .overlay{position:absolute;inset:0;pointer-events:none;overflow:visible}
 .overlay svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .leader{stroke:var(--paper);stroke-width:2;fill:none}
@@ -123,7 +122,7 @@ h1 span{display:block}
 /* ---------- sections ---------- */
 section{padding:110px 0}
 h2{font-size:clamp(44px,5.2vw,76px);line-height:.95;text-wrap:balance}
-.sec-line{margin-top:18px;font-size:20px;color:var(--soft);max-width:24em}
+.sec-line{margin-top:18px;font-size:20px;color:var(--muted);max-width:24em}
 
 /* ---------- chat (02's channel stage, restyled around it) ---------- */
 .chat-grid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:56px;align-items:start}
@@ -131,16 +130,16 @@ h2{font-size:clamp(44px,5.2vw,76px);line-height:.95;text-wrap:balance}
 .s-log:focus-visible{outline-offset:-4px;border-radius:0}
 .tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:0 0 14px;padding:4px 4px 10px}
 .tabs::-webkit-scrollbar{display:none}
-.tab{position:relative;isolation:isolate;flex:none;font:600 15.5px/1 var(--text);color:var(--soft);background:none;border:0;padding:11px 14px;border-radius:10px;cursor:pointer}
-.tab:hover{color:var(--paper);background:rgba(11,27,107,.3)}
-.tab[aria-selected="true"]{color:var(--ink)}
+.tab{position:relative;isolation:isolate;flex:none;font:600 15.5px/1 var(--text);color:var(--muted);background:none;border:0;padding:11px 14px;border-radius:10px;cursor:pointer}
+.tab:hover{color:var(--ink);background:rgba(11,27,107,.07)}
+.tab[aria-selected="true"]{color:var(--paper)}
 .tab:focus-visible{outline-offset:2px}
-.tabmark{position:absolute;inset:0;z-index:-1;border-radius:10px;background:var(--paper);box-shadow:0 4px 0 var(--ink);view-transition-name:tabmark}
-.stagebar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 18px;margin-top:26px;font-size:15px;color:var(--soft)}
-.chline{font-size:14.5px;color:var(--paper);background:var(--deep);border-radius:9px;padding:8px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tabmark{position:absolute;inset:0;z-index:-1;border-radius:10px;background:var(--cobalt);box-shadow:0 4px 0 var(--ink);view-transition-name:tabmark}
+.stagebar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 18px;margin-top:26px;font-size:15px;color:var(--muted)}
+.chline{font-size:14.5px;color:var(--paper);background:var(--ink);border-radius:9px;padding:8px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .chline b{color:var(--yolk);font-weight:500}
 .stagebar .r{display:flex;align-items:center;gap:16px;margin-left:auto}
-.linkbtn{white-space:nowrap;font:700 15px/1 var(--text);color:var(--paper);background:none;border:0;padding:6px 0;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px;cursor:pointer}
+.linkbtn{white-space:nowrap;font:700 15px/1 var(--text);color:var(--ink);background:none;border:0;padding:6px 0;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px;cursor:pointer}
 
 .stage{position:relative;height:clamp(540px,calc(100vh - 262px),700px);border-radius:14px;overflow:hidden;display:flex;container-type:inline-size;view-transition-name:stage;isolation:isolate}
 .side{display:none}
@@ -422,9 +421,9 @@ h2{font-size:clamp(44px,5.2vw,76px);line-height:.95;text-wrap:balance}
 .clone .btn{align-self:flex-start}
 .also{font-size:16px;font-weight:600}
 
-footer{padding:10px 0 70px;color:var(--soft);font-size:15px}
+footer{padding:10px 0 70px;color:var(--muted);font-size:15px}
 footer .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:12px 28px}
-.built{display:inline-flex;align-items:center;gap:10px;font-weight:700;color:var(--paper);text-decoration:none}
+.built{display:inline-flex;align-items:center;gap:10px;font-weight:700;color:var(--ink);text-decoration:none}
 .built svg{width:26px;height:26px}
 .built:hover span{text-decoration:underline;text-underline-offset:4px}
 footer .caveat{margin-left:auto}
@@ -477,44 +476,48 @@ footer .caveat{margin-left:auto}
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8E5E3C"/><stop offset="1" stop-color="#5E3A24"/></linearGradient>
-    <radialGradient id="plate" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="#FBFAF6"/><stop offset=".8" stop-color="#EDEAE2"/><stop offset="1" stop-color="#D9D4C8"/></radialGradient>
-    <radialGradient id="yolk" cx=".38" cy=".35" r=".7"><stop offset="0" stop-color="#FFD36B"/><stop offset=".6" stop-color="#F2A21E"/><stop offset="1" stop-color="#D97F0E"/></radialGradient>
-    <radialGradient id="avo" cx=".5" cy=".55" r=".6"><stop offset="0" stop-color="#E9E8A2"/><stop offset=".6" stop-color="#C3CF5E"/><stop offset="1" stop-color="#7F9A2E"/></radialGradient>
-    <linearGradient id="crumb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E7B56E"/><stop offset="1" stop-color="#C98E48"/></linearGradient>
-    <radialGradient id="vig" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></radialGradient>
-    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"/></filter>
-    <symbol id="breakfast" viewBox="0 0 320 240">
-      <rect width="320" height="240" fill="url(#wood)"/>
-      <g stroke="#3f2414" stroke-opacity=".22" fill="none" stroke-width="1.2">
-        <path d="M0 30 C80 24 160 38 320 26"/><path d="M0 78 C90 70 200 86 320 74"/><path d="M0 132 C100 126 210 140 320 128"/><path d="M0 186 C70 180 220 194 320 182"/><path d="M0 222 C120 216 200 228 320 220"/>
-      </g>
-      <ellipse cx="166" cy="134" rx="134" ry="98" fill="#2a160b" opacity=".5" filter="url(#soft)"/>
-      <ellipse cx="160" cy="122" rx="132" ry="98" fill="url(#plate)"/>
-      <ellipse cx="160" cy="122" rx="104" ry="76" fill="none" stroke="#d8d2c4" stroke-width="1.5"/>
-      <g transform="rotate(-14 104 86)">
-        <path d="M60 52 Q58 34 80 34 L132 36 Q150 36 148 56 L146 120 Q146 132 132 132 L74 130 Q60 130 60 118 Z" fill="#8B4D22"/>
-        <path d="M68 58 Q67 44 84 44 L128 46 Q140 46 139 60 L137 116 Q137 124 128 124 L78 122 Q68 122 68 114 Z" fill="url(#crumb)"/>
-        <g fill="#B97A3A" opacity=".7"><ellipse cx="88" cy="66" rx="4" ry="2.5"/><ellipse cx="114" cy="78" rx="5" ry="3"/><ellipse cx="96" cy="98" rx="3" ry="2"/><ellipse cx="124" cy="104" rx="4" ry="2.4"/><ellipse cx="82" cy="110" rx="3.5" ry="2"/><ellipse cx="108" cy="58" rx="3" ry="2"/></g>
-      </g>
-      <g transform="rotate(24 228 82)">
-        <path d="M228 34 C252 34 262 60 262 86 C262 112 248 128 228 128 C208 128 194 112 194 86 C194 60 204 34 228 34 Z" fill="#33481A"/>
-        <path d="M228 40 C248 40 256 62 256 86 C256 108 244 122 228 122 C212 122 200 108 200 86 C200 62 208 40 228 40 Z" fill="url(#avo)"/>
-        <circle cx="228" cy="94" r="17" fill="#7B4A28"/><circle cx="223" cy="89" r="5" fill="#A06A40" opacity=".7"/>
-      </g>
-      <path d="M118 140 C104 128 120 112 142 116 C160 106 184 116 182 132 C198 142 188 168 166 170 C150 186 116 182 112 166 C98 160 104 146 118 140 Z" fill="#FCFBF6"/>
-      <path d="M118 140 C104 128 120 112 142 116" fill="none" stroke="#e8e2d2" stroke-width="2"/>
-      <circle cx="148" cy="145" r="15" fill="url(#yolk)"/><circle cx="143" cy="140" r="4" fill="#fff" opacity=".6"/>
-      <path d="M196 156 C190 140 210 128 228 136 C248 132 262 148 254 164 C258 182 236 192 220 186 C202 192 186 176 196 156 Z" fill="#FCFBF6"/>
-      <path d="M254 164 C258 182 236 192 220 186" fill="none" stroke="#e5dfcf" stroke-width="2"/>
-      <circle cx="224" cy="160" r="14" fill="url(#yolk)"/><circle cx="219" cy="155" r="3.8" fill="#fff" opacity=".6"/>
-      <g fill="#6b5a3a" opacity=".55"><circle cx="150" cy="168" r="1"/><circle cx="210" cy="174" r="1"/><circle cx="236" cy="150" r="1"/><circle cx="128" cy="160" r=".9"/></g>
-      <rect width="320" height="240" fill="url(#vig)"/>
-    </symbol>
+<filter id="heatglow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation=".05"/></filter>
+<clipPath id="clip-salmon"><path d="M-.37 -.1C-.37 -.19 -.29 -.22 -.19 -.21L.25 -.17C.37 -.16 .41 -.07 .39 .03C.37 .14 .29 .19 .17 .19L-.23 .18C-.33 .18 -.38 .1 -.38 0Z"/></clipPath>
+<g id="geo-salmon" transform="translate(.12 -.36) rotate(-12) scale(1.3)"><path d="M-.37 -.1C-.37 -.19 -.29 -.22 -.19 -.21L.25 -.17C.37 -.16 .41 -.07 .39 .03C.37 .14 .29 .19 .17 .19L-.23 .18C-.33 .18 -.38 .1 -.38 0Z"/></g>
+<g id="geo-rice" transform="translate(-.4 .2)"><path d="M0.3801 0.0267Q0.3672 0.0685 0.3614 0.1116Q0.3556 0.1547 0.3231 0.1862Q0.2906 0.2176 0.2636 0.2533Q0.2367 0.289 0.192 0.303Q0.1473 0.3169 0.1055 0.337Q0.0636 0.3571 0.017 0.3503Q-0.0296 0.3436 -0.0768 0.3435Q-0.124 0.3434 -0.1619 0.3175Q-0.1998 0.2916 -0.2415 0.2713Q-0.2833 0.251 -0.3037 0.2119Q-0.3242 0.1728 -0.3509 0.137Q-0.3776 0.1012 -0.376 0.0578Q-0.3744 0.0144 -0.3799 -0.0288Q-0.3855 -0.0719 -0.3621 -0.1096Q-0.3387 -0.1473 -0.3219 -0.1879Q-0.305 -0.2285 -0.2652 -0.2519Q-0.2255 -0.2753 -0.1901 -0.304Q-0.1547 -0.3327 -0.1076 -0.3364Q-0.0606 -0.3402 -0.0148 -0.3504Q0.0311 -0.3607 0.0746 -0.3439Q0.1182 -0.3271 0.164 -0.3166Q0.2097 -0.3061 0.2398 -0.2726Q0.2699 -0.2391 0.3051 -0.2102Q0.3403 -0.1814 0.35 -0.1389Q0.3597 -0.0964 0.3764 -0.0557Q0.393 -0.0151 0.3801 0.0267Z"/></g>
+<g id="geo-broc"><circle cx="0.42" cy="0.18" r="0.1122"/><circle cx="0.5083" cy="0.231" r="0.0714"/><circle cx="0.4352" cy="0.2809" r="0.0714"/><circle cx="0.3506" cy="0.2548" r="0.0714"/><circle cx="0.3183" cy="0.1724" r="0.0714"/><circle cx="0.3625" cy="0.0957" r="0.0714"/><circle cx="0.4501" cy="0.0825" r="0.0714"/><circle cx="0.5149" cy="0.1427" r="0.0714"/><circle cx="0.24" cy="0.5" r="0.1056"/><circle cx="0.1994" cy="0.587" r="0.0672"/><circle cx="0.1467" cy="0.5225" r="0.0672"/><circle cx="0.1642" cy="0.4411" r="0.0672"/><circle cx="0.2388" cy="0.404" r="0.0672"/><circle cx="0.3143" cy="0.4392" r="0.0672"/><circle cx="0.3339" cy="0.5202" r="0.0672"/><circle cx="0.2827" cy="0.586" r="0.0672"/><circle cx="0.56" cy="0.45" r="0.099"/><circle cx="0.5908" cy="0.5346" r="0.063"/><circle cx="0.5131" cy="0.5268" r="0.063"/><circle cx="0.4707" cy="0.4612" r="0.063"/><circle cx="0.4956" cy="0.3872" r="0.063"/><circle cx="0.569" cy="0.3604" r="0.063"/><circle cx="0.6356" cy="0.4012" r="0.063"/><circle cx="0.6453" cy="0.4787" r="0.063"/></g>
+<g id="mealart">
+  <circle cy=".075" r="1" fill="#0B1B6B"/>
+  <circle r="1" fill="#FBF6EC"/>
+  <circle r=".94" fill="none" stroke="#2340D8" stroke-width=".022"/>
+  <circle r=".88" fill="none" stroke="#E9E1CF" stroke-width=".01"/>
+  <g fill="#0B1B6B" transform="translate(0 .035)"><use href="#geo-rice"/><use href="#geo-salmon"/><path d="M0.2581 0.0865L0.42 0.18" stroke="#0B1B6B" stroke-width="0.0935" stroke-linecap="round" fill="none"/><path d="M0.3144 0.3405L0.24 0.5" stroke="#0B1B6B" stroke-width="0.088" stroke-linecap="round" fill="none"/><path d="M0.5036 0.295L0.56 0.45" stroke="#0B1B6B" stroke-width="0.0825" stroke-linecap="round" fill="none"/><use href="#geo-broc"/></g>
+  <use href="#geo-rice" fill="#FFFFFF"/>
+  <g transform="translate(-.4 .2)"><g fill="#E6DCC4"><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.2879 0.0001) rotate(52)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.0629 0.2235) rotate(96)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.1243 0.2057) rotate(136)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.2393 -0.0594) rotate(114)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.0601 -0.1213) rotate(67)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.0655 -0.2177) rotate(10)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.0828 -0.169) rotate(166)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.0371 -0.0885) rotate(92)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.2205 -0.104) rotate(116)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.2533 -0.1206) rotate(164)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.1207 0.1125) rotate(151)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.0579 0.0917) rotate(54)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.1467 0.0637) rotate(169)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.2397 -0.0813) rotate(158)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.1464 0.0508) rotate(101)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.1945 -0.0097) rotate(35)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.0591 -0.0342) rotate(66)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.1363 0.1827) rotate(166)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.1215 -0.0102) rotate(73)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.0379 0.1594) rotate(76)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.1085 0.171) rotate(111)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.03 0.2556) rotate(82)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.1559 -0.1632) rotate(114)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.2121 -0.0195) rotate(124)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.1755 -0.063) rotate(127)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.0016 0.2068) rotate(63)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.091 0.1477) rotate(143)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.0718 -0.0626) rotate(147)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.169 0.0808) rotate(28)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.2643 0.1267) rotate(40)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.0768 -0.0758) rotate(82)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.0929 -0.0552) rotate(166)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.2119 -0.169) rotate(159)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.219 -0.129) rotate(50)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.1492 0.0089) rotate(14)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.2356 0.0021) rotate(42)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.0117 -0.1886) rotate(124)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.0211 0.2529) rotate(42)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.1993 0.1817) rotate(21)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.0163 0.001) rotate(164)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.1879 -0.1966) rotate(4)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.1053 -0.0688) rotate(174)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(-0.2268 -0.0887) rotate(48)"/><rect x="-.032" y="-.013" width=".064" height=".026" rx=".013" transform="translate(0.0233 0.1216) rotate(102)"/></g><g fill="#0B1B6B"><ellipse rx=".016" ry=".008" transform="translate(0.256 0.0786) rotate(126)"/><ellipse rx=".016" ry=".008" transform="translate(-0.0513 -0.2012) rotate(6)"/><ellipse rx=".016" ry=".008" transform="translate(0.2232 0.1668) rotate(24)"/><ellipse rx=".016" ry=".008" transform="translate(-0.1092 -0.2387) rotate(7)"/><ellipse rx=".016" ry=".008" transform="translate(0.2099 -0.1705) rotate(179)"/><ellipse rx=".016" ry=".008" transform="translate(0.2588 -0.0688) rotate(76)"/><ellipse rx=".016" ry=".008" transform="translate(0.003 0.2382) rotate(159)"/><ellipse rx=".016" ry=".008" transform="translate(-0.1415 0.0946) rotate(73)"/><ellipse rx=".016" ry=".008" transform="translate(0.1815 -0.1405) rotate(63)"/></g></g>
+  <use href="#geo-salmon" fill="#FF7E5F"/>
+  <g transform="translate(.12 -.36) rotate(-12) scale(1.3)" clip-path="url(#clip-salmon)">
+    <path d="M-.33 -.12C-.33 -.17 -.27 -.18 -.19 -.17L.22 -.135" fill="none" stroke="#FFB49A" stroke-width=".03" stroke-linecap="round"/>
+    <g fill="none" stroke="#FFD3C2" stroke-width=".024" stroke-linecap="round"><path d="M-0.22 -.18C-0.27 -.07 -0.27 .06 -0.21 .17"/><path d="M-0.09 -.18C-0.14 -.07 -0.14 .06 -0.08 .17"/><path d="M0.04 -.18C-0.01 -.07 -0.01 .06 0.05 .17"/><path d="M0.17 -.18C0.12 -.07 0.12 .06 0.18 .17"/><path d="M0.29 -.18C0.24 -.07 0.24 .06 0.3 .17"/></g>
+    <g fill="#3E8E3A"><circle cx="-.05" cy=".02" r=".018"/><circle cx=".11" cy="-.06" r=".014"/><circle cx=".2" cy=".07" r=".016"/><circle cx="-.18" cy=".09" r=".013"/></g>
+  </g>
+  <path d="M0.2581 0.0865L0.42 0.18" stroke="#A9D86E" stroke-width="0.0935" stroke-linecap="round" fill="none"/><path d="M0.3144 0.3405L0.24 0.5" stroke="#A9D86E" stroke-width="0.088" stroke-linecap="round" fill="none"/><path d="M0.5036 0.295L0.56 0.45" stroke="#A9D86E" stroke-width="0.0825" stroke-linecap="round" fill="none"/>
+  <use href="#geo-broc" fill="#2E8B3D"/>
+  <g fill="#5DBB4C"><circle cx="0.4913" cy="0.2106" r="0.034"/><circle cx="0.4182" cy="0.2605" r="0.034"/><circle cx="0.3336" cy="0.2344" r="0.034"/><circle cx="0.3013" cy="0.152" r="0.034"/><circle cx="0.3455" cy="0.0753" r="0.034"/><circle cx="0.4331" cy="0.0621" r="0.034"/><circle cx="0.4979" cy="0.1223" r="0.034"/><circle cx="0.3996" cy="0.1562" r="0.0442"/><circle cx="0.1834" cy="0.5678" r="0.032"/><circle cx="0.1307" cy="0.5033" r="0.032"/><circle cx="0.1482" cy="0.4219" r="0.032"/><circle cx="0.2228" cy="0.3848" r="0.032"/><circle cx="0.2983" cy="0.42" r="0.032"/><circle cx="0.3179" cy="0.501" r="0.032"/><circle cx="0.2667" cy="0.5668" r="0.032"/><circle cx="0.2208" cy="0.4776" r="0.0416"/><circle cx="0.5758" cy="0.5166" r="0.03"/><circle cx="0.4981" cy="0.5088" r="0.03"/><circle cx="0.4557" cy="0.4432" r="0.03"/><circle cx="0.4806" cy="0.3692" r="0.03"/><circle cx="0.554" cy="0.3424" r="0.03"/><circle cx="0.6206" cy="0.3832" r="0.03"/><circle cx="0.6303" cy="0.4607" r="0.03"/><circle cx="0.542" cy="0.429" r="0.039"/></g>
+</g>
+<g id="heat">
+  <circle r="1" fill="#13248F"/>
+  <circle r=".94" fill="none" stroke="#3352F5" stroke-width=".02"/>
+  <g filter="url(#heatglow)"><use href="#geo-rice" fill="#a3ccb5"/><use href="#geo-salmon" fill="#ffc73d"/><use href="#geo-broc" fill="#2640c8"/></g>
+  <use href="#geo-rice" fill="#a3ccb5"/><use href="#geo-salmon" fill="#ffc73d"/><use href="#geo-broc" fill="#2640c8"/>
+  <g transform="translate(-0.4 0.2) scale(0.55) translate(0.4 -0.2)"><use href="#geo-rice" fill="#c5db61"/></g><g transform="translate(0.12 -0.36) scale(0.55) translate(-0.12 0.36)"><use href="#geo-salmon" fill="#ff7b43"/></g>
+</g>
+<symbol id="mealphoto" viewBox="-1.6 -1.2 3.2 2.4">
+  <rect x="-1.6" y="-1.2" width="3.2" height="2.4" fill="#D9A46C"/>
+  <g stroke="#C48B52" stroke-width=".018"><path d="M-1.6 -0.75H1.6"/><path d="M-1.6 -0.25H1.6"/><path d="M-1.6 0.25H1.6"/><path d="M-1.6 0.75H1.6"/></g>
+  <rect x="-1.6" y="-1.2" width=".5" height="2.4" fill="#2340D8"/>
+  <g stroke="#FBF6EC" stroke-width=".05" opacity=".8"><path d="M-1.47 -1.2V1.2M-1.23 -1.2V1.2"/></g>
+  <use href="#mealart" transform="translate(.12 -.04) scale(1.05)"/>
+</symbol>
     <symbol id="plateglyph" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="#FFC83D"/></symbol>
   </defs>
 </svg>
 
+<div class="band">
 <div class="wrap">
   <header class="top">
     <span class="mark"><i></i>Calories</span>
@@ -532,29 +535,37 @@ footer .caveat{margin-left:auto}
     </div>
 
     <div class="plate-wrap">
-      <div class="plate-stage" id="pstage" role="img" aria-label="Breakfast plate with two fried eggs, sourdough toast and half an avocado. A thermal lens shows calorie density and reads each item: eggs 100 g, 196 kcal, 13.6 g protein; toast 60 g, 150 kcal, 5.4 g; avocado 70 g, 112 kcal, 1.4 g.">
-        <canvas id="gl" aria-hidden="true"></canvas>
-        <svg class="fallback" viewBox="-1.25 -1.25 2.5 2.5" aria-hidden="true">
+      <div class="plate-stage" id="pstage" role="img" aria-label="Lunch plate with a salmon fillet, white rice and broccoli. A thermal lens shows calorie density and reads each item: salmon 120 g, 250 kcal, 24.5 g protein; rice 150 g, 195 kcal, 4.1 g; broccoli 80 g, 28 kcal, 1.9 g.">
+        <svg class="scene" viewBox="-1.25 -1.25 2.5 2.5" aria-hidden="true">
           <defs>
-            <radialGradient id="fy" cx="40%" cy="35%"><stop offset="0" stop-color="#ffd07a"/><stop offset="1" stop-color="#f09a16"/></radialGradient>
-            <radialGradient id="fa" cx="45%" cy="50%"><stop offset="0" stop-color="#ddd77a"/><stop offset=".8" stop-color="#93b24c"/><stop offset="1" stop-color="#23391a"/></radialGradient>
+            <clipPath id="lensclip"><circle id="lensc" r="0"/></clipPath>
+            <clipPath id="wakeclip"><rect id="waker" x="-1.6" y="-1.6" width="3.2" height="0"/></clipPath>
+            <pattern id="scanlines" width="1" height=".028" patternUnits="userSpaceOnUse"><rect width="1" height=".009" fill="#FBF6EC" opacity=".1"/></pattern>
           </defs>
-          <circle cy=".075" r="1" fill="#0B1B6B"/>
-          <circle r="1" fill="#F6F1E7"/><circle r=".935" fill="none" stroke="#2340D8" stroke-width=".012"/>
-          <g transform="translate(-.4 -.08) rotate(-12)"><path d="M-.25 .19 L-.25 -.15 Q-.3 -.4 -.1 -.38 Q0 -.33 .1 -.38 Q.3 -.4 .25 -.15 L.25 .19 Q.25 .29 .15 .29 L-.15 .29 Q-.25 .29 -.25 .19Z" fill="#c98f4c" stroke="#6b3a17" stroke-width=".035"/></g>
-          <circle cx=".2" cy="-.44" r=".25" fill="#fffdf6"/><circle cx=".5" cy="-.04" r=".25" fill="#fffdf6"/>
-          <circle cx=".23" cy="-.46" r=".092" fill="url(#fy)"/><circle cx=".47" cy="-.06" r=".095" fill="url(#fy)"/>
-          <g transform="translate(-.04 .5) rotate(20)"><ellipse cx=".02" cy="0" rx=".27" ry=".18" fill="url(#fa)"/><circle cx="-.07" r=".082" fill="#6e4024"/></g>
+          <use href="#mealart"/>
+          <g id="wake" clip-path="url(#wakeclip)" opacity="0"><use href="#heat"/></g>
+          <g id="beam" opacity="0"><rect x="-1.2" y="-.045" width="2.4" height=".09" fill="#FBF6EC" opacity=".22" filter="url(#heatglow)"/><rect x="-1.2" y="-.007" width="2.4" height=".014" rx=".007" fill="#FBF6EC"/></g>
+          <g id="lens" opacity="0">
+            <circle id="lensshadow" r="0" fill="#0B1B6B"/>
+            <g clip-path="url(#lensclip)">
+              <rect x="-2" y="-2" width="4" height="4" fill="#0B1B6B"/>
+              <g id="heatmag"><use href="#heat"/></g>
+              <rect x="-2" y="-2" width="4" height="4" fill="url(#scanlines)"/>
+            </g>
+            <circle id="lensring" r="0" fill="none" stroke="#FBF6EC" stroke-width=".014"/>
+            <circle id="lensticks" r="0" fill="none" stroke="#FBF6EC" stroke-width=".024" opacity=".8"/>
+            <path id="lenscross" d="" fill="none" stroke="#FBF6EC" stroke-width=".009" stroke-linecap="round"/>
+          </g>
         </svg>
         <div class="overlay" id="overlay">
           <svg aria-hidden="true"><line class="leader" id="leader" x1="0" y1="0" x2="0" y2="0" opacity="0"/><g id="ret" opacity="0"></g></svg>
-          <div class="ptag" data-item="eggs">Eggs 196 kcal</div>
-          <div class="ptag" data-item="toast">Toast 150 kcal</div>
-          <div class="ptag" data-item="avo">Avocado 112 kcal</div>
+          <div class="ptag" data-item="salmon">Salmon 250 kcal</div>
+          <div class="ptag" data-item="rice">Rice 195 kcal</div>
+          <div class="ptag" data-item="broc">Broccoli 28 kcal</div>
           <div class="callout" id="callout" aria-hidden="true">
-            <h3 data-f="name">2 fried eggs</h3>
-            <dl><dd data-f="g">100 g</dd><dt>weight</dt><dd data-f="kcal">196</dd><dt>kcal</dt><dd data-f="p">13.6 g</dd><dt>protein</dt></dl>
-            <p class="dens"><span class="swatch" data-f="sw"></span><span data-f="d">1.96 kcal per gram</span></p>
+            <h3 data-f="name">Salmon fillet</h3>
+            <dl><dd data-f="g">120 g</dd><dt>weight</dt><dd data-f="kcal">250</dd><dt>kcal</dt><dd data-f="p">24.5 g</dd><dt>protein</dt></dl>
+            <p class="dens"><span class="swatch" data-f="sw"></span><span data-f="d">2.08 kcal per gram</span></p>
           </div>
         </div>
       </div>
@@ -566,6 +577,7 @@ footer .caveat{margin-left:auto}
     </div>
   </div>
   </main>
+</div>
 </div>
 
 <section id="chat" aria-labelledby="chat-h">
@@ -592,7 +604,7 @@ footer .caveat{margin-left:auto}
   </div>
 </section>
 
-<section id="hosts" aria-labelledby="hosts-h" style="padding-top:40px">
+<section id="hosts" aria-labelledby="hosts-h" style="padding-top:20px">
   <div class="wrap">
     <div class="panel">
       <div>
@@ -657,12 +669,12 @@ footer .caveat{margin-left:auto}
   const $ = (s, r = document) => r.querySelector(s);
 
   const ITEMS = [
-    { id: "eggs", name: "2 fried eggs", g: 100, kcal: 196, p: 13.6, pts: [[0.20, 0.44], [0.50, 0.04]], a: [0.36, 0.25], r: 0.52 },
-    { id: "toast", name: "Sourdough toast", g: 60, kcal: 150, p: 5.4, pts: [[-0.40, 0.08]], a: [-0.40, 0.08], r: 0.40 },
-    { id: "avo", name: "Half an avocado", g: 70, kcal: 112, p: 1.4, pts: [[-0.04, -0.50]], a: [-0.04, -0.50], r: 0.30 },
+    { id: "salmon", name: "Salmon fillet", g: 120, kcal: 250, p: 24.5, pts: [[0.345, 0.41], [-0.105, 0.31]], a: [0.12, 0.36], r: 0.5, bias: 0.05 },
+    { id: "rice", name: "White rice", g: 150, kcal: 195, p: 4.1, pts: [[-0.40, -0.20]], a: [-0.40, -0.20], r: 0.42 },
+    { id: "broc", name: "Broccoli", g: 80, kcal: 28, p: 1.9, pts: [[0.42, -0.18], [0.24, -0.50], [0.56, -0.45]], a: [0.41, -0.38], r: 0.34 },
   ];
   const RAMP = [[0, "#0B1B6B"], [0.2, "#3352F5"], [0.4, "#8FB8FF"], [0.6, "#B6E06A"], [0.8, "#FFC83D"], [1, "#FF5B45"]];
-  const DMAX = 3.2;
+  const DMAX = 2.6;
   const rampAt = (t) => {
     for (let i = 1; i < RAMP.length; i++) if (t <= RAMP[i][0]) {
       const [t0, c0] = RAMP[i - 1], [t1, c1] = RAMP[i], k = (t - t0) / (t1 - t0);
@@ -673,12 +685,12 @@ footer .caveat{margin-left:auto}
     return RAMP[RAMP.length - 1][1];
   };
 
-  const stage = $("#pstage"), canvas = $("#gl");
+  const stage = $("#pstage");
   const callout = $("#callout"), leader = $("#leader"), ret = $("#ret"), pin = $("#pin"), dock = $("#dock");
   const tags = [...document.querySelectorAll(".ptag")];
   if (coarse) $("#hint").textContent = "Drag across the plate";
 
-  let S = 0, R = 0, dpr = 1, mobile = false;
+  let S = 0, R = 0, mobile = false;
   const PLATE = 0.40;
   const toPx = ([x, y]) => [S / 2 + x * R, S / 2 - y * R];
   const toPlate = (px, py) => [(px - S / 2) / R, (S / 2 - py) / R];
@@ -713,7 +725,7 @@ footer .caveat{margin-left:auto}
     const [x, y] = toPlate(px, py);
     let best = null, bd = 1e9;
     for (const it of ITEMS) for (const [ix, iy] of it.pts) {
-      const d = Math.hypot(x - ix, y - iy) - (it.id === "eggs" ? 0.06 : 0);
+      const d = Math.hypot(x - ix, y - iy) - (it.bias || 0);
       if (d < bd) { bd = d; best = it; }
     }
     if (current && best !== current) {
@@ -735,7 +747,7 @@ footer .caveat{margin-left:auto}
   function setTarget(clientX, clientY) {
     const b = stage.getBoundingClientRect();
     let x = clientX - b.left, y = clientY - b.top;
-    const [px, py] = toPlate(x, y), r = Math.hypot(px, py), lim = 1.08;
+    const [px, py] = toPlate(x, y), r = Math.hypot(px, py), lim = 1.0;
     if (r > lim) [x, y] = toPx([px / r * lim, py / r * lim]);
     lens.tx = x; lens.ty = y; lastInput = performance.now();
   }
@@ -775,287 +787,42 @@ footer .caveat{margin-left:auto}
     });
   }
 
-  const gl = params.has("nogl") ? null : canvas.getContext("webgl2", { antialias: false, premultipliedAlpha: true, alpha: true });
-  if (!gl) { document.documentElement.classList.add("no-gl"); startStatic(); return; }
-
-  const VS = `#version 300 es
-  in vec2 a; void main(){ gl_Position = vec4(a,0.,1.); }`;
-  const FS = `#version 300 es
-  precision highp float;
-  uniform vec2 uRes; uniform float uR; uniform vec2 uLens; uniform float uLensR; uniform float uLensOn;
-  uniform float uScan; uniform float uScanOn; uniform float uWake; uniform float uTime; uniform vec3 uBg;
-  out vec4 o;
-
-  float hash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
-  float noise(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
-    return mix(mix(hash(i),hash(i+vec2(1,0)),u.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x),u.y); }
-  float fbm(vec2 p){ float a=.5,s=0.; for(int i=0;i<4;i++){ s+=a*noise(p); p=p*2.03+17.1; a*=.5;} return s; }
-  float smin(float a,float b,float k){ float h=clamp(.5+.5*(b-a)/k,0.,1.); return mix(b,a,h)-k*h*(1.-h); }
-  mat2 rot(float a){ float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
-  float sdBox(vec2 p, vec2 b, float r){ vec2 q=abs(p)-b+r; return length(max(q,0.))+min(max(q.x,q.y),0.)-r; }
-
-  const vec2 TC = vec2(-0.40, 0.08);
-  const vec2 EA = vec2(0.20,0.44), EB = vec2(0.50,0.04);
-  const vec2 YA = vec2(0.23,0.46), YB = vec2(0.47,0.06);
-  const vec2 AC = vec2(-0.04,-0.50);
-  const float AA = -0.35;
-
-  vec2 toastQ(vec2 p){ return rot(0.21)*(p-TC); }
-  float toastD(vec2 p){
-    vec2 q = toastQ(p);
-    float body = sdBox(q-vec2(0.,-0.06), vec2(0.25,0.23), 0.07);
-    float l = length(q-vec2(-0.115,0.15))-0.15;
-    float r = length(q-vec2( 0.115,0.15))-0.15;
-    float d = smin(body, min(l,r), 0.06);
-    return d + (noise(q*16.)-.5)*0.01;
-  }
-  float blob(vec2 p, vec2 c, float r, float s){
-    vec2 d=p-c; float a=atan(d.y,d.x);
-    float rr = r*(1.+0.07*sin(3.*a+s)+0.045*sin(5.*a+s*2.3)+0.025*sin(9.*a+s*.7));
-    return length(d)-rr + (noise(p*11.+s)-.5)*0.03;
-  }
-  float whiteD(vec2 p){ return smin(blob(p,EA,0.25,1.3), blob(p,EB,0.25,4.1), 0.05); }
-  float yolkD(vec2 p){ return min(length(p-YA)-0.092, length(p-YB)-0.095); }
-  vec2 avoQ(vec2 p){ return rot(AA)*(p-AC); }
-  float avoD(vec2 p){ vec2 q=avoQ(p); return smin(length(q-vec2(-0.07,0.))-0.175, length(q-vec2(0.135,0.))-0.112, 0.13); }
-  float pitD(vec2 p){ vec2 q=avoQ(p); return length(q-vec2(-0.07,0.005))-0.082; }
-  float foodD(vec2 p){ return min(min(toastD(p), whiteD(p)), avoD(p)); }
-
-  float dome(float d, float r){ float t=clamp(-d/r,0.,1.); return sqrt(1.-(1.-t)*(1.-t)); }
-
-  float H(vec2 p){
-    float r = length(p);
-    float rim = smoothstep(0.74,0.9,r)*(1.-smoothstep(0.93,1.0,r));
-    float h = smoothstep(1.0,0.985,r)*(0.02 + 0.032*rim);
-    float dt = toastD(p);
-    if(dt<0.02){ float ht = 0.02 + 0.055*dome(dt,0.05) + 0.006*noise(toastQ(p)*55.); h = mix(h, max(h,ht), smoothstep(0.004,-0.004,dt)); }
-    float dw = whiteD(p);
-    if(dw<0.02){ float hw = 0.02 + 0.012*dome(dw,0.04); float dy=yolkD(p); hw += 0.06*dome(dy,0.095); h = mix(h, max(h,hw), smoothstep(0.004,-0.004,dw)); }
-    float da = avoD(p);
-    if(da<0.02){ float rimA = smoothstep(-0.05,-0.012,da); float ha = 0.02 + 0.05*dome(da,0.03) + 0.012*rimA; float dp=pitD(p); ha = max(ha, 0.05+0.05*dome(dp,0.082)); h = mix(h, max(h,ha), smoothstep(0.004,-0.004,da)); }
-    return h;
-  }
-
-  // albedo + spec strength
-  vec4 albedo(vec2 p, out float dens){
-    float r = length(p);
-    dens = 0.0;
-    vec3 c = uBg; float sp = 0.0;
-    if(r<1.0){
-      c = vec3(0.965,0.945,0.905); sp = 0.6; dens = 0.12;
-      float line = smoothstep(0.006,0.0,abs(r-0.935));
-      c = mix(c, vec3(0.137,0.251,0.847), line*0.95);
-      c *= 0.97 + 0.03*noise(p*30.);
-    }
-    float dt = toastD(p);
-    if(dt<0.0){
-      vec2 q = toastQ(p);
-      vec3 crumb = mix(vec3(0.83,0.62,0.33), vec3(0.62,0.38,0.16), smoothstep(0.35,0.75,fbm(q*7.)));
-      float pores = smoothstep(0.62,0.8,noise(q*48.))*0.35 + smoothstep(0.7,0.9,noise(q*95.+3.))*0.25;
-      crumb *= 1.-pores;
-      float crust = smoothstep(-0.05,-0.028,dt);
-      c = mix(crumb, vec3(0.40,0.21,0.08)*(0.8+0.4*noise(q*30.)), crust); sp = 0.08;
-      dens = mix(2.5, 3.0, crust);
-    }
-    float dw = whiteD(p);
-    if(dw<0.0){
-      float edge = smoothstep(-0.045,-0.004,dw);
-      float lace = smoothstep(0.35,0.75,fbm(p*22.));
-      vec3 w = vec3(0.965,0.955,0.93);
-      w = mix(w, vec3(0.80,0.58,0.30), edge*lace*0.9);
-      // cracked pepper
-      vec2 g = p*70.; vec2 id=floor(g); float hp=hash(id);
-      float pep = step(0.93,hp)*smoothstep(0.32,0.12,length(fract(g)-0.5));
-      w = mix(w, vec3(0.13,0.11,0.1), pep*0.85);
-      c = w; sp = 0.35; dens = mix(0.55, 1.7, edge*lace);
-      float dy = yolkD(p);
-      if(dy<0.0){
-        float t = clamp(-dy/0.095,0.,1.);
-        c = mix(vec3(0.95,0.52,0.06), vec3(1.0,0.70,0.16), t); sp = 1.4; dens = 3.2;
-      }
-    }
-    float da = avoD(p);
-    if(da<0.0){
-      float skin = smoothstep(-0.026,-0.014,da);
-      vec2 q = avoQ(p);
-      float t = clamp(-da/0.16,0.,1.);
-      vec3 flesh = mix(vec3(0.40,0.58,0.15), vec3(0.88,0.86,0.47), smoothstep(0.05,0.75,t));
-      flesh *= 0.95+0.08*noise(q*40.);
-      // chilli flakes
-      vec2 g = q*55.+7.; float hp=hash(floor(g));
-      float fl = step(0.955,hp)*smoothstep(0.3,0.1,length(fract(g)-0.5));
-      flesh = mix(flesh, vec3(0.72,0.13,0.06), fl);
-      c = mix(flesh, vec3(0.10,0.17,0.07), skin); sp = mix(0.25,0.9,skin);
-      dens = mix(1.6, 0.6, skin);
-      float dp = pitD(p);
-      if(dp<0.0){ c = mix(vec3(0.36,0.20,0.10), vec3(0.52,0.31,0.16), noise(q*26.)); sp=1.0; dens = 0.2; }
-    }
-    return vec4(c, sp);
-  }
-
-  vec3 ramp(float t){
-    t = clamp(t,0.,1.);
-    vec3 c0=vec3(.043,.106,.42), c1=vec3(.2,.322,.961), c2=vec3(.561,.722,1.), c3=vec3(.714,.878,.416), c4=vec3(1.,.784,.239), c5=vec3(1.,.357,.271);
-    if(t<.2) return mix(c0,c1,t/.2);
-    if(t<.4) return mix(c1,c2,(t-.2)/.2);
-    if(t<.6) return mix(c2,c3,(t-.4)/.2);
-    if(t<.8) return mix(c3,c4,(t-.6)/.2);
-    return mix(c4,c5,(t-.8)/.2);
-  }
-
-  // thermal reading: diffuse density field with heat bloom
-  float thermal(vec2 p){
-    float dens; albedo(p, dens);
-    float bloom = 0.0;
-    bloom += 0.9*exp(-max(toastD(p),0.)*14.);
-    bloom += 1.2*exp(-max(yolkD(p),0.)*18.);
-    bloom += 0.5*exp(-max(avoD(p),0.)*16.);
-    float v = max(dens, bloom*0.55);
-    v *= 0.86 + 0.28*fbm(p*7.0 + 3.1);
-    v += 0.12*(noise(p*5.+uTime*.15)-.5);
-    return v/3.2;
-  }
-
-  vec3 shade(vec2 p, out float alpha){
-    float e = 1.2/uR;
-    float h0 = H(p), hx = H(p+vec2(e,0.)), hy = H(p+vec2(0.,e));
-    vec3 n = normalize(vec3(-(hx-h0)/e, -(hy-h0)/e, 1.0));
-    float dens; vec4 al = albedo(p, dens);
-    vec3 L = normalize(vec3(-0.45,0.55,0.75));
-    float diff = max(dot(n,L),0.);
-    vec3 hv = normalize(L+vec3(0,0,1));
-    float spec = pow(max(dot(n,hv),0.), 60.)*al.w;
-    float r = length(p);
-    // shadows: food on plate, plate on table
-    vec2 so = vec2(0.45,-0.55)*0.06;
-    float foodShadow = 1.0 - 0.38*(1.0-smoothstep(-0.03,0.07,foodD(p - so)));
-    float hard = 1.0 - smoothstep(0.992, 1.008, length(p - vec2(0.0,-0.075)));
-    vec3 amb = vec3(0.42,0.48,0.62);
-    vec3 key = vec3(1.0,0.95,0.88);
-    vec3 col;
-    float inPlate = smoothstep(1.0,0.99,r);
-    float isFood = 1.0-smoothstep(-0.004,0.004,foodD(p));
-    float sh = mix(1.0, foodShadow, (1.0-isFood)*inPlate);
-    col = al.rgb*(amb*0.55 + key*diff*0.75*sh) + spec*key*0.5*sh;
-    // table
-    float pool = exp(-r*r*0.9);
-    vec3 table = uBg*(0.92 + 0.35*pool) * (0.97+0.05*fbm(p*18.));
-    table = mix(table, vec3(0.043,0.106,0.42), hard);
-    col = mix(table, col, inPlate);
-    alpha = max(mix(1.0 - smoothstep(1.02, 1.25, r), 1.0, inPlate), hard);
-    return col;
-  }
-
-  void main(){
-    vec2 fc = gl_FragCoord.xy;
-    vec2 p = (fc - uRes*0.5)/uR;
-    float a;
-    vec3 col = shade(p, a);
-
-    // load scan: a line sweeping down with a thermal wake above it
-    if(uScanOn>0.0 || uWake>0.0){
-      float dy = p.y - uScan;
-      float wake = smoothstep(0.0,0.06,dy)*uWake;
-      if(wake>0.0){
-        vec3 th = ramp(thermal(p));
-        col = mix(col, th, wake*a);
-      }
-      float px = abs(dy)*uR;
-      float line = exp(-px*0.9) + 0.35*exp(-px*0.12);
-      float span = 1.0 - smoothstep(1.05,1.25,abs(p.x));
-      col += vec3(1.0,0.96,0.88)*line*span*uScanOn*0.9;
-      a = max(a, min(line*span*uScanOn,1.0));
-    }
-
-    // lens
-    if(uLensOn>0.0){
-      vec2 d = fc - uLens; float dl = length(d);
-      float inside = (1.0 - smoothstep(uLensR-1.0, uLensR+0.5, dl))*uLensOn;
-      // soft drop shadow outside the ring
-      float halo = smoothstep(uLensR+18.0, uLensR, dl)*(1.0-inside);
-      col *= 1.0 - 0.35*halo*uLensOn;
-      if(inside>0.0){
-        vec2 pm = (uLens + d/1.12 - uRes*0.5)/uR;
-        float t = thermal(pm);
-        vec3 th = ramp(t);
-        float iso = abs(fract(t*9.0+0.5)-0.5)/max(fwidth(t*9.0),1e-4);
-        th = mix(th, vec3(1.0), (1.0-clamp(iso,0.,1.))*0.18);
-        th *= 0.94 + 0.06*sin(fc.y*1.6 + uTime*3.0);
-        th *= 1.0 - 0.25*smoothstep(uLensR*0.6, uLensR, dl);
-        // crosshair
-        float cx = (1.0-smoothstep(0.6,1.4,abs(d.x)))*step(6.0,abs(d.y))*step(abs(d.y),16.0);
-        float cy = (1.0-smoothstep(0.6,1.4,abs(d.y)))*step(6.0,abs(d.x))*step(abs(d.x),16.0);
-        th = mix(th, vec3(1.0,0.97,0.9), (cx+cy)*0.8);
-        col = mix(col, th, inside);
-        a = max(a, inside);
-      }
-      // ring and ticks
-      float ring = 1.0 - smoothstep(1.4, 2.6, abs(dl-uLensR));
-      float ang = atan(d.y,d.x);
-      float tk = abs(fract(ang/6.28318*72.0+0.5)-0.5);
-      float tick = (1.0-smoothstep(0.035,0.07,tk))*step(uLensR+3.0,dl)*step(dl,uLensR+8.0);
-      float big = abs(fract(ang/6.28318*8.0+0.5)-0.5);
-      float tickB = (1.0-smoothstep(0.004,0.01,big))*step(uLensR+3.0,dl)*step(dl,uLensR+14.0);
-      float rr = max(ring, max(tick*0.7, tickB))*uLensOn;
-      col = mix(col, vec3(0.984,0.965,0.925), rr);
-      a = max(a, rr);
-    }
-
-    col += (hash(fc+fract(uTime)*91.7)-0.5)*0.025;
-    o = vec4(col*a, a);
-  }`;
-
-  function compile(type, src) {
-    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
-    return s;
-  }
-  let prog;
-  try {
-    prog = gl.createProgram();
-    gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
-    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-  } catch (err) {
-    console.error(err);
-    document.documentElement.classList.add("no-gl"); startStatic(); return;
-  }
-  gl.useProgram(prog);
-  const buf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-  const loc = gl.getAttribLocation(prog, "a");
-  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  const U = {};
-  ["uRes", "uR", "uLens", "uLensR", "uLensOn", "uScan", "uScanOn", "uWake", "uTime", "uBg"].forEach((n) => (U[n] = gl.getUniformLocation(prog, n)));
-  gl.uniform3f(U.uBg, 0x23 / 255, 0x40 / 255, 0xd8 / 255);
+  const el = (id) => document.getElementById(id);
+  const lensG = el("lens"), lensC = el("lensc"), lensShadow = el("lensshadow"), lensRing = el("lensring"), lensTicks = el("lensticks"), lensCross = el("lenscross");
+  const heatMag = el("heatmag"), scanlines = el("scanlines"), wake = el("wake"), waker = el("waker"), beam = el("beam");
 
   function resize() {
     const b = stage.getBoundingClientRect();
     const prevS = S;
     S = b.width; R = S * PLATE; mobile = innerWidth <= 1000;
     if (prevS > 0 && prevS !== S) { const k = S / prevS; lens.x *= k; lens.y *= k; lens.tx *= k; lens.ty *= k; }
-    dpr = Math.min(devicePixelRatio || 1, 1.75, Math.sqrt(1.6e6 / (S * S)));
-    canvas.width = Math.round(S * dpr); canvas.height = Math.round(S * dpr);
-    gl.viewport(0, 0, canvas.width, canvas.height);
     placeTags();
     if (current) setItem(current, true);
     kick();
   }
 
   let scan = { on: 0, y: 1.2, wake: 0 }, scanDone = false, wakeT = 0;
+  const n4 = (v) => v.toFixed(4);
   function draw(t) {
-    gl.uniform2f(U.uRes, canvas.width, canvas.height);
-    gl.uniform1f(U.uR, R * dpr);
-    gl.uniform2f(U.uLens, lens.x * dpr, (S - lens.y) * dpr);
-    gl.uniform1f(U.uLensR, lensR() * dpr);
-    gl.uniform1f(U.uLensOn, lens.on);
-    gl.uniform1f(U.uScan, scan.y);
-    gl.uniform1f(U.uScanOn, scan.on);
-    gl.uniform1f(U.uWake, scan.wake);
-    gl.uniform1f(U.uTime, reduce ? 0 : t / 1000);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    // load scan, in plate units with y pointing down
+    const sy = -scan.y;
+    beam.setAttribute("opacity", scan.on.toFixed(3));
+    beam.setAttribute("transform", `translate(0 ${n4(sy)})`);
+    wake.setAttribute("opacity", scan.wake.toFixed(3));
+    waker.setAttribute("height", n4(Math.max(0, sy + 1.6)));
+    // lens: the thermal twin, magnified, clipped to a circle
+    lensG.setAttribute("opacity", lens.on.toFixed(3));
+    if (lens.on < 0.002) return;
+    const cx = (lens.x - S / 2) / R, cy = (lens.y - S / 2) / R, r = lensR() / R, rt = r + 0.036;
+    for (const c of [lensC, lensRing, lensTicks]) { c.setAttribute("cx", n4(cx)); c.setAttribute("cy", n4(cy)); }
+    lensC.setAttribute("r", n4(r)); lensRing.setAttribute("r", n4(r)); lensTicks.setAttribute("r", n4(rt));
+    const tick = (2 * Math.PI * rt) / 72;
+    lensTicks.setAttribute("stroke-dasharray", `${n4(tick * 0.16)} ${n4(tick * 0.84)}`);
+    lensShadow.setAttribute("cx", n4(cx)); lensShadow.setAttribute("cy", n4(cy + 0.04)); lensShadow.setAttribute("r", n4(rt + 0.012));
+    heatMag.setAttribute("transform", `translate(${n4(cx)} ${n4(cy)}) scale(1.12) translate(${n4(-cx)} ${n4(-cy)})`);
+    const a = 0.022, b = 0.065;
+    lensCross.setAttribute("d", `M${n4(cx - b)} ${n4(cy)}H${n4(cx - a)}M${n4(cx + a)} ${n4(cy)}H${n4(cx + b)}M${n4(cx)} ${n4(cy - b)}V${n4(cy - a)}M${n4(cx)} ${n4(cy + a)}V${n4(cy + b)}`);
+    if (!reduce) scanlines.setAttribute("patternTransform", `translate(0 ${n4(((t / 1000) * 0.02) % 0.028)})`);
   }
 
   let running = false, visible = true, t0 = 0;
@@ -1109,18 +876,6 @@ footer .caveat{margin-left:auto}
   if (reduce) { scanDone = true; enableLens(); }
   else requestAnimationFrame((t) => { t0 = t; kick(); });
 
-  function startStatic() {
-    const b = stage.getBoundingClientRect();
-    S = b.width; R = S * PLATE; mobile = innerWidth <= 1000;
-    placeTags();
-    const [x, y] = toPx(ITEMS[0].a); lens.x = x; lens.y = y;
-    setItem(ITEMS[0]); callout.classList.add("on"); leader.setAttribute("opacity", "1"); ret.setAttribute("opacity", "1");
-    placeCallout();
-    stage.addEventListener("pointermove", (e) => {
-      const r = stage.getBoundingClientRect(); lens.x = e.clientX - r.left; lens.y = e.clientY - r.top;
-      setItem(nearest(lens.x, lens.y)); placeCallout();
-    });
-  }
 })();
 
 /* ===================== chat: 02's channel stage with a new script ===================== */
@@ -1144,25 +899,25 @@ const CH = [
 let skin = "telegram";
 
 /* ---------- the conversation (example values) ---------- */
-const EGGS = { label: "2 fried eggs", amt: "100 g", grams: 100, kcal: 196, protein: 13.6 };
-const TOAST = { label: "Sourdough toast", amt: "60 g", grams: 60, kcal: 150, protein: 5.4 };
-const AVO = { label: "Half an avocado", amt: "70 g", grams: 70, kcal: 112, protein: 1.4 };
+const SALMON = { label: "Salmon fillet", amt: "120 g", grams: 120, kcal: 250, protein: 24.5 };
+const RICE = { label: "White rice", amt: "150 g", grams: 150, kcal: 195, protein: 4.1 };
+const BROC = { label: "Broccoli", amt: "80 g", grams: 80, kcal: 28, protein: 1.9 };
 const BANANA = { label: "Banana", amt: "118 g", grams: 118, kcal: 105, protein: 1.3 };
 const COFFEE = { label: "Coffee with milk", amt: "250 ml", ml: 250, kcal: 65, protein: 3.4 };
 const SUGAR = { label: "Sugar, 2 spoons", amt: "8 g", grams: 8, kcal: 31, protein: 0 };
 const sum = (items, k) => items.reduce((a, i) => a + i[k], 0);
 const SCRIPT = [
-  { id: "m1", from: "u", kind: "photo", t: "08:02" },
-  { id: "m2", from: "b", kind: "meal", t: "08:02", items: [EGGS, TOAST, AVO], saved: true, dash: true, cost: "$0.0021" },
-  { id: "m3", from: "u", kind: "voice", t: "10:31", dur: "0:04" },
-  { id: "m4", from: "b", kind: "meal", t: "10:31", heard: "a banana and a coffee with milk", items: [BANANA, COFFEE], saved: true, cost: "$0.0014" },
-  { id: "m5", from: "u", kind: "text", t: "10:33", text: "forgot, 2 spoons of sugar in the coffee", replyTo: "m4", quoteText: "Banana, coffee with milk", thread: true },
-  { id: "m6", from: "b", kind: "meal", t: "10:33", head: "Updated.", items: [SUGAR], allItems: [BANANA, COFFEE, SUGAR], update: true, thread: true },
+  { id: "m1", from: "u", kind: "photo", t: "13:02" },
+  { id: "m2", from: "b", kind: "meal", t: "13:02", items: [SALMON, RICE, BROC], saved: true, dash: true, cost: "$0.0021" },
+  { id: "m3", from: "u", kind: "voice", t: "16:31", dur: "0:04" },
+  { id: "m4", from: "b", kind: "meal", t: "16:31", heard: "a banana and a coffee with milk", items: [BANANA, COFFEE], saved: true, cost: "$0.0014" },
+  { id: "m5", from: "u", kind: "text", t: "16:33", text: "forgot, 2 spoons of sugar in the coffee", replyTo: "m4", quoteText: "Banana, coffee with milk", thread: true },
+  { id: "m6", from: "b", kind: "meal", t: "16:33", head: "Updated.", items: [SUGAR], allItems: [BANANA, COFFEE, SUGAR], update: true, thread: true },
 ];
 let shown = 0, typing = false, voice = "", draft = "";
 
 /* ---------- message bodies ---------- */
-const photo = () => `<span class="photo"><svg viewBox="0 0 320 240" role="img" aria-label="Photo of breakfast: two fried eggs, sourdough toast and half an avocado"><use href="#breakfast"/></svg></span>`;
+const photo = () => `<span class="photo"><svg viewBox="0 0 320 240" role="img" aria-label="Photo of lunch: a salmon fillet, white rice and broccoli"><use href="#mealphoto"/></svg></span>`;
 const BARS = [6,10,16,9,20,14,22,12,8,18,24,15,10,19,13,7,16,21,11,8,14,9,6,12,17,10,7];
 const voiceEl = m => `<span class="voice ${voice}"><span class="play" aria-hidden="true"></span><span class="wave" aria-hidden="true">${BARS.map((h, i) => `<i style="height:${h}px;--i:${i}"></i>`).join("")}</span><span class="dur">${m.dur}</span><span class="sr">Voice note, 4 seconds</span></span>`;
 const itemLine = i => `${esc(i.label)}, ${i.amt}: ${i.kcal} kcal, ${num(i.protein)} g protein`;
@@ -1235,7 +990,7 @@ const R = {
     let line, obj;
     if (m.from === "u") {
       line = `<b>POST</b> /agent/calories`;
-      if (m.kind === "photo") obj = { attachments: [{ type: "image", mediaType: "image/jpeg", name: "breakfast.jpg" }] };
+      if (m.kind === "photo") obj = { attachments: [{ type: "image", mediaType: "image/jpeg", name: "lunch.jpg" }] };
       else if (m.kind === "voice") obj = { attachments: [{ type: "audio", mediaType: "audio/ogg", seconds: 4 }] };
       else obj = { text: m.text, replyTo: m.replyTo };
     } else {
@@ -1355,7 +1110,7 @@ function play() {
   shown = 0; typing = false; voice = ""; renderCompose(); renderLog(false);
   later(400, appendNext);                                   // photo
   later(1100, setTyping);
-  later(2500, appendNext);                                  // breakfast reply
+  later(2500, appendNext);                                  // lunch reply
   later(4300, () => { voice = "playing"; appendNext(); });  // voice note plays
   later(6100, () => { voice = "played"; setTyping(); });
   later(7500, appendNext);                                  // transcript + summary
