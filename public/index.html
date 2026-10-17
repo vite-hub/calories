@@ -83,8 +83,8 @@ code{font-family:var(--mono)}
 /* ---------- hero ---------- */
 .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center;min-height:calc(100svh - 76px);padding:0 0 28px}
 .copy{min-width:0;padding-bottom:40px;container-type:inline-size}
-/* Each line stays whole: the longer one is about 6.5em wide, so 15cqi fills the column. */
-h1{font-size:min(96px,15cqi);line-height:.92;letter-spacing:-.01em}
+/* Each line stays whole: the longer one is about 7.2em wide, so 13.5cqi fills the column. */
+h1{font-size:min(96px,13.5cqi);line-height:.92;letter-spacing:-.01em}
 h1 span{display:block;white-space:nowrap}
 .lead{margin-top:26px;font-size:21px;max-width:23em}
 .pickwrap{position:relative;display:inline-block;white-space:nowrap}
@@ -140,6 +140,7 @@ h2{font-size:clamp(44px,5.2vw,76px);line-height:.95;text-wrap:balance}
 /* ---------- chat (02's channel stage, restyled around it) ---------- */
 .chat-grid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:56px;align-items:start}
 .chat-copy{padding-top:64px;position:sticky;top:40px}
+#chat-h{font-size:clamp(38px,3.4vw,54px);line-height:1}
 .s-log:focus-visible{outline-offset:-4px;border-radius:0}
 .tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:0 0 14px;padding:4px 4px 10px}
 .tabs::-webkit-scrollbar{display:none}
@@ -474,7 +475,7 @@ footer .caveat{margin-left:auto}
   .top{padding-top:16px}
   .mark{font-size:23px}
   .plate-wrap{margin:0 -18px}
-  h1{font-size:min(76px,15cqi)}
+  h1{font-size:min(76px,13.5cqi)}
   .lead{font-size:18.5px;margin-top:18px}
   .actions{margin-top:26px}
   section{padding:80px 0}
@@ -552,7 +553,7 @@ footer .caveat{margin-left:auto}
   <main>
   <div class="hero">
     <div class="copy">
-      <h1><span>Send a meal.</span><span>Get the count.</span></h1>
+      <h1><span>Send a meal.</span><span>Get the macros.</span></h1>
       <p class="lead">An MIT template for a private <span class="pickwrap"><button class="chpick" id="chpick" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Channel: Telegram">Telegram</button><span class="chmenu" id="chmenu" role="listbox" aria-label="Channel" hidden></span></span> bot that logs calories and protein.</p>
       <div class="actions">
         <a class="btn y" href="https://github.com/vite-hub/calories">Clone the template</a>
@@ -608,8 +609,8 @@ footer .caveat{margin-left:auto}
 <section id="chat" aria-labelledby="chat-h">
   <div class="wrap chat-grid">
     <div class="chat-copy">
-      <h2 id="chat-h">Snap it, say it</h2>
-      <p class="sec-line" id="tabs-label">Ships with Telegram. Switch the channel.</p>
+      <h2 id="chat-h">Send a photo, a voice note, or just type what you ate</h2>
+      <p class="sec-line" id="tabs-label">Works in any chat app.</p>
       <div class="codecard" aria-label="Excerpt of server/agents/calories/agent.ts">
         <div class="fname">server/agents/calories/agent.ts</div>
         <pre><code id="code"></code></pre>
