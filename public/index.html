@@ -434,9 +434,10 @@ h2{font-size:clamp(44px,5.2vw,76px);line-height:.95;text-wrap:balance}
 
 /* ---------- hosts ---------- */
 .panel{background:var(--yolk);color:var(--ink);border-radius:34px;padding:64px 60px 56px;box-shadow:0 14px 0 var(--ink);
-  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px 56px;align-items:end}
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px 56px;align-items:start}
+.panel h2{grid-column:1/-1}
 .panel :focus-visible{outline-color:var(--ink)}
-.hosts{display:flex;flex-wrap:wrap;gap:10px;margin-top:34px}
+.hosts{display:flex;flex-wrap:wrap;gap:10px}
 .hosts button{font:700 16px/1 var(--text);padding:11px 15px 11px 13px;border-radius:11px;border:3px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;
   display:inline-flex;align-items:center;gap:9px;transition:transform .08s}
 .hosts button svg{width:20px;height:20px;flex:none;fill:currentColor}
@@ -497,7 +498,7 @@ footer .caveat{margin-left:auto}
   .stage{height:560px;border-radius:20px}
   .tab{padding:10px 12px;font-size:15px}
   .panel{padding:38px 20px 30px;border-radius:26px}
-  .hosts{gap:8px;margin-top:24px}
+  .hosts{gap:8px}
   .hosts button{padding:10px 12px;font-size:15px}
   .cfg{font-size:14.5px;padding:16px}
   .where{font-size:17px}
@@ -653,8 +654,8 @@ footer .caveat{margin-left:auto}
 <section id="hosts" aria-labelledby="hosts-h" style="padding-top:20px">
   <div class="wrap">
     <div class="panel">
+      <h2 id="hosts-h">Deploy anywhere</h2>
       <div>
-        <h2 id="hosts-h">Deploy anywhere</h2>
         <div class="hosts" role="group" aria-label="Host">
           <button type="button" aria-pressed="true" data-p="cloudflare"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5088 16.8447c.1475-.5068.0908-.9707-.1553-1.3154-.2246-.3164-.6045-.499-1.0615-.5205l-8.6592-.1123a.1559.1559 0 0 1-.1333-.0713c-.0283-.042-.0351-.0986-.021-.1553.0278-.084.1123-.1484.2036-.1562l8.7359-.1123c1.0351-.0489 2.1601-.8868 2.5537-1.9136l.499-1.3013c.0215-.0561.0293-.1128.0147-.168-.5625-2.5463-2.835-4.4453-5.5499-4.4453-2.5039 0-4.6284 1.6177-5.3876 3.8614-.4927-.3658-1.1187-.5625-1.794-.499-1.2026.119-2.1665 1.083-2.2861 2.2856-.0283.31-.0069.6128.0635.894C1.5683 13.171 0 14.7754 0 16.752c0 .1748.0142.3515.0352.5273.0141.083.0844.1475.1689.1475h15.9814c.0909 0 .1758-.0645.2032-.1553l.12-.4268zm2.7568-5.5634c-.0771 0-.1611 0-.2383.0112-.0566 0-.1054.0415-.127.0976l-.3378 1.1744c-.1475.5068-.0918.9707.1543 1.3164.2256.3164.6055.498 1.0625.5195l1.8437.1133c.0557 0 .1055.0263.1329.0703.0283.043.0351.1074.0214.1562-.0283.084-.1132.1485-.204.1553l-1.921.1123c-1.041.0488-2.1582.8867-2.5527 1.914l-.1406.3585c-.0283.0713.0215.1416.0986.1416h6.5977c.0771 0 .1474-.0489.169-.126.1122-.4082.1757-.837.1757-1.2803 0-2.6025-2.125-4.727-4.7344-4.727"/></svg>Cloudflare</button>
           <button type="button" aria-pressed="false" data-p="vercel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M24 22.525H0l12-21.05 12 21.05z"/></svg>Vercel</button>
