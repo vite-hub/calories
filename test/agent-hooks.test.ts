@@ -36,13 +36,13 @@ test("the Agent has an explicit invocation journal outside the Console runtime",
 
 test("the finish hook formats the reply, configured dashboard, and invocation cost", async () => {
   assert.equal(await replyFor({ invocation: { usage: { cost: { display: "$0.002" } } } }),
-    "Meal recorded.\n\nDashboard: https://calories.example\n\n$0.002");
+    "Meal recorded.\n\nDashboard: https://calories.example/dashboard\n\n$0.002");
 });
 
 test("the finish hook does not depend on a particular SQL result shape", async () => {
   for (const output of [[{ id: "one" }, { id: "two" }], [], null]) {
     assert.equal(await replyFor({ toolResults: [{ toolName: "db_query", output }] }),
-      "Meal recorded.\n\nDashboard: https://calories.example\n\nCost unavailable");
+      "Meal recorded.\n\nDashboard: https://calories.example/dashboard\n\nCost unavailable");
   }
 });
 
@@ -53,12 +53,12 @@ test("the finish hook removes message headers and reply lines the model copied",
     "[Tue 2026-10-13 18:27:01 +02:00 · msg 109321] Saved the red lemonade.",
   ].join("\n");
   assert.equal(await replyFor({ text }),
-    "Saved the red lemonade.\n\nDashboard: https://calories.example\n\nCost unavailable");
+    "Saved the red lemonade.\n\nDashboard: https://calories.example/dashboard\n\nCost unavailable");
 });
 
 test("an empty model reply does not claim that a meal was saved", async () => {
   assert.equal(await replyFor({ text: " " }),
-    "No reply was returned. Check the dashboard for the result.\n\nDashboard: https://calories.example\n\nCost unavailable");
+    "No reply was returned. Check the dashboard for the result.\n\nDashboard: https://calories.example/dashboard\n\nCost unavailable");
 });
 
 test("the error hook explains possible persistence and provides a diagnostic reference", async () => {
@@ -69,6 +69,6 @@ test("the error hook explains possible persistence and provides a diagnostic ref
     reply: (text: string) => text,
   } as unknown as Parameters<typeof error>[0]);
   assert.match(output, /may have saved the meal before the failure/);
-  assert.match(output, /Dashboard: https:\/\/calories.example/);
+  assert.match(output, /Dashboard: https:\/\/calories.example\/dashboard/);
   assert.match(output, /Reference: test-trace/);
 });

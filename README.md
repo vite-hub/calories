@@ -53,13 +53,15 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Open <http://localhost:3000>. Start customizing in `server/agents/calories/agent.ts`, its `instructions.md`, and `nuxt.config.ts`.
+Open <http://localhost:3000> for the landing page and <http://localhost:3000/dashboard> for the dashboard. Start customizing in `server/agents/calories/agent.ts`, its `instructions.md`, and `nuxt.config.ts`.
 
 | Change | File |
 | --- | --- |
 | Channel, models, Capabilities, and reply hooks | `server/agents/calories/agent.ts` |
 | Meal estimation and database verification | `server/agents/calories/instructions.md` |
 | Database schema | `server/databases/config.ts` |
+| Landing page | `public/index.html` |
+| Dashboard page | `app/pages/dashboard.vue` |
 | Read-only dashboard data | `server/collections/meals.ts` |
 | Public photo preview | `server/api/meals/[id]/photo.get.ts` |
 | Host, storage, and Nuxt modules | `nuxt.config.ts` |

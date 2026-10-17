@@ -19,6 +19,10 @@ function withoutMessageMetadata(text: string) {
     .trim();
 }
 
+function dashboardUrl() {
+  return new URL("/dashboard", useServerEnv().app.url).href;
+}
+
 export default defineAgent({
   // Run history for the Console and CLI. A failed history write does not stop a meal.
   invocations: "database",
@@ -81,7 +85,7 @@ export default defineAgent({
 
       return event.reply([
         "Sorry, I couldn't finish that reply. I may have saved the meal before the failure, so check the dashboard before retrying.",
-        "Dashboard: " + useServerEnv().app.url,
+        "Dashboard: " + dashboardUrl(),
         ...(reference ? [`Reference: ${reference}`] : []),
       ].join("\n"));
     },
@@ -89,7 +93,7 @@ export default defineAgent({
       const cost = event.invocation.usage?.cost?.display ?? "Cost unavailable";
       return event.reply([
         withoutMessageMetadata(event.text ?? "") || "No reply was returned. Check the dashboard for the result.",
-        "Dashboard: " + useServerEnv().app.url,
+        "Dashboard: " + dashboardUrl(),
         cost,
       ].join("\n\n"));
     },
