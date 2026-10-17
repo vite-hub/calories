@@ -19,8 +19,8 @@ watchPostEffect(() => {
 <template>
   <UCard
     as="article"
-    class="scroll-mt-20"
-    :class="{ 'ring-2 ring-inverted': selected }"
+    class="sticker scroll-mt-24 rounded-[1.25rem] ring-0"
+    :class="{ 'outline-4 outline-offset-4 outline-primary': selected }"
     :aria-current="selected ? 'true' : undefined"
     :ui="{ header: 'px-4 py-3 sm:px-5', body: 'px-4 py-1 sm:px-5 sm:py-1', footer: 'px-4 py-2.5 sm:px-5' }"
   >
@@ -28,14 +28,14 @@ watchPostEffect(() => {
       <div ref="header" class="flex items-start justify-between gap-4">
         <div class="min-w-0">
           <NuxtTime class="text-xs text-muted tabular-nums" :datetime="meal.createdAt" hour="numeric" minute="2-digit" />
-          <h3 class="mt-0.5 text-sm font-semibold text-highlighted wrap-anywhere">{{ getMealTitle(meal) }}</h3>
+          <h3 class="mt-0.5 text-base font-semibold text-highlighted wrap-anywhere">{{ getMealTitle(meal) }}</h3>
         </div>
 
         <dl class="shrink-0 text-right tabular-nums">
           <dt class="sr-only">Calories</dt>
-          <dd class="text-sm font-semibold text-highlighted">
+          <dd class="font-display text-xl text-highlighted">
             {{ meal.totalCalories?.toLocaleString() ?? "–" }}
-            <span class="text-xs font-normal text-muted">kcal</span>
+            <span class="font-sans text-xs font-medium text-muted">kcal</span>
           </dd>
           <dt class="sr-only">Protein</dt>
           <dd class="text-xs text-muted">{{ meal.totalProtein ?? "–" }} g protein</dd>

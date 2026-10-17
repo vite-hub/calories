@@ -45,19 +45,19 @@ const days = computed(() => groupMealsByDay(meals.value, journalNow.value.getTim
     <AppHeader :goals @save="saveGoals" />
 
     <main class="mx-auto max-w-3xl px-4 pb-16 sm:px-6">
-      <div class="pt-8 pb-6 sm:pt-10">
-        <h1 class="text-2xl font-semibold tracking-tight text-highlighted">Meal journal</h1>
-        <p class="mt-1 text-sm text-muted">Calories and protein from your saved meals.</p>
+      <div class="pt-10 pb-8 sm:pt-14">
+        <h1 class="font-display text-5xl leading-none text-highlighted sm:text-6xl">Meal journal</h1>
+        <p class="mt-3 text-base text-muted">Calories and protein from your saved meals.</p>
 
         <nav
           v-if="days.length"
-          class="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0"
+          class="-mx-4 mt-6 flex gap-2.5 overflow-x-auto px-4 pb-1.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0"
           aria-label="Jump to a day"
         >
           <UButton
             v-for="day in days.slice(0, 7)"
             :key="day.key"
-            class="shrink-0"
+            class="shrink-0 rounded-lg font-semibold ring-2 ring-(--line) aria-[current=location]:bg-primary aria-[current=location]:text-inverted aria-[current=location]:ring-primary"
             color="neutral"
             exact-hash
             :aria-current="route.hash === `#day-${day.key}` ? 'location' : undefined"
@@ -86,33 +86,32 @@ const days = computed(() => groupMealsByDay(meals.value, journalNow.value.getTim
         v-for="day in days"
         :id="`day-${day.key}`"
         :key="day.key"
-        class="scroll-mt-20 border-t border-default py-6"
+        class="scroll-mt-24 border-t-2 border-default py-8"
         :aria-labelledby="`day-${day.key}-title`"
       >
         <header class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h2 :id="`day-${day.key}-title`" class="text-base font-semibold text-highlighted">
+          <h2 :id="`day-${day.key}-title`" class="font-display text-2xl text-highlighted">
             <template v-if="isRelativeDay(day.label)">
               {{ day.label }}
-              <NuxtTime class="ms-1 font-normal text-muted" :datetime="day.date" day="numeric" month="long" weekday="long" :year="day.year" />
+              <NuxtTime class="ms-1.5 font-sans text-base font-medium text-muted" :datetime="day.date" day="numeric" month="long" weekday="long" :year="day.year" />
             </template>
             <NuxtTime v-else :datetime="day.date" day="numeric" month="long" weekday="long" :year="day.year" />
           </h2>
-          <p class="text-xs text-muted tabular-nums">{{ day.meals.length }} {{ day.meals.length === 1 ? "meal" : "meals" }}</p>
+          <p class="text-sm font-medium text-muted tabular-nums">{{ day.meals.length }} {{ day.meals.length === 1 ? "meal" : "meals" }}</p>
         </header>
 
         <UCard
-          class="mt-3"
-          variant="subtle"
-          :ui="{ body: 'grid grid-cols-2 divide-x divide-default p-0 sm:p-0' }"
+          class="sticker mt-4 rounded-[1.25rem] ring-0"
+          :ui="{ body: 'grid grid-cols-2 divide-x-2 divide-default p-0 sm:p-0' }"
         >
-          <div v-for="metric in dayMetrics(day)" :key="metric.label" class="min-w-0 p-4">
-            <p class="flex items-center gap-1.5 text-xs font-medium text-muted">
+          <div v-for="metric in dayMetrics(day)" :key="metric.label" class="min-w-0 p-4 sm:p-5">
+            <p class="flex items-center gap-1.5 text-sm font-semibold text-muted">
               <span class="size-2 rounded-full" :class="metric.dot" aria-hidden="true" />
               {{ metric.label }}
             </p>
             <p class="mt-1.5 tabular-nums">
-              <span class="text-xl font-semibold tracking-tight text-highlighted">{{ metric.value.toLocaleString() }}</span>
-              <span class="ms-1 text-xs text-muted">of {{ metric.goal.toLocaleString() }} {{ metric.unit }}</span>
+              <span class="font-display text-3xl text-highlighted">{{ metric.value.toLocaleString() }}</span>
+              <span class="ms-1.5 text-sm text-muted">of {{ metric.goal.toLocaleString() }} {{ metric.unit }}</span>
             </p>
             <!-- The text around the bar states the same values for assistive technology. -->
             <UProgress
@@ -121,10 +120,10 @@ const days = computed(() => groupMealsByDay(meals.value, journalNow.value.getTim
               :color="metric.value > metric.goal ? 'warning' : metric.color"
               :max="metric.goal"
               :model-value="Math.min(metric.value, metric.goal)"
-              size="sm"
+              size="md"
             />
             <p
-              class="mt-2 text-xs tabular-nums"
+              class="mt-2 text-sm tabular-nums"
               :class="metric.value > metric.goal ? 'font-medium text-highlighted' : 'text-muted'"
             >
               {{ goalDelta(metric.value, metric.goal, metric.unit) }}
@@ -132,7 +131,7 @@ const days = computed(() => groupMealsByDay(meals.value, journalNow.value.getTim
           </div>
         </UCard>
 
-        <div class="mt-3 grid gap-3">
+        <div class="mt-6 grid gap-6">
           <MealAnalysis
             v-for="meal in day.meals"
             :id="`meal-${meal.id}`"

@@ -12,14 +12,12 @@ function save(value: DailyGoals) {
 </script>
 
 <template>
-  <header class="sticky top-0 z-10 h-(--ui-header-height) border-b border-default bg-default">
+  <header class="sticky top-0 z-10 h-(--ui-header-height) bg-(--cobalt) text-(--paper) shadow-[0_4px_0_var(--ink)]">
     <div class="mx-auto flex h-full max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
-      <div class="flex items-center gap-2">
-        <span class="grid size-7 place-items-center rounded-md bg-inverted text-inverted" aria-hidden="true">
-          <UIcon name="i-lucide-flame" class="size-4" />
-        </span>
-        <span class="text-sm font-semibold text-highlighted">Calories</span>
-      </div>
+      <NuxtLink to="/" class="flex items-center gap-2.5 rounded-md font-display text-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--yolk)">
+        <span class="size-4 rounded-full bg-(--yolk) shadow-[0_3px_0_var(--ink)]" aria-hidden="true" />
+        Calories
+      </NuxtLink>
 
       <div class="flex items-center gap-1.5">
         <!-- Unmount the draft immediately, including during the popover's close transition. -->
@@ -28,12 +26,12 @@ function save(value: DailyGoals) {
             color="neutral"
             icon="i-lucide-target"
             size="sm"
-            variant="outline"
-            class="tabular-nums"
+            variant="solid"
+            class="rounded-lg bg-(--paper) font-semibold text-(--ink) tabular-nums shadow-[0_3px_0_var(--ink)] hover:bg-white active:translate-y-0.5 active:shadow-[0_1px_0_var(--ink)]"
           >
             <span class="sr-only">Daily goals:</span>
             {{ goals.calories.toLocaleString() }} kcal
-            <span class="text-dimmed" aria-hidden="true">/</span>
+            <span class="opacity-50" aria-hidden="true">/</span>
             {{ goals.protein }} g<span class="sr-only"> protein</span>
           </UButton>
 
@@ -47,7 +45,7 @@ function save(value: DailyGoals) {
         </UPopover>
 
         <ClientOnly>
-          <UColorModeButton color="neutral" size="sm" variant="ghost" />
+          <UColorModeButton color="neutral" size="sm" variant="ghost" class="text-(--paper) hover:bg-white/15 hover:text-(--paper)" />
           <template #fallback><span class="size-8" aria-hidden="true" /></template>
         </ClientOnly>
       </div>

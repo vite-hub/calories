@@ -21,7 +21,7 @@ watch(() => props.src, () => {
     v-if="failed"
     role="img"
     :aria-label="`Photo of ${title} is unavailable`"
-    class="flex aspect-[2/1] w-full items-center justify-center gap-2 rounded-md bg-elevated text-xs text-muted sm:aspect-[3/1]"
+    class="flex aspect-[2/1] w-full items-center justify-center gap-2 rounded-xl bg-elevated text-xs text-muted sm:aspect-[3/1]"
   >
     <UIcon name="i-lucide-image-off" class="size-4" />
     Photo unavailable
@@ -31,7 +31,7 @@ watch(() => props.src, () => {
     <UButton
       color="neutral"
       variant="ghost"
-      class="block w-full overflow-hidden p-0"
+      class="block w-full overflow-hidden rounded-xl p-0"
       :aria-label="`Open photo of ${title}`"
     >
       <img

@@ -2,15 +2,77 @@
 @import "@nuxt/ui";
 @source "../../node_modules/vite-hub/dist/console/runtime";
 
-:root {
-  --ui-header-height: 3.5rem;
+/* The landing page palette and type: cobalt, ink, paper, Bagel Fat One and Figtree. */
+@theme static {
+  --font-sans: "Figtree", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bagel Fat One", "Arial Rounded MT Bold", ui-sans-serif, system-ui, sans-serif;
+
+  --color-cobalt-50: #eef1fe;
+  --color-cobalt-100: #dce3ff;
+  --color-cobalt-200: #c0cbfe;
+  --color-cobalt-300: #97a8fb;
+  --color-cobalt-400: #6b80f5;
+  --color-cobalt-500: #4560ec;
+  --color-cobalt-600: #2340d8;
+  --color-cobalt-700: #1c35c0;
+  --color-cobalt-800: #1630b0;
+  --color-cobalt-900: #12258a;
+  --color-cobalt-950: #0b1b6b;
 }
 
-/* Use a deeper zinc base in dark mode so cards and borders read as layers. */
+:root {
+  --ui-header-height: 4rem;
+  --cobalt: #2340d8;
+  --ink: #0b1b6b;
+  --paper: #fbf6ec;
+  --yolk: #ffc83d;
+  /* Outline and hard drop shadow for card-like surfaces. */
+  --line: var(--ink);
+  --drop: var(--ink);
+
+  --ui-primary: var(--ui-color-primary-600);
+  --ui-bg: var(--paper);
+  --ui-bg-muted: #f5eedf;
+  --ui-bg-elevated: #efe6d2;
+  --ui-bg-accented: #e6dbc3;
+  --ui-bg-inverted: var(--ink);
+  --ui-border: #e4d9c2;
+  --ui-border-muted: #ece3cf;
+  --ui-border-accented: #cdbf9f;
+  --ui-border-inverted: var(--ink);
+  --ui-text-dimmed: #7a82ae;
+  --ui-text-muted: #4a5590;
+  --ui-text-toned: #2f3a7a;
+  --ui-text: #1b2770;
+  --ui-text-highlighted: var(--ink);
+  --ui-text-inverted: var(--paper);
+}
+
 .dark {
-  --ui-bg: var(--ui-color-neutral-950);
-  --ui-bg-muted: var(--ui-color-neutral-900);
-  --ui-bg-elevated: var(--ui-color-neutral-900);
+  --line: #33438f;
+  --drop: #03071d;
+
+  --ui-primary: var(--ui-color-primary-400);
+  --ui-bg: #0a1236;
+  --ui-bg-muted: #0f1945;
+  --ui-bg-elevated: #142055;
+  --ui-bg-accented: #1b2a6a;
+  --ui-bg-inverted: var(--paper);
+  --ui-border: #1f2c68;
+  --ui-border-muted: #18235a;
+  --ui-border-accented: #33438f;
+  --ui-border-inverted: var(--paper);
+  --ui-text-dimmed: #7d88bf;
+  --ui-text-muted: #a9b3e0;
+  --ui-text-toned: #ccd3f3;
+  --ui-text: #e6e9f8;
+  --ui-text-highlighted: var(--paper);
+  --ui-text-inverted: var(--ink);
+}
+
+/* Pair with ring-0 and a rounded class: the outline and drop are box shadows. */
+@utility sticker {
+  @apply shadow-[0_0_0_2px_var(--line),0_6px_0_2px_var(--drop)];
 }
 
 @media (prefers-reduced-motion: no-preference) {

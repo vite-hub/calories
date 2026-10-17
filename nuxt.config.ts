@@ -9,6 +9,11 @@ export default defineNuxtConfig({
     head: {
       htmlAttrs: { lang: "en" },
       meta: [{ name: "color-scheme", content: "light dark" }],
+      link: [
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+        { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@400;500;600;700&display=swap" },
+      ],
       title: "Calories",
     },
   },
