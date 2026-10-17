@@ -125,8 +125,7 @@ h1 span{display:block;white-space:nowrap}
 .ptag{position:absolute;left:0;top:0;transform:translate(-50%,-50%);padding:7px 10px;font:700 14px/1.1 var(--text);background:var(--yolk);color:var(--ink);
   border-radius:9px;box-shadow:0 3px 0 var(--ink);white-space:nowrap;opacity:0;translate:0 8px;transition:opacity .3s,translate .45s cubic-bezier(.3,1.6,.5,1);pointer-events:none}
 .ptag.on{opacity:1;translate:0 0}
-.under{width:min(var(--S),100%);display:flex;gap:20px;justify-content:space-between;align-items:center;margin-top:2px;padding:0 6%}
-.hint{font-size:16px;font-weight:600;color:var(--soft)}
+.under{width:min(var(--S),100%);display:flex;gap:20px;justify-content:center;align-items:center;margin-top:2px;padding:0 6%}
 .legend{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--soft)}
 .legend .bar{position:relative;width:150px;height:10px;border-radius:5px;box-shadow:0 2px 0 var(--ink);
   background:linear-gradient(90deg,#0B1B6B,#3352F5 20%,#8FB8FF 40%,#B6E06A 60%,#FFC83D 80%,#FF5B45)}
@@ -599,7 +598,6 @@ footer .caveat{margin-left:auto}
       </div>
       <div class="dock" id="dock" aria-hidden="true"></div>
       <div class="under">
-        <p class="hint" id="hint">Move over the plate</p>
         <div class="legend" aria-hidden="true"><span>low</span><span class="bar"><span class="pin" id="pin"></span></span><span>kcal per gram</span></div>
       </div>
     </div>
@@ -720,7 +718,6 @@ footer .caveat{margin-left:auto}
   const stage = $("#pstage");
   const callout = $("#callout"), leader = $("#leader"), ret = $("#ret"), pin = $("#pin"), dock = $("#dock");
   const tags = [...document.querySelectorAll(".ptag")];
-  if (coarse) $("#hint").textContent = "Drag across the plate";
 
   let S = 0, R = 0, mobile = false;
   const PLATE = 0.40;
