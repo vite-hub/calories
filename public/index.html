@@ -73,7 +73,7 @@ code{font-family:var(--mono)}
 
 /* top bar */
 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 0 0}
-.mark{font-family:var(--display);font-size:26px;display:flex;align-items:center;gap:10px}
+.mark{font-family:var(--display);font-size:26px;line-height:1;display:flex;align-items:center;gap:10px;white-space:nowrap}
 .mark i{width:18px;height:18px;border-radius:50%;background:var(--yolk);box-shadow:0 3px 0 var(--ink)}
 .top a.gh{font-weight:700;font-size:16px;background:var(--paper);color:var(--ink);text-decoration:none;padding:10px 14px;border-radius:10px;box-shadow:0 4px 0 var(--ink)}
 .top .nav{display:flex;align-items:center;gap:20px}
@@ -488,7 +488,8 @@ footer .caveat{margin-left:auto}
   body{font-size:17px}
   .wrap{padding:0 18px}
   .top{padding-top:16px}
-  .mark{font-size:23px}
+  .mark{font-size:21px;white-space:normal;max-width:9em}
+  .mark i{flex:none}
   .plate-wrap{margin:0 -18px}
   h1{font-size:min(76px,13.5cqi)}
   .lead{font-size:18.5px;margin-top:18px}
@@ -561,7 +562,7 @@ footer .caveat{margin-left:auto}
 <div class="band">
 <div class="wrap">
   <header class="top">
-    <span class="mark"><i></i>Calories</span>
+    <span class="mark"><i></i>ViteHub Calories</span>
     <nav class="nav"><a class="dash" href="/dashboard">Dashboard</a><a class="gh" href="https://github.com/vite-hub/calories">GitHub</a></nav>
   </header>
 
