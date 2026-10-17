@@ -1,0 +1,1080 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calories, one conversation in any channel | ViteHub Agent template</title>
+<meta name="description" content="Calories is an open-source ViteHub Agent template. Send a meal as a photo, voice note, or text and get calories and protein back. Move the same conversation from Telegram to Discord, Slack, Teams, GitHub, web chat, or HTTP by changing the channel in agent.ts.">
+<!--
+DESIGN PLAN, 02-any-channel
+
+Color (the page stays quiet so the channel skins carry the color)
+  Lichen   #E6EAE6  page ground, a cool green-grey paper
+  Sheet    #F5F7F5  code panel and raised surfaces
+  Ink      #17232A  text, primary button
+  Pewter   #4E5C63  secondary text (5.5:1 on Lichen)
+  Moss     #2D6652  changed-line marks, saved state, calorie ring
+  Yolk     #C98A1B  protein ring, taken from the drawn breakfast (used as fill, never as text)
+
+Type
+  Recursive (Google Fonts), one family used across its axes.
+  Headlines: Sans, CASL 0.55, wght 640, tight. Body: Sans Linear 400.
+  Code and the HTTP skin: MONO 1. The web chat skin goes full Casual. Changing
+  channel also changes how the type speaks, from one variable font.
+
+Layout
+  Hero, left aligned two columns at desktop:
+   [ nav ...................................................... ]
+   [ headline          ] [ channel tabs ......................... ]
+   [ subhead           ] [                                         ]
+   [ clone / copy      ] [   live conversation stage, 620px tall   ]
+   [ agent.ts panel    ] [   (skin changes, messages morph)        ]
+  Mobile: headline, CTAs, tabs (scroll inside the row), stage, code.
+  Sections below are plain editorial columns: a measured text column with one
+  drawing or code block beside it. No card grid.
+
+The one memorable thing
+  The same five messages morph between seven channel grammars through the View
+  Transitions API while the import and channel lines in agent.ts change beside them.
+
+Review against generic defaults
+  - First draft was cream + serif headline. Revised to cool lichen + Recursive so it
+    doesn't read as the cream/serif/terracotta default.
+  - Dropped eyebrow labels above sections; headings stand alone.
+  - "What happens to a meal" is a real sequence, so it keeps step numbers. Nothing else does.
+  - One animated moment (the conversation + tour). Sections below do not fade in.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Recursive:slnt,wght,CASL,CRSV,MONO@-15..0,300..1000,0..1,0..1,0..1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --lichen:#E6EAE6; --sheet:#F5F7F5; --ink:#17232A; --pewter:#4E5C63; --moss:#2D6652; --yolk:#C98A1B;
+  --rule:#C3CCC8; --mosstint:#D7E6DC;
+  --f:"Recursive", ui-sans-serif, sans-serif;
+  --mono: "MONO" 1, "CASL" 0;
+}
+*{box-sizing:border-box}
+html{background:var(--lichen);color:var(--ink);font-family:var(--f);font-variation-settings:"CASL" 0,"MONO" 0;-webkit-text-size-adjust:100%}
+body{margin:0;font-size:18px;line-height:1.55;overflow-x:hidden}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--moss);outline-offset:3px;border-radius:4px}
+code,pre,.mono{font-family:var(--f);font-variation-settings:var(--mono)}
+.wrap{max-width:1320px;margin:0 auto;padding:0 40px}
+@media (max-width:640px){.wrap{padding:0 16px}}
+
+/* nav */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0 10px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:700;font-size:18px;font-variation-settings:"CASL" .55}
+.brand small{font-weight:400;color:var(--pewter);font-size:15px;font-variation-settings:"CASL" 0}
+.nav nav{display:flex;gap:22px;font-size:15px}
+.nav nav a{text-decoration:none;color:var(--pewter)}
+.nav nav a:hover{color:var(--ink);text-decoration:underline;text-underline-offset:4px}
+@media (max-width:640px){.brand small{display:none}.nav nav{gap:14px}}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;padding:34px 0 72px;align-items:start}
+.hero h1 .l{display:block;text-wrap:balance}
+.hero h1{font-size:clamp(40px,4.6vw,66px);line-height:1.02;letter-spacing:-.025em;font-weight:640;font-variation-settings:"CASL" .55;margin:0 0 22px;text-wrap:balance;max-width:12ch}
+.lede{font-size:19px;color:var(--pewter);max-width:40ch;margin:0 0 24px}
+.lede strong{color:var(--ink);font-weight:560}
+.ctas{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:30px}
+.btn{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 20px;border-radius:10px;font:inherit;font-size:16px;font-weight:600;text-decoration:none;cursor:pointer;border:1.5px solid var(--ink)}
+.btn.primary{background:var(--ink);color:#F5F7F5}
+.btn.primary:hover{background:#25353E}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.ghost:hover{background:var(--sheet)}
+.btn .cmd{font-variation-settings:var(--mono);font-weight:450;font-size:14px;color:var(--pewter)}
+.copied{font-size:14px;color:var(--moss);min-width:6ch}
+
+/* code panel */
+.codecard{background:var(--sheet);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.codecard .fname{display:flex;flex-wrap:wrap;white-space:nowrap;justify-content:space-between;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font-size:13px;color:var(--pewter);font-variation-settings:var(--mono)}
+.codecard pre{margin:0;padding:14px 0;font-size:13.5px;line-height:1.65;overflow-x:auto}
+.codecard .ln{display:block;padding:0 16px;white-space:pre}
+.ln.dim{color:#6A777D}
+.ln.hot{background:var(--mosstint);box-shadow:inset 3px 0 0 var(--moss)}
+.ln.flash{animation:flash .9s ease-out}
+@keyframes flash{from{background:#B9D7C3}to{background:var(--mosstint)}}
+.tk-k{color:#7A3E6C}.tk-s{color:#2D6652}.tk-f{color:#1F4E79}
+.codenote{font-size:15px;color:var(--pewter);margin:12px 2px 0;max-width:46ch}
+
+/* channel tabs */
+.tabs-label{font-size:15px;color:var(--pewter);margin:0 0 10px}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:0 0 14px;padding:2px;position:relative}
+.tabs::-webkit-scrollbar{display:none}
+.tab{position:relative;flex:none;font:inherit;font-size:15px;font-weight:520;color:var(--pewter);background:none;border:0;padding:9px 13px;border-radius:8px;cursor:pointer}
+.tab:hover{color:var(--ink);background:rgba(23,35,42,.05)}
+.tab[aria-selected="true"]{color:var(--ink)}
+.tabmark{position:absolute;left:10px;right:10px;bottom:2px;height:2.5px;border-radius:2px;background:var(--ink);view-transition-name:tabmark}
+.stagebar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;font-size:14px;color:var(--pewter)}
+.linkbtn{white-space:nowrap;font:inherit;font-size:14px;color:var(--ink);background:none;border:0;padding:4px 0;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+
+/* ===== stage ===== */
+.stage{position:relative;height:clamp(540px,calc(100vh - 262px),700px);border-radius:14px;overflow:hidden;display:flex;container-type:inline-size;view-transition-name:stage;isolation:isolate}
+.side{display:none}
+.frame{flex:1;display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-width:0;min-height:0;height:100%}
+.s-head{view-transition-name:shead;min-width:0}
+.s-log{overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-width:thin;overscroll-behavior:contain}
+.compose{view-transition-name:compose;display:flex;align-items:center;gap:8px;min-width:0}
+.compose input{flex:1;min-width:0;font:inherit;font-size:15px;border:0;background:transparent;color:inherit;outline:none}
+.compose .send{font:inherit;cursor:pointer;flex:none}
+.compose .cpre{flex:none}
+.demo-note{margin:0;font-size:12px;line-height:1.3;padding:0 14px 10px}
+.msg{min-width:0}
+.msg.enter{animation:enter .38s cubic-bezier(.2,.8,.2,1)}
+@keyframes enter{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+.photo{display:block;overflow:hidden;line-height:0}
+.photo svg{width:100%;height:auto;display:block}
+.voice{display:flex;align-items:center;gap:10px}
+.voice .play{width:30px;height:30px;border-radius:50%;flex:none;position:relative}
+.voice .play::after{content:"";position:absolute;left:11px;top:9px;border-left:10px solid currentColor;border-top:6px solid transparent;border-bottom:6px solid transparent}
+.wave{display:flex;align-items:center;gap:2px;height:24px}
+.wave i{display:block;width:3px;border-radius:2px;background:currentColor;opacity:.7}
+.items{margin:6px 0;padding:0;list-style:none}
+.items li{margin:2px 0}
+.m-head{margin:0;font-weight:650}
+.m-tot{margin:6px 0 0;font-weight:600}
+.m-links{margin:6px 0 0}
+.m-links a{text-decoration:underline;text-underline-offset:2px}
+.m-cost{margin:2px 0 0;font-variation-settings:var(--mono);font-size:.86em;opacity:.75}
+.m-demo{margin:6px 0 0;font-size:.84em;opacity:.8;font-style:italic}
+.quote{display:block;font-size:.88em;margin-bottom:5px;padding:2px 0 2px 8px;border-left:2px solid currentColor;opacity:.85}
+.transcript{margin:6px 0 0;font-size:.88em;opacity:.8}
+.typing span{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin:0 1.5px;animation:dot 1s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,100%{opacity:.25}50%{opacity:1}}
+.av{width:36px;height:36px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:700;font-size:14px;color:#fff}
+.av.u{background:#B86A3C}
+.av.b{background:#2D6652}
+.av svg{width:60%;height:60%}
+.nm{font-weight:650}
+.tm{font-size:12px;opacity:.65}
+.tag{font-size:11px;font-weight:650;padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:1px}
+
+/* --- Telegram-like: bubbles on wallpaper --- */
+.sk-telegram{background:#fff;color:#111}
+.sk-telegram .s-head{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#fff;border-bottom:1px solid #e3e6e8}
+.sk-telegram .s-head .sub{font-size:13px;color:#6f8291}
+.sk-telegram .s-log{background:linear-gradient(160deg,#c6d6a6 0%,#9fc4a5 55%,#86b7ae 100%);background-attachment:local;padding:14px 12px;position:relative}
+.sk-telegram .msg{display:flex;margin:5px 0}
+.sk-telegram .msg.u{justify-content:flex-end}
+.sk-telegram .bub{max-width:78%;background:#fff;border-radius:16px 16px 16px 5px;padding:7px 11px 6px;font-size:15px;line-height:1.38;box-shadow:0 1px 1px rgba(0,40,20,.18);position:relative}
+.sk-telegram .u .bub{background:#E1F7CB;border-radius:16px 16px 5px 16px}
+.sk-telegram .bub .tm{display:block;text-align:right;font-size:11.5px;color:#6b8a73;margin-top:2px}
+.sk-telegram .u .bub .tm::after{content:" \2713\2713";color:#48a14d;letter-spacing:-3px}
+.sk-telegram .bub.ph{padding:3px;width:min(232px,70%)}
+.sk-telegram .bub.ph .photo{border-radius:13px 13px 13px 13px}
+.sk-telegram .bub.ph .tm{position:absolute;right:10px;bottom:8px;color:#fff;background:rgba(0,0,0,.35);padding:0 6px;border-radius:9px}
+.sk-telegram .voice{color:#4FAE4E}
+.sk-telegram .voice .play{background:#4FAE4E;color:#fff}
+.sk-telegram .quote{border-color:#3d8fd1;color:#2f6e9e;background:rgba(61,143,209,.09);border-radius:0 6px 6px 0;opacity:1}
+.sk-telegram .m-links a{color:#2a7ab8}
+.sk-telegram .typing{color:#6f8291}
+.sk-telegram .compose{background:#fff;padding:9px 12px;border-top:1px solid #e3e6e8}
+.sk-telegram .compose input{font-size:15px;padding:8px 4px}
+.sk-telegram .compose .send{width:36px;height:36px;border-radius:50%;border:0;background:#3d8fd1;color:#fff;font-size:0}
+.sk-telegram .compose .send::before{content:"";display:block;margin:0 auto;border-left:12px solid #fff;border-top:7px solid transparent;border-bottom:7px solid transparent;transform:translateX(2px)}
+.sk-telegram .demo-note{background:#fff;color:#5e6f7b}
+
+/* --- Discord-like: dark, left aligned, grouped --- */
+.sk-discord{background:#313338;color:#DBDEE1}
+.sk-discord .s-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #26282c;font-size:15px}
+.sk-discord .s-head b{color:#F2F3F5}
+.sk-discord .s-head .sub{color:#949BA4;font-size:13.5px;border-left:1px solid #4e5058;padding-left:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sk-discord .s-log{padding:10px 0 12px}
+.sk-discord .msg{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:14px;padding:3px 16px 3px;font-size:15px;line-height:1.4}
+.sk-discord .msg.first{margin-top:12px}
+.sk-discord .msg .av{width:40px;height:40px;grid-row:span 3}
+.sk-discord .msg:not(.first) .av{visibility:hidden;height:0}
+.sk-discord .nm{color:#F2F3F5}
+.sk-discord .tm{color:#949BA4;margin-left:6px;opacity:1}
+.sk-discord .tag{background:#5865F2;color:#fff}
+.sk-discord .reply{grid-column:2;font-size:13px;color:#B5BAC1;position:relative;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sk-discord .reply::before{content:"";position:absolute;left:-34px;top:8px;width:28px;height:10px;border-left:2px solid #4e5058;border-top:2px solid #4e5058;border-top-left-radius:6px}
+.sk-discord .reply b{color:#DBDEE1;font-weight:600}
+.sk-discord .photo{border-radius:8px;max-width:240px;margin-top:4px}
+.sk-discord .voice{background:#2B2D31;border:1px solid #232428;border-radius:8px;padding:10px 12px;max-width:320px;margin-top:4px;color:#B5BAC1}
+.sk-discord .voice .play{background:#5865F2;color:#fff}
+.sk-discord .embed{border-left:4px solid #2D9D78;background:#2B2D31;border-radius:4px;padding:10px 14px;margin-top:4px;max-width:440px}
+.sk-discord .m-links a{color:#00A8FC}
+.sk-discord .compose{margin:0 16px 8px;background:#383A40;border-radius:8px;padding:10px 14px}
+.sk-discord .compose input{font-size:15px}
+.sk-discord .compose input::placeholder{color:#8a8f98}
+.sk-discord .compose .send{background:none;border:0;color:#B5BAC1;font-size:14px;font-weight:600}
+.sk-discord .demo-note{color:#949BA4;padding:0 18px 10px}
+
+/* --- Slack-like: sidebar, square avatars, thread --- */
+.sk-slack{background:#fff;color:#1D1C1D}
+.sk-slack .side{display:block;flex:none;width:150px;background:#3F0E40;color:#CFC3CF;padding:14px 10px;font-size:14px}
+.sk-slack .side b{display:block;color:#fff;padding:0 8px 12px;font-size:15px}
+.sk-slack .side span{display:block;padding:4px 8px;border-radius:6px}
+.sk-slack .side span.on{background:#1164A3;color:#fff}
+@container (max-width:520px){.sk-slack .side{display:none}}
+.sk-slack .s-head{padding:12px 18px;border-bottom:1px solid #e2e2e2;font-size:17px;display:flex;gap:10px;align-items:center}
+.sk-slack .s-head .sub{font-size:13px;color:#616061}
+.sk-slack .s-log{padding:8px 0 12px}
+.sk-slack .msg{display:grid;grid-template-columns:36px minmax(0,1fr);column-gap:10px;padding:4px 18px;font-size:15px;line-height:1.45}
+.sk-slack .msg.first{margin-top:8px}
+.sk-slack .av{border-radius:7px;width:36px;height:36px;grid-row:span 3}
+.sk-slack .msg:not(.first) .av{visibility:hidden;height:0}
+.sk-slack .tm{color:#616061;margin-left:6px;opacity:1}
+.sk-slack .tag{background:#e8e8e8;color:#616061}
+.sk-slack .photo{border-radius:8px;max-width:230px;margin-top:4px;border:1px solid #e2e2e2}
+.sk-slack .voice{border:1px solid #ddd;border-radius:10px;padding:8px 12px;max-width:300px;color:#616061;margin-top:4px}
+.sk-slack .voice .play{background:#1D1C1D;color:#fff}
+.sk-slack .m-links a{color:#1264A3}
+.sk-slack .threadlink{font-size:13px;color:#1264A3;font-weight:650;margin-top:4px}
+.sk-slack .msg.thread{margin-left:64px;padding-left:12px;border-left:2px solid #e2e2e2;margin-right:18px;padding-right:0}
+.sk-slack .msg.thread.first{margin-top:6px}
+.sk-slack .quote{border-color:#ddd;color:#616061;opacity:1}
+.sk-slack .compose{margin:0 18px 8px;border:1px solid #8d8d8d;border-radius:9px;padding:10px 12px}
+.sk-slack .compose .send{background:#007A5A;color:#fff;border:0;border-radius:5px;padding:5px 10px;font-size:13px;font-weight:650}
+.sk-slack .demo-note{color:#616061;padding:0 20px 10px}
+
+/* --- Teams-like: cards, own messages right --- */
+.sk-teams{background:#F5F5F5;color:#242424}
+.sk-teams .s-head{display:flex;align-items:center;gap:12px;padding:10px 18px 0;background:#fff;border-bottom:1px solid #e0e0e0;font-size:15px}
+.sk-teams .s-head .av{width:32px;height:32px}
+.sk-teams .s-head .tabsx{display:flex;gap:18px;margin-left:8px;font-size:14px;color:#616161}
+.sk-teams .s-head .tabsx span{padding:12px 0 10px}
+.sk-teams .s-head .tabsx .on{color:#242424;font-weight:650;box-shadow:inset 0 -3px 0 #5B5FC7}
+.sk-teams .s-log{padding:14px 18px}
+.sk-teams .msg{display:flex;gap:10px;margin:10px 0;font-size:14px;line-height:1.45;align-items:flex-start}
+.sk-teams .msg .av{width:32px;height:32px;font-size:12px}
+.sk-teams .msg.u{justify-content:flex-end}
+.sk-teams .msg.u .av{display:none}
+.sk-teams .card{background:#fff;border-radius:6px;padding:8px 14px 10px;max-width:80%;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.sk-teams .u .card{background:#E8EBFA;box-shadow:none}
+.sk-teams .card .meta{font-size:12px;color:#616161;margin-bottom:3px}
+.sk-teams .card .meta .nm{color:#242424;font-weight:600;margin-right:8px}
+.sk-teams .photo{border-radius:4px;width:min(220px,100%)}
+.sk-teams .voice{color:#5B5FC7}
+.sk-teams .voice .play{background:#5B5FC7;color:#fff}
+.sk-teams .m-links a{color:#5B5FC7}
+.sk-teams .quote{border-color:#5B5FC7;background:#f0f0f7;color:#424242;opacity:1;border-left-width:3px;padding:4px 8px}
+.sk-teams .compose{margin:0 18px 8px;background:#fff;border-radius:6px;padding:10px 12px;border-bottom:2px solid #5B5FC7}
+.sk-teams .compose .send{background:none;border:0;color:#5B5FC7;font-weight:650;font-size:14px}
+.sk-teams .demo-note{color:#616161;padding:0 20px 10px}
+
+/* --- GitHub-like: issue timeline --- */
+.sk-github{background:#fff;color:#1F2328}
+.sk-github .s-head{padding:14px 20px 12px;border-bottom:1px solid #D0D7DE}
+.sk-github .s-head h3{margin:0;font-size:20px;font-weight:450;line-height:1.25}
+.sk-github .s-head h3 span{color:#59636E}
+.sk-github .s-head .meta{display:flex;gap:8px;align-items:center;font-size:13px;color:#59636E;margin-top:8px}
+.sk-github .state{background:#1F883D;color:#fff;border-radius:14px;padding:3px 10px;font-weight:600;font-size:13px}
+.sk-github .s-log{padding:14px 20px 14px 20px;position:relative}
+.sk-github .msg{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;margin:0 0 16px;font-size:14px;line-height:1.5;position:relative}
+.sk-github .msg::before{content:"";position:absolute;left:56px;top:100%;height:16px;width:2px;background:#D0D7DE}
+.sk-github .msg:last-child::before{display:none}
+.sk-github .msg .av{width:32px;height:32px;font-size:12px}
+.sk-github .box{border:1px solid #D0D7DE;border-radius:6px;min-width:0}
+.sk-github .b.box{border-color:#9AC1A9}
+.sk-github .bh{background:#F6F8FA;border-bottom:1px solid #D0D7DE;border-radius:6px 6px 0 0;padding:7px 12px;font-size:13px;color:#59636E}
+.sk-github .b .bh{background:#EEF6F0;border-color:#9AC1A9}
+.sk-github .bh b{color:#1F2328}
+.sk-github .tag{border:1px solid #D0D7DE;color:#59636E;border-radius:12px;padding:0 7px;font-weight:500}
+.sk-github .bb{padding:10px 12px;min-width:0}
+.sk-github .photo{border-radius:6px;max-width:240px}
+.sk-github .file{display:inline-block;color:#0969DA;text-decoration:underline}
+.sk-github table{border-collapse:collapse;font-size:13px;margin:8px 0;width:100%;max-width:440px}
+.sk-github th,.sk-github td{border:1px solid #D0D7DE;padding:4px 8px;text-align:left}
+.sk-github th{background:#F6F8FA;font-weight:600}
+.sk-github td.n,.sk-github th.n{text-align:right}
+.sk-github tr.total td{font-weight:650}
+.sk-github .quote{border-left:3px solid #D0D7DE;color:#59636E;opacity:1;padding-left:10px}
+.sk-github .m-links a{color:#0969DA}
+.sk-github .compose{margin:0 20px 8px;border:1px solid #D0D7DE;border-radius:6px;padding:8px 8px 8px 12px}
+.sk-github .compose .send{background:#1F883D;color:#fff;border:1px solid rgba(31,35,40,.15);border-radius:6px;padding:5px 12px;font-size:13px;font-weight:600}
+.sk-github .demo-note{color:#59636E;padding:0 22px 10px}
+@container (max-width:460px){.sk-github .s-log{padding:12px}.sk-github .msg{grid-template-columns:minmax(0,1fr)}.sk-github .msg .av{display:none}.sk-github .msg::before{left:20px}.sk-github .compose{margin:0 12px 8px}}
+
+/* --- Web chat: a widget on a page --- */
+.sk-web{background:#EEE9E1;color:#1b1b1b;font-variation-settings:"CASL" 1}
+.sk-web .side{display:block;position:absolute;left:0;top:0;bottom:0;width:calc(100% - 460px);padding:28px 26px;font-variation-settings:"CASL" 0}
+.sk-web .side b{display:block;font-size:14px;color:#6d6455;margin-bottom:26px}
+.sk-web .side i{display:block;height:10px;border-radius:5px;background:#d9d1c4;margin:0 0 12px}
+.sk-web .side em{display:block;height:120px;border-radius:12px;background:#ddd5c8;margin:22px 0}
+@container (max-width:640px){.sk-web .side{display:none}}
+.sk-web .frame{flex:none;margin:18px 18px 18px auto;width:min(420px,calc(100% - 36px));background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 18px 40px -18px rgba(60,40,10,.45);height:calc(100% - 36px)}
+.sk-web .s-head{background:#FFD43B;padding:16px 18px;display:flex;gap:12px;align-items:center}
+.sk-web .s-head .sub{font-size:13px;opacity:.8}
+.sk-web .s-head b{font-size:17px;font-weight:800}
+.sk-web .s-log{padding:14px 14px}
+.sk-web .msg{display:flex;margin:7px 0;font-size:15px;line-height:1.4}
+.sk-web .msg.u{justify-content:flex-end}
+.sk-web .bub{background:#F1F0EC;border-radius:20px 20px 20px 6px;padding:9px 14px;max-width:82%}
+.sk-web .u .bub{background:#1b1b1b;color:#fff;border-radius:20px 20px 6px 20px}
+.sk-web .bub.ph{padding:0;overflow:hidden;width:min(220px,75%)}
+.sk-web .bub .tm{display:none}
+.sk-web .voice{color:#fff}
+.sk-web .voice .play{background:#FFD43B;color:#1b1b1b}
+.sk-web .quote{border-color:#FFD43B;opacity:.9}
+.sk-web .m-links a{color:#1b1b1b;text-decoration-color:#d9a800;text-decoration-thickness:2px}
+.sk-web .compose{margin:4px 12px 8px;background:#F1F0EC;border-radius:24px;padding:6px 6px 6px 16px}
+.sk-web .compose .send{width:36px;height:36px;border-radius:50%;background:#1b1b1b;color:#FFD43B;border:0;font-size:18px;font-weight:800}
+.sk-web .demo-note{color:#5c5850;text-align:center}
+
+/* --- HTTP: raw request / response --- */
+.sk-http{background:#101820;color:#D6DEE6;font-variation-settings:var(--mono)}
+.sk-http .s-head{display:flex;justify-content:space-between;gap:10px;padding:11px 16px;border-bottom:1px solid #22303c;font-size:13px;color:#8FA1B3}
+.sk-http .s-head b{color:#E6EDF3;font-weight:600}
+.sk-http .s-log{padding:8px 16px 14px;font-size:12.5px;line-height:1.55}
+.sk-http .msg{margin:10px 0 0;border-left:2px solid #2c3d4c;padding-left:12px}
+.sk-http .msg.b{border-color:#3f8f6f}
+.sk-http .rl{color:#8FA1B3}
+.sk-http .rl b{color:#F2B880;font-weight:600}
+.sk-http .msg.b .rl b{color:#7FD1A8}
+.sk-http pre{margin:2px 0 0;white-space:pre-wrap;word-break:break-word;font:inherit}
+.sk-http .jk{color:#9CC3E6}.sk-http .js{color:#C3E88D}.sk-http .jn{color:#F2B880}.sk-http .jb{color:#E59BC4}
+.sk-http .typing{color:#8FA1B3}
+.sk-http .compose{border-top:1px solid #22303c;padding:10px 16px;font-size:13px}
+.sk-http .compose .cpre{color:#7FD1A8}
+.sk-http .compose input{font-size:13px;color:#E6EDF3}
+.sk-http .compose input::placeholder{color:#6f8496}
+.sk-http .compose .send{background:none;border:1px solid #3a4d5e;color:#D6DEE6;border-radius:5px;padding:3px 10px;font-size:12px}
+.sk-http .demo-note{color:#8FA1B3;padding:0 16px 10px}
+
+@container (max-width:440px){.sk-telegram .bub{max-width:90%}.sk-telegram .s-log{padding:12px 8px}.sk-web .bub{max-width:90%}.m-links{font-size:.88em}.sk-slack .msg.thread{margin-left:30px;padding-left:8px}.sk-slack .msg,.sk-discord .msg{padding-left:12px;padding-right:12px}}
+/* view transitions */
+::view-transition-old(root),::view-transition-new(root){animation:none}
+::view-transition-group(*){animation-duration:.6s;animation-timing-function:cubic-bezier(.22,.8,.2,1)}
+::view-transition-old(*),::view-transition-new(*){animation-duration:.6s}
+::view-transition-image-pair(*){isolation:auto}
+::view-transition-old(stage),::view-transition-new(stage){height:100%;width:100%}
+
+/* ===== sections ===== */
+section.s{padding:96px 0;border-top:1px solid var(--rule)}
+.s h2,.clone h2{font-size:clamp(32px,3.4vw,46px);line-height:1.06;letter-spacing:-.02em;font-weight:620;font-variation-settings:"CASL" .55;margin:0 0 18px;max-width:18ch;text-wrap:balance}
+.s p{max-width:60ch}
+.cols{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:72px;align-items:start}
+.muted{color:var(--pewter)}
+.steps{list-style:none;padding:0;margin:36px 0 0;counter-reset:st}
+.steps li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 14px;padding:16px 0;border-top:1px solid var(--rule)}
+.steps li::before{counter-increment:st;content:counter(st);grid-row:span 2;font-weight:700;font-variation-settings:"CASL" .55;font-size:22px;color:var(--moss);line-height:1.2}
+.steps h3{margin:0;font-size:19px;font-weight:620}
+.steps p{margin:0;color:var(--pewter);font-size:17px}
+.dash{background:var(--sheet);border:1px solid var(--rule);border-radius:16px;padding:26px;position:sticky;top:30px}
+.dash .dtop{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:var(--pewter);margin-bottom:14px}
+.dash .dtop b{color:var(--ink);font-size:17px}
+.rings{display:grid;grid-template-columns:170px minmax(0,1fr);gap:26px;align-items:center}
+.rings svg{width:170px;height:170px}
+.leg{font-size:15px;line-height:1.45}
+.leg div{margin-bottom:12px;padding-left:14px;border-left:4px solid var(--moss)}
+.leg div.p{border-color:var(--yolk)}
+.leg strong{display:block;font-size:24px;font-weight:650;font-variation-settings:"CASL" .4}
+.hist{margin-top:22px;border-top:1px solid var(--rule);padding-top:16px;display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:14px;align-items:center;font-size:15px}
+.hist .thumb{width:72px;height:54px;border-radius:8px;overflow:hidden}
+.hist .thumb svg{width:100%;height:100%;display:block}
+.hist .k{font-weight:650;text-align:right}
+.dash .cap{font-size:14px;color:var(--pewter);margin:16px 0 0}
+.asks{margin-top:28px;font-size:17px}
+.asks q{font-variation-settings:"CASL" 1;font-weight:560;quotes:"\0022" "\0022";color:var(--ink)}
+
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 18px;border:0;padding:0}
+.presets legend{font-size:15px;color:var(--pewter);margin-bottom:10px;padding:0}
+.presets label{cursor:pointer}
+.presets input{position:absolute;opacity:0;pointer-events:none}
+.presets span{display:inline-block;padding:8px 14px;border:1.5px solid var(--rule);border-radius:9px;font-size:15px;font-weight:550;font-variation-settings:var(--mono)}
+.presets input:checked+span{border-color:var(--ink);background:var(--ink);color:var(--sheet)}
+.presets input:focus-visible+span{outline:2px solid var(--moss);outline-offset:2px}
+.presetout{font-size:17px;min-height:3.2em;max-width:52ch}
+.presetout b{font-weight:620}
+.codecard.big pre{font-size:14px;padding:18px 0}
+.small{font-size:15px}
+.caps{list-style:none;padding:0;margin:22px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px}
+.caps li{padding:12px 0;border-top:1px solid var(--rule);font-size:16px;color:var(--pewter)}
+.caps code{color:var(--ink);font-weight:600;font-size:15px;display:block}
+
+.clone{padding:110px 0 80px;border-top:1px solid var(--rule)}
+.clone h2{font-size:clamp(36px,4.6vw,64px);max-width:20ch}
+.term{background:#17232A;color:#E3EAE6;border-radius:14px;padding:22px 24px;margin:30px 0 18px;max-width:780px;position:relative}
+.term pre{margin:0;font-size:15px;line-height:1.75;white-space:pre-wrap;word-break:break-word}
+.term .c{color:#8FA59A}
+.term .btn{position:absolute;top:14px;right:14px;height:36px;font-size:14px;border-color:#47575f;background:#22323a;color:#E3EAE6;padding:0 14px}
+.term .btn:hover{background:#2c3e47}
+.reqs{font-size:16px;color:var(--pewter)}
+.caveat{margin-top:40px;font-size:15px;color:var(--pewter);max-width:62ch}
+footer{border-top:1px solid var(--rule);padding:28px 0 90px;font-size:14px;color:var(--pewter)}
+footer a{color:var(--ink)}
+
+.home{position:fixed;left:16px;bottom:16px;z-index:50;display:flex;gap:10px;align-items:center;background:var(--ink);color:var(--sheet);border-radius:10px;padding:8px 12px;font-size:13px;text-decoration:none}
+.home span{color:#9fb0aa}
+.home:hover{background:#25353E}
+
+@media (max-width:1060px){
+  .hero{grid-template-columns:minmax(0,1fr);gap:0}
+  .hero h1{max-width:14ch}
+  .intro{display:contents}
+  .demo{order:1;margin:0 0 28px}
+  .codewrap{order:2}
+  .cols{grid-template-columns:minmax(0,1fr);gap:40px}
+  .dash{position:static}
+}
+@media (max-width:640px){
+  body{font-size:17px}
+  .hero{padding-top:18px}
+  .lede{font-size:17.5px}
+  .stage{height:560px}
+  section.s{padding:64px 0}
+  .rings{grid-template-columns:120px minmax(0,1fr);gap:16px}
+  .rings svg{width:120px;height:120px}
+  .leg strong{font-size:20px}
+  .caps{gap:0 16px}
+  .codecard.big pre{font-size:12px}
+  .steps li{grid-template-columns:28px minmax(0,1fr)}
+  .term{padding:18px 16px 18px}
+  .term pre{font-size:13px;padding-top:34px}
+  .codecard pre{font-size:12.5px}
+  .btn .cmd{display:none}
+  .ctas{gap:8px}
+  .ctas .btn{height:46px;padding:0 13px;font-size:15px}
+  .tabs-label{font-size:14px}
+  .home{left:10px;bottom:10px;padding:6px 10px;font-size:12px}
+  .stagebar{font-size:13px}
+  .codecard .fname span+span{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8E5E3C"/><stop offset="1" stop-color="#5E3A24"/></linearGradient>
+    <radialGradient id="plate" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="#FBFAF6"/><stop offset=".8" stop-color="#EDEAE2"/><stop offset="1" stop-color="#D9D4C8"/></radialGradient>
+    <radialGradient id="yolk" cx=".38" cy=".35" r=".7"><stop offset="0" stop-color="#FFD36B"/><stop offset=".6" stop-color="#F2A21E"/><stop offset="1" stop-color="#D97F0E"/></radialGradient>
+    <radialGradient id="avo" cx=".5" cy=".55" r=".6"><stop offset="0" stop-color="#E9E8A2"/><stop offset=".6" stop-color="#C3CF5E"/><stop offset="1" stop-color="#7F9A2E"/></radialGradient>
+    <linearGradient id="crumb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E7B56E"/><stop offset="1" stop-color="#C98E48"/></linearGradient>
+    <radialGradient id="vig" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></radialGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .09 0"/></filter>
+    <symbol id="breakfast" viewBox="0 0 320 240">
+      <rect width="320" height="240" fill="url(#wood)"/>
+      <g stroke="#3f2414" stroke-opacity=".22" fill="none" stroke-width="1.2">
+        <path d="M0 30 C80 24 160 38 320 26"/><path d="M0 78 C90 70 200 86 320 74"/><path d="M0 132 C100 126 210 140 320 128"/><path d="M0 186 C70 180 220 194 320 182"/><path d="M0 222 C120 216 200 228 320 220"/>
+      </g>
+      <ellipse cx="166" cy="134" rx="134" ry="98" fill="#2a160b" opacity=".5" filter="url(#soft)"/>
+      <ellipse cx="160" cy="122" rx="132" ry="98" fill="url(#plate)"/>
+      <ellipse cx="160" cy="122" rx="104" ry="76" fill="none" stroke="#d8d2c4" stroke-width="1.5"/>
+      <!-- toast -->
+      <g transform="rotate(-14 104 86)">
+        <path d="M60 52 Q58 34 80 34 L132 36 Q150 36 148 56 L146 120 Q146 132 132 132 L74 130 Q60 130 60 118 Z" fill="#8B4D22"/>
+        <path d="M68 58 Q67 44 84 44 L128 46 Q140 46 139 60 L137 116 Q137 124 128 124 L78 122 Q68 122 68 114 Z" fill="url(#crumb)"/>
+        <g fill="#B97A3A" opacity=".7"><ellipse cx="88" cy="66" rx="4" ry="2.5"/><ellipse cx="114" cy="78" rx="5" ry="3"/><ellipse cx="96" cy="98" rx="3" ry="2"/><ellipse cx="124" cy="104" rx="4" ry="2.4"/><ellipse cx="82" cy="110" rx="3.5" ry="2"/><ellipse cx="108" cy="58" rx="3" ry="2"/></g>
+      </g>
+      <!-- avocado half -->
+      <g transform="rotate(24 228 82)">
+        <path d="M228 34 C252 34 262 60 262 86 C262 112 248 128 228 128 C208 128 194 112 194 86 C194 60 204 34 228 34 Z" fill="#33481A"/>
+        <path d="M228 40 C248 40 256 62 256 86 C256 108 244 122 228 122 C212 122 200 108 200 86 C200 62 208 40 228 40 Z" fill="url(#avo)"/>
+        <circle cx="228" cy="94" r="17" fill="#7B4A28"/><circle cx="223" cy="89" r="5" fill="#A06A40" opacity=".7"/>
+      </g>
+      <!-- egg with two yolks -->
+      <path d="M118 140 C104 128 120 112 142 116 C160 106 184 116 182 132 C198 142 188 168 166 170 C150 186 116 182 112 166 C98 160 104 146 118 140 Z" fill="#FCFBF6"/>
+      <path d="M118 140 C104 128 120 112 142 116" fill="none" stroke="#e8e2d2" stroke-width="2"/>
+      <circle cx="138" cy="146" r="13" fill="url(#yolk)"/><circle cx="162" cy="140" r="12" fill="url(#yolk)"/>
+      <circle cx="134" cy="142" r="3.5" fill="#fff" opacity=".6"/><circle cx="158" cy="136" r="3" fill="#fff" opacity=".6"/>
+      <!-- second egg -->
+      <path d="M196 156 C190 140 210 128 228 136 C248 132 262 148 254 164 C258 182 236 192 220 186 C202 192 186 176 196 156 Z" fill="#FCFBF6"/>
+      <path d="M254 164 C258 182 236 192 220 186" fill="none" stroke="#e5dfcf" stroke-width="2"/>
+      <circle cx="224" cy="160" r="14" fill="url(#yolk)"/><circle cx="219" cy="155" r="3.8" fill="#fff" opacity=".6"/>
+      <g fill="#6b5a3a" opacity=".55"><circle cx="150" cy="168" r="1"/><circle cx="210" cy="174" r="1"/><circle cx="236" cy="150" r="1"/><circle cx="128" cy="160" r=".9"/></g>
+      <rect width="320" height="240" fill="url(#vig)"/>
+      <rect width="320" height="240" filter="url(#grain)"/>
+    </symbol>
+    <symbol id="plateglyph" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="#F2B84B"/></symbol>
+  </defs>
+</svg>
+
+<a class="home" href="../">All designs <span>2 of 10</span></a>
+
+<div class="wrap">
+  <header class="nav">
+    <a class="brand" href="#top" id="top">Calories <small>a ViteHub Agent template</small></a>
+    <nav aria-label="Project links">
+      <a href="https://github.com/vite-hub/calories">GitHub</a>
+      <a href="https://vitehub.dev">ViteHub docs</a>
+    </nav>
+  </header>
+
+  <main>
+  <section class="hero" aria-labelledby="h1">
+    <div class="intro">
+      <h1 id="h1"><span class="l">Send breakfast to a bot.</span> <span class="l">Pick the chat it lives in.</span></h1>
+      <p class="lede">Calories is an open-source <strong>ViteHub Agent</strong> template. Send it a photo, a voice note, or a line of text. It estimates calories and protein for each item and saves the meal to a database you own.</p>
+      <div class="ctas">
+        <a class="btn primary" href="https://github.com/vite-hub/calories">Clone the template</a>
+        <button class="btn ghost" type="button" data-copy="git clone https://github.com/vite-hub/calories.git">Copy the command <span class="cmd">git clone</span></button>
+        <span class="copied" aria-live="polite"></span>
+      </div>
+      <div class="codewrap">
+        <div class="codecard" aria-label="Excerpt of server/agents/calories/agent.ts">
+          <div class="fname"><span>server/agents/calories/agent.ts</span><span id="lineinfo">2 lines change</span></div>
+          <pre><code id="code"></code></pre>
+        </div>
+        <p class="codenote">Changing channel touches the import and the entry in <code>channels</code>. The meal logic, the prompt, and the database stay as they are.</p>
+      </div>
+    </div>
+
+    <div class="demo">
+      <p class="tabs-label" id="tabs-label">The template ships with Telegram. Try this conversation in another channel.</p>
+      <div class="tabs" role="tablist" aria-labelledby="tabs-label" id="tabs"></div>
+      <div class="stage sk-telegram" id="stage">
+        <aside class="side" id="side" aria-hidden="true"></aside>
+        <div class="frame" role="tabpanel" id="panel" aria-label="Conversation preview">
+          <header class="s-head" id="shead"></header>
+          <div class="s-log" id="slog" role="log" aria-label="Conversation" tabindex="0"></div>
+          <form class="compose" id="compose" autocomplete="off">
+            <span class="cpre" id="cpre"></span>
+            <label for="cin" class="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Type a meal for a demo reply</label>
+            <input id="cin" name="meal" maxlength="160" placeholder="Type a meal, like 2 eggs and a latte">
+            <button class="send" id="csend" type="submit">Send</button>
+          </form>
+          <p class="demo-note">Demo reply from a small food table in this page. Nothing is sent.</p>
+        </div>
+      </div>
+      <div class="stagebar">
+        <span>Costs and estimates here are example values.</span>
+        <button class="linkbtn" type="button" id="replay">Replay the conversation</button>
+      </div>
+    </div>
+  </section>
+  </main>
+</div>
+
+<section class="s" aria-labelledby="h-meal">
+  <div class="wrap cols">
+    <div>
+      <h2 id="h-meal">What happens to a meal</h2>
+      <p class="muted">Every channel above runs the same steps in the same Agent.</p>
+      <ol class="steps">
+        <li><h3>It arrives</h3><p>A photo, a line of text, or a voice note, from the one user ID allowed to talk to the bot. The <code>transcribe</code> Capability turns voice into text, with Voxtral via OpenRouter in the template.</p></li>
+        <li><h3>Items and grams</h3><p>The model names each thing on the plate and estimates its edible weight in grams.</p></li>
+        <li><h3>Calories, protein, confidence</h3><p>It estimates calories and protein per item, plus one confidence for the whole meal.</p></li>
+        <li><h3>Saved, then read back</h3><p>The meal goes into the database. The Agent says it saved the meal only after the write succeeded and it read the row back.</p></li>
+        <li><h3>The reply</h3><p>You get the breakdown, a link to your dashboard, and what that one reply cost in model usage, from the <code>usage()</code> Capability.</p></li>
+      </ol>
+      <p class="asks">Reply to a meal to fix it, <q>that was 2 eggs, not 3</q>, or ask about your journal, <q>how much protein this week?</q></p>
+    </div>
+    <figure class="dash" style="margin:0" aria-label="Drawing of the read-only dashboard">
+      <div class="dtop"><b>Today</b><span>read-only dashboard</span></div>
+      <div class="rings">
+        <svg viewBox="0 0 120 120" role="img" aria-label="Calorie ring at 458 of 2,200 kcal, protein ring at 20.4 of 140 grams">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#D5DDD8" stroke-width="10"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#2D6652" stroke-width="10" stroke-linecap="round" stroke-dasharray="68 326.7" transform="rotate(-90 60 60)"/>
+          <circle cx="60" cy="60" r="38" fill="none" stroke="#E7DCC4" stroke-width="10"/>
+          <circle cx="60" cy="60" r="38" fill="none" stroke="#C98A1B" stroke-width="10" stroke-linecap="round" stroke-dasharray="34.8 238.8" transform="rotate(-90 60 60)"/>
+        </svg>
+        <div class="leg">
+          <div><strong>458 kcal</strong>of 2,200 kcal goal</div>
+          <div class="p"><strong>20.4 g</strong>of 140 g protein goal</div>
+        </div>
+      </div>
+      <div class="hist">
+        <div class="thumb"><svg viewBox="0 0 320 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#breakfast"/></svg></div>
+        <div>Breakfast<br><span class="muted small">2 fried eggs, sourdough toast, half an avocado</span></div>
+        <div class="k">458 kcal</div>
+      </div>
+      <figcaption class="cap">Daily totals against your goals, and meal history with photo previews. Previews are resized to 768 px with camera metadata removed. Originals stay private.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="s" aria-labelledby="h-host">
+  <div class="wrap cols">
+    <div>
+      <h2 id="h-host">Keep your meals on a box you own, or on any host</h2>
+      <p>ViteHub builds the same codebase for five deployment presets. You pick one in <code>nuxt.config.ts</code>. With <code>node</code>, the app runs on your own machine, a VPS, or a container, and your meals live in a SQLite file you can copy, back up, or delete.</p>
+      <fieldset class="presets" id="presets">
+        <legend>Pick a preset to see where meals and photos go</legend>
+        <label><input type="radio" name="preset" value="node" checked><span>node</span></label>
+        <label><input type="radio" name="preset" value="cloudflare"><span>cloudflare</span></label>
+        <label><input type="radio" name="preset" value="vercel"><span>vercel</span></label>
+        <label><input type="radio" name="preset" value="netlify"><span>netlify</span></label>
+        <label><input type="radio" name="preset" value="deno"><span>deno</span></label>
+      </fieldset>
+      <p class="presetout" id="presetout" aria-live="polite"></p>
+      <p class="small muted">Details per host are in the <a href="https://vitehub.dev/docs/frameworks-hosts/support-matrix">ViteHub support matrix</a>.</p>
+    </div>
+    <div>
+      <div class="codecard big">
+        <div class="fname"><span>nuxt.config.ts</span><span>1 line changes</span></div>
+        <pre><code id="nuxtcode"></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="s" aria-labelledby="h-model">
+  <div class="wrap cols">
+    <div>
+      <h2 id="h-model">Swap the model in the driver</h2>
+      <p>The template sends photos and text to a GLM model through OpenRouter. The driver takes any AI SDK model, so GPT, Claude, Gemini, or another provider's model goes in the same place. A coding agent such as Codex or Claude Code can drive it too, and so can plain application code.</p>
+      <p class="muted">The Agent can use only the Capabilities you grant it. Calories grants four.</p>
+      <ul class="caps">
+        <li><code>blob</code>stores meal photos</li>
+        <li><code>db</code>writes and reads meals</li>
+        <li><code>transcribe</code>turns voice notes into text</li>
+        <li><code>usage</code>reports the cost of each reply</li>
+      </ul>
+    </div>
+    <div>
+      <div class="codecard big">
+        <div class="fname"><span>server/agents/calories/agent.ts</span><span>the driver</span></div>
+        <pre><code><span class="ln dim">export default defineAgent({</span><span class="ln">  capabilities: [</span><span class="ln">    blob({ mode: <span class="tk-s">"write"</span> }), db({ mode: <span class="tk-s">"write"</span> }),</span><span class="ln">    transcribe({ execute }), usage(),</span><span class="ln">  ],</span><span class="ln dim">  channels: { telegram: telegram({ ... }) },</span><span class="ln">  driver: {</span><span class="ln hot">    model: () =&gt; <span class="tk-f">openRouter</span>(<span class="tk-s">"z-ai/glm-5.3-flashx"</span>),</span><span class="ln">  },</span><span class="ln dim">});</span></code></pre>
+      </div>
+      <p class="codenote">The whole Agent is this one file, about 100 lines, plus a 28-line <code>instructions.md</code> prompt.</p>
+    </div>
+  </div>
+</section>
+
+<section class="clone" aria-labelledby="h-clone">
+  <div class="wrap">
+    <h2 id="h-clone">Clone it tonight. Log breakfast tomorrow.</h2>
+    <p class="muted" style="max-width:56ch">Fork it, point it at your own bot token, and keep the parts you like. The template is MIT licensed.</p>
+    <div class="term">
+      <button class="btn" type="button" data-copy="git clone https://github.com/vite-hub/calories.git
+cd calories && pnpm install && cp .env.example .env
+pnpm db:migrate && pnpm dev">Copy the command</button>
+<pre class="mono">git clone https://github.com/vite-hub/calories.git
+cd calories &amp;&amp; pnpm install &amp;&amp; cp .env.example .env
+<span class="c"># add OPENROUTER_API_KEY, TELEGRAM_TOKEN, TELEGRAM_ALLOWED_USER_ID</span>
+pnpm db:migrate &amp;&amp; pnpm dev</pre>
+    </div>
+    <p class="reqs">Requires Node.js 24.15+ and pnpm 10. A local Console at <code>/_vitehub</code> shows recent Agent sessions, read-only.</p>
+    <div class="ctas" style="margin-top:26px">
+      <a class="btn primary" href="https://github.com/vite-hub/calories">Clone the template</a>
+      <a class="btn ghost" href="https://vitehub.dev">Read the ViteHub docs</a>
+      <span class="copied" aria-live="polite"></span>
+    </div>
+    <p class="caveat">Estimates can be wrong. A model guessing grams from a photo will miss sometimes, which is why corrections are one reply away. Calories is an experiment, not medical or dietary advice.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">Calories is MIT licensed and built with ViteHub, Nuxt, Vue, VueUse, Nuxt UI, AI SDK, OpenRouter, Drizzle, and Nitro. <a href="https://github.com/vite-hub/calories">Source on GitHub</a>.</div>
+</footer>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const f1 = n => (Math.round(n * 10) / 10).toFixed(1);
+const q = new URLSearchParams(location.search);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches || q.has("reduce");
+const canVT = typeof document.startViewTransition === "function" && !q.has("novt");
+
+/* ---------- channels ---------- */
+const CH = [
+  { id: "telegram", label: "Telegram", key: "telegram", fn: "telegram", args: "{ allowedUserIds, botToken }" },
+  { id: "discord", label: "Discord", key: "discord", fn: "discord", args: "{ ... }" },
+  { id: "slack", label: "Slack", key: "slack", fn: "slack", args: "{ ... }" },
+  { id: "teams", label: "Teams", key: "teams", fn: "teams", args: "{ ... }" },
+  { id: "github", label: "GitHub", key: "github", fn: "github", args: "{ ... }" },
+  { id: "web", label: "Web chat", key: "webChat", fn: "webChat", args: "{ ... }" },
+  { id: "http", label: "HTTP", key: "http", fn: "http", args: "{ ... }" },
+];
+let skin = "telegram";
+
+/* ---------- conversation ---------- */
+const EGG = (n) => ({ key: "egg", label: `${n} fried eggs`, grams: 50 * n, kcal: 98 * n, protein: 6.8 * n });
+const TOAST = { key: "toast", label: "Sourdough toast", grams: 60, kcal: 150, protein: 5.4 };
+const AVO = { key: "avocado", label: "Half an avocado", grams: 70, kcal: 112, protein: 1.4 };
+const sum = (items, k) => items.reduce((a, i) => a + i[k], 0);
+const SCRIPT = [
+  { id: "m1", from: "u", kind: "photo", t: "08:12" },
+  { id: "m2", from: "u", kind: "voice", t: "08:12", dur: "0:06", transcript: "Toast is sourdough, and that's half an avocado." },
+  { id: "m3", from: "b", kind: "meal", t: "08:13", head: "Breakfast saved.", items: [EGG(3), TOAST, AVO], confidence: "medium", cost: "$0.0021" },
+  { id: "m4", from: "u", kind: "text", t: "08:15", text: "that was 2 eggs, not 3", replyTo: "m3", quoteText: "3 fried eggs, 150 g", thread: true },
+  { id: "m5", from: "b", kind: "meal", t: "08:15", head: "Updated. Eggs changed from 3 to 2.", items: [EGG(2)], allItems: [EGG(2), TOAST, AVO], confidence: "medium", cost: "$0.0009", update: true, thread: true },
+];
+let msgs = SCRIPT.map(m => ({ ...m }));
+let shown = 0;
+let typing = false;
+let seq = 0;
+// the journal that the demo answers questions from
+const journal = [{ name: "Breakfast", items: [EGG(2), TOAST, AVO] }];
+
+/* ---------- small helpers for message bodies ---------- */
+const photo = (cls = "") => `<span class="photo ${cls}"><svg viewBox="0 0 320 240" role="img" aria-label="Photo of breakfast: two fried eggs, one with a double yolk, sourdough toast, and half an avocado"><use href="#breakfast"/></svg></span>`;
+const BARS = [6,10,16,9,20,14,22,12,8,18,24,15,10,19,13,7,16,21,11,8,14,9,6,12,17,10,7];
+const voice = (m) => `<span class="voice"><span class="play" aria-hidden="true"></span><span class="wave" aria-hidden="true">${BARS.map(h => `<i style="height:${h}px"></i>`).join("")}</span><span class="dur">${m.dur}</span></span><p class="transcript">Transcript: "${esc(m.transcript)}"</p>`;
+const itemLine = i => `${esc(i.label)}, ${i.grams} g: ${Math.round(i.kcal)} kcal, ${f1(i.protein)} g protein`;
+const totals = m => { const all = m.allItems || m.items; return { kcal: Math.round(sum(all, "kcal")), protein: sum(all, "protein") }; };
+const totalLine = m => { const t = totals(m); return `${m.update ? "Total now" : "Total"} ${t.kcal} kcal, ${f1(t.protein)} g protein. Confidence ${m.confidence}.`; };
+const tail = m => m.demo
+  ? `<p class="m-demo">Demo reply, nothing is sent.</p>`
+  : `<p class="m-links"><a href="https://calories.example.com" tabindex="-1">Dashboard: calories.example.com</a></p><p class="m-cost">${m.cost}</p>`;
+function mealList(m) {
+  if (m.kind === "note") return `<p style="margin:0">${m.text}</p>${tail(m)}`;
+  return `<p class="m-head">${esc(m.head)}</p><ul class="items">${m.items.map(i => `<li>${itemLine(i)}</li>`).join("")}</ul>${m.items.length ? `<p class="m-tot">${totalLine(m)}</p>` : ""}${m.note ? `<p style="margin:6px 0 0">${m.note}</p>` : ""}${tail(m)}`;
+}
+function mealTable(m) {
+  if (m.kind === "note") return `<p style="margin:0">${m.text}</p>${tail(m)}`;
+  const t = totals(m);
+  const rows = m.items.map(i => `<tr><td>${esc(i.label)}</td><td class="n">${i.grams} g</td><td class="n">${Math.round(i.kcal)}</td><td class="n">${f1(i.protein)} g</td></tr>`).join("");
+  return `<p class="m-head">${esc(m.head)}</p><table><thead><tr><th>Item</th><th class="n">Grams</th><th class="n">kcal</th><th class="n">Protein</th></tr></thead><tbody>${rows}<tr class="total"><td>${m.update ? "Meal total now" : "Total"}</td><td></td><td class="n">${t.kcal}</td><td class="n">${f1(t.protein)} g</td></tr></tbody></table><p style="margin:0">Confidence: ${m.confidence}</p>${m.note ? `<p style="margin:6px 0 0">${m.note}</p>` : ""}${tail(m)}`;
+}
+const quote = m => m.replyTo ? `<span class="quote">${esc(m.quoteText)}</span>` : "";
+const userBody = m => m.kind === "photo" ? photo() : m.kind === "voice" ? voice(m) : `${quote(m)}${esc(m.text)}`;
+const AVU = `<span class="av u" aria-hidden="true">Y</span>`;
+const AVB = `<span class="av b" aria-hidden="true"><svg><use href="#plateglyph"/></svg></span>`;
+const who = m => m.from === "u" ? "You" : "Calories";
+const attrs = (m, cls = "") => `class="msg ${m.from} ${cls}" data-id="${m.id}"`;
+
+/* ---------- skins ---------- */
+const HEAD = {
+  telegram: () => `${AVB}<div><b>Calories</b><div class="sub">bot</div></div>`,
+  discord: () => `<b># meals</b><span class="sub">Send a meal, get calories and protein</span>`,
+  slack: () => `<b># meals</b><span class="sub">Calories app</span>`,
+  teams: () => `${AVB}<b>Calories</b><span class="tabsx"><span class="on">Chat</span><span>Files</span></span>`,
+  github: () => `<h3>Breakfast, Oct 17 <span>#12</span></h3><div class="meta"><span class="state">Open</span><span>you opened this issue</span></div>`,
+  web: () => `${AVB}<div><b>Calories</b><div class="sub">Send a meal as text or a photo</div></div>`,
+  http: () => `<span><b>HTTP channel</b>, application/json</span><span>illustrative payloads</span>`,
+};
+const SITE = `<b>your-site.example</b><i style="width:70%"></i><i style="width:88%"></i><i style="width:54%"></i><em></em><i style="width:80%"></i><i style="width:62%"></i>`;
+const SIDE = `<b>Kitchen</b><span># general</span><span class="on"># meals</span><span># recipes</span>`;
+
+const R = {
+  telegram(m) {
+    if (m.from === "u") return `<div ${attrs(m)}><div class="bub ${m.kind === "photo" ? "ph" : ""}">${userBody(m)}<span class="tm">${m.t}</span></div></div>`;
+    return `<div ${attrs(m)}><div class="bub">${mealList(m)}<span class="tm">${m.t}</span></div></div>`;
+  },
+  discord(m, prev) {
+    const first = !prev || prev.from !== m.from || m.replyTo;
+    const reply = m.replyTo ? `<div class="reply"><b>@Calories</b> ${esc(m.quoteText)}</div>` : "";
+    const head = first ? `<div><span class="nm">${who(m)}</span>${m.from === "b" ? `<span class="tag">bot</span>` : ""}<span class="tm">Today at ${m.t}</span></div>` : "";
+    const body = m.from === "u" ? (m.kind === "text" ? `<div>${esc(m.text)}</div>` : `<div>${userBody(m)}</div>`) : `<div class="embed">${mealList(m)}</div>`;
+    return `<div ${attrs(m, first ? "first" : "")}>${reply}${m.from === "u" ? AVU : AVB}${head}${body}</div>`;
+  },
+  slack(m, prev) {
+    const th = m.thread ? "thread" : "";
+    const first = !prev || prev.from !== m.from || (!!prev.thread !== !!m.thread);
+    const head = first ? `<div><span class="nm">${who(m)}</span>${m.from === "b" ? `<span class="tag">APP</span>` : ""}<span class="tm">${m.t}</span></div>` : "";
+    const body = m.from === "u" ? (m.kind === "text" ? `<div>${esc(m.text)}</div>` : `<div>${userBody(m)}</div>`) : `<div>${mealList(m)}${m.id === "m3" && shown >= 4 ? `<div class="threadlink">${shown >= 5 ? "2 replies" : "1 reply"}</div>` : ""}</div>`;
+    return `<div ${attrs(m, `${first ? "first" : ""} ${th}`)}>${m.from === "u" ? AVU : AVB}${head}${body}</div>`;
+  },
+  teams(m) {
+    const meta = `<div class="meta">${m.from === "b" ? `<span class="nm">Calories</span>` : ""}${m.t}</div>`;
+    return `<div ${attrs(m)}>${m.from === "b" ? AVB : ""}<div class="card">${meta}${m.from === "u" ? userBody(m) : mealList(m)}</div></div>`;
+  },
+  github(m) {
+    const action = m.from === "u" ? "commented" : "commented";
+    let body;
+    if (m.from === "b") body = mealTable(m);
+    else if (m.kind === "photo") body = photo();
+    else if (m.kind === "voice") body = `<a class="file" href="#" tabindex="-1" onclick="return false">voice-note.ogg</a> <span style="color:#59636E">(${m.dur})</span><p class="transcript">Transcript: "${esc(m.transcript)}"</p>`;
+    else body = `${m.replyTo ? `<span class="quote">${esc(m.quoteText)}</span>` : ""}${esc(m.text)}`;
+    const label = m.from === "b" ? `<span class="tag">bot</span>` : "";
+    return `<div ${attrs(m)}>${m.from === "u" ? AVU : AVB}<div class="box"><div class="bh"><b>${m.from === "u" ? "you" : "calories"}</b>${label} ${action} at ${m.t}</div><div class="bb">${body}</div></div></div>`;
+  },
+  web(m) {
+    if (m.from === "u") return `<div ${attrs(m)}><div class="bub ${m.kind === "photo" ? "ph" : ""}">${userBody(m)}</div></div>`;
+    return `<div ${attrs(m)}><div class="bub">${mealList(m)}</div></div>`;
+  },
+  http(m) {
+    let line, obj;
+    if (m.from === "u") {
+      line = `<b>POST</b> /agent/calories`;
+      if (m.kind === "photo") obj = { attachments: [{ type: "image", mediaType: "image/jpeg", name: "breakfast.jpg" }] };
+      else if (m.kind === "voice") obj = { attachments: [{ type: "audio", mediaType: "audio/ogg", seconds: 6 }] };
+      else obj = m.replyTo ? { text: m.text, replyTo: m.replyTo } : { text: m.text };
+    } else {
+      line = `<b>200</b> OK`;
+      if (m.kind === "note") { const d = document.createElement("div"); d.innerHTML = m.text; obj = { text: d.textContent, demo: true }; }
+      else {
+        const t = totals(m);
+        obj = { saved: !m.demo, items: m.items.map(i => ({ name: i.label, grams: i.grams, kcal: Math.round(i.kcal), protein: +f1(i.protein) })), total: { kcal: t.kcal, protein: +f1(t.protein) }, confidence: m.confidence };
+        if (m.demo) obj.demo = true; else { obj.dashboard = "https://calories.example.com"; obj.cost = m.cost; }
+      }
+    }
+    return `<div ${attrs(m)}><div class="rl">${line}</div><pre>${json(obj)}</pre></div>`;
+  },
+};
+function json(o, ind = "") {
+  const n = ind + "  ";
+  if (Array.isArray(o)) return o.length ? `[\n${o.map(v => n + json(v, n)).join(",\n")}\n${ind}]` : "[]";
+  if (o && typeof o === "object" && Object.values(o).every(v => v === null || typeof v !== "object")) return `{ ${Object.entries(o).map(([k, v]) => `<span class="jk">"${k}"</span>: ${json(v)}`).join(", ")} }`;
+  if (o && typeof o === "object") return `{\n${Object.entries(o).map(([k, v]) => `${n}<span class="jk">"${k}"</span>: ${json(v, n)}`).join(",\n")}\n${ind}}`;
+  if (typeof o === "string") return `<span class="js">"${esc(o.replace(/\\/g, "\\\\").replace(/"/g, '\\"'))}"</span>`;
+  if (typeof o === "boolean") return `<span class="jb">${o}</span>`;
+  return `<span class="jn">${o}</span>`;
+}
+
+/* ---------- composer per skin ---------- */
+const COMPOSE = {
+  telegram: { pre: "", ph: "Type a meal, like 2 eggs and a latte", send: "Send" },
+  discord: { pre: "", ph: "Message #meals, like 2 eggs and a latte", send: "Send" },
+  slack: { pre: "", ph: "Message #meals, like 2 eggs and a latte", send: "Send" },
+  teams: { pre: "", ph: "Type a meal, like 2 eggs and a latte", send: "Send" },
+  github: { pre: "", ph: "Add a comment, like 2 eggs and a latte", send: "Comment" },
+  web: { pre: "", ph: "Type a meal, like 2 eggs and a latte", send: "↑" },
+  http: { pre: "text:", ph: "2 eggs and a latte", send: "POST" },
+};
+
+/* ---------- DOM ---------- */
+const stage = $("#stage"), head = $("#shead"), side = $("#side"), log = $("#slog");
+const cin = $("#cin"), csend = $("#csend"), cpre = $("#cpre"), tabs = $("#tabs"), code = $("#code");
+const ch = () => CH.find(c => c.id === skin);
+
+function renderTabs() {
+  tabs.innerHTML = CH.map(c => `<button class="tab" role="tab" id="tab-${c.id}" aria-controls="panel" aria-selected="${c.id === skin}" tabindex="${c.id === skin ? 0 : -1}" data-id="${c.id}">${c.label}${c.id === skin ? `<span class="tabmark" aria-hidden="true"></span>` : ""}</button>`).join("");
+  $("#panel").setAttribute("aria-labelledby", "tab-" + skin);
+}
+function renderCode(flash) {
+  const c = ch();
+  const imp = `<span class="ln hot${flash ? " flash" : ""}" style="view-transition-name:code-imp"><span class="tk-k">import</span> { ${c.fn} } <span class="tk-k">from</span> <span class="tk-s">"vite-hub/agent/channels"</span>;</span>`;
+  const line = `<span class="ln hot${flash ? " flash" : ""}" style="view-transition-name:code-ch">    ${c.key}: <span class="tk-f">${c.fn}</span>(${c.args}),</span>`;
+  code.innerHTML = `${imp}<span class="ln dim">export default defineAgent({</span><span class="ln dim">  capabilities: [blob(), db(), transcribe(), usage()],</span><span class="ln">  channels: {</span>${line}<span class="ln">  },</span><span class="ln dim">  driver: { model: () =&gt; openRouter(...) },</span><span class="ln dim">});</span>`;
+}
+function renderLog() {
+  const list = msgs.slice(0, shown);
+  let html = list.map((m, i) => R[skin](m, list[i - 1])).join("");
+  if (typing) html += `<div class="msg b typing-row" style="padding:6px 16px"><span class="typing" aria-label="Calories is typing"><span></span><span></span><span></span></span></div>`;
+  log.innerHTML = html;
+  log.scrollTop = log.scrollHeight;
+}
+function render(flash) {
+  stage.className = "stage sk-" + skin;
+  head.innerHTML = HEAD[skin]();
+  side.innerHTML = skin === "slack" ? SIDE : skin === "web" ? SITE : "";
+  const c = COMPOSE[skin];
+  cpre.textContent = c.pre; cin.placeholder = c.ph; csend.textContent = c.send;
+  csend.setAttribute("aria-label", "Send demo meal");
+  renderTabs();
+  renderCode(flash);
+  renderLog();
+}
+function nameVisible(on) {
+  const r = log.getBoundingClientRect();
+  log.querySelectorAll("[data-id]").forEach(el => {
+    const b = el.getBoundingClientRect();
+    el.style.viewTransitionName = on && b.top >= r.top - 2 && b.bottom <= r.bottom + 40 && b.top < r.bottom ? "vt-" + el.dataset.id : "none";
+  });
+}
+function revealTab() {
+  const t = $("#tab-" + skin); if (!t) return;
+  const l = t.offsetLeft, r = l + t.offsetWidth;
+  if (l < tabs.scrollLeft) tabs.scrollLeft = l - 8;
+  else if (r > tabs.scrollLeft + tabs.clientWidth) tabs.scrollLeft = r - tabs.clientWidth + 8;
+}
+function setSkin(id, { focus = false } = {}) {
+  if (id === skin) return;
+  const apply = () => { skin = id; render(true); revealTab(); nameVisible(true); };
+  const inView = stage.getBoundingClientRect().bottom > 0 && stage.getBoundingClientRect().top < innerHeight;
+  if (canVT && !reduce && inView) {
+    nameVisible(true);
+    const vt = document.startViewTransition(apply);
+    vt.finished.finally(() => { nameVisible(false); if (focus) $("#tab-" + id)?.focus(); });
+  } else { apply(); nameVisible(false); if (focus) $("#tab-" + id)?.focus(); }
+}
+
+/* ---------- tabs interaction ---------- */
+tabs.addEventListener("click", e => { const b = e.target.closest(".tab"); if (!b) return; stopTour(); setSkin(b.dataset.id); });
+tabs.addEventListener("keydown", e => {
+  const i = CH.findIndex(c => c.id === skin);
+  let j = null;
+  if (e.key === "ArrowRight") j = (i + 1) % CH.length;
+  if (e.key === "ArrowLeft") j = (i - 1 + CH.length) % CH.length;
+  if (e.key === "Home") j = 0;
+  if (e.key === "End") j = CH.length - 1;
+  if (j === null) return;
+  e.preventDefault(); stopTour(); setSkin(CH[j].id, { focus: true });
+  if (!canVT || reduce) $("#tab-" + CH[j].id).focus();
+});
+
+/* ---------- autoplay + tour ---------- */
+let timers = [];
+const later = (ms, fn) => timers.push(setTimeout(fn, ms));
+function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+function appendNext() {
+  shown++; typing = false; renderLog();
+  const el = log.querySelector(`[data-id="${msgs[shown - 1].id}"]`);
+  if (el && !reduce) { el.classList.add("enter"); el.addEventListener("animationend", () => el.classList.remove("enter"), { once: true }); }
+  if (skin === "slack" && shown >= 4) renderLog();
+}
+function setTyping() { typing = true; renderLog(); }
+function play() {
+  clearTimers(); stopTour();
+  msgs = SCRIPT.map(m => ({ ...m })); journal.length = 1; journal[0].items = [EGG(2), TOAST, AVO];
+  if (reduce) { shown = SCRIPT.length; typing = false; renderLog(); return; }
+  shown = 0; typing = false; renderLog();
+  later(500, appendNext); later(1700, appendNext); later(2500, setTyping); later(4000, appendNext);
+  later(5900, appendNext); later(6500, setTyping); later(7800, appendNext);
+  later(10200, startTour);
+}
+let tourTimer = null, tourIdx = 0, tourOn = false, heroVisible = true;
+function startTour() {
+  if (reduce || userTouched) return;
+  tourOn = true; tourIdx = CH.findIndex(c => c.id === skin);
+  const step = () => {
+    if (!tourOn) return;
+    if (!heroVisible || document.hidden) { tourTimer = setTimeout(step, 1000); return; }
+    tourIdx++;
+    if (tourIdx > CH.length) { tourOn = false; return; } // full lap ends back on Telegram
+    setSkin(CH[tourIdx % CH.length].id);
+    tourTimer = setTimeout(step, 2700);
+  };
+  tourTimer = setTimeout(step, 600);
+}
+function stopTour() { tourOn = false; clearTimeout(tourTimer); }
+let userTouched = false;
+["pointerdown", "keydown", "wheel", "touchstart"].forEach(ev => $(".demo").addEventListener(ev, () => { userTouched = true; stopTour(); }, { passive: true }));
+let started = false;
+new IntersectionObserver(es => {
+  heroVisible = es[0].isIntersecting;
+  if (heroVisible && !started) { started = true; play(); }
+}, { threshold: .25 }).observe(stage);
+$("#replay").addEventListener("click", () => { userTouched = true; play(); });
+
+/* ---------- demo food table ---------- */
+// per 100 g: kcal, protein; unit = grams of one typical portion
+const FOODS = [
+  ["egg", "fried egg", "fried eggs", 196, 13.6, 50, ["eggs", "egg"]],
+  ["toast", "slice of sourdough toast", "slices of sourdough toast", 250, 9, 60, ["sourdough", "toast", "toasts"]],
+  ["bread", "slice of bread", "slices of bread", 265, 9, 35, ["bread", "slices of bread", "slice of bread"]],
+  ["avocado", "avocado", "avocados", 160, 2, 140, ["avocado", "avocados", "avo"]],
+  ["banana", "banana", "bananas", 89, 1.1, 118, ["banana", "bananas"]],
+  ["apple", "apple", "apples", 52, .3, 180, ["apple", "apples"]],
+  ["orange", "orange", "oranges", 47, .9, 130, ["orange", "oranges"]],
+  ["oats", "bowl of oatmeal", "bowls of oatmeal", 71, 2.5, 250, ["oatmeal", "porridge", "oats"]],
+  ["yogurt", "Greek yogurt", "Greek yogurts", 97, 9, 170, ["greek yogurt", "yogurt", "yoghurt", "skyr"]],
+  ["milk", "glass of milk", "glasses of milk", 64, 3.3, 250, ["milk"]],
+  ["latte", "latte", "lattes", 54, 3.4, 300, ["latte", "lattes", "cappuccino", "flat white"]],
+  ["coffee", "black coffee", "black coffees", 2, .3, 240, ["coffee", "espresso", "americano"]],
+  ["rice", "bowl of rice", "bowls of rice", 130, 2.7, 180, ["rice"]],
+  ["chicken", "chicken breast", "chicken breasts", 165, 31, 150, ["chicken breast", "chicken"]],
+  ["salmon", "salmon fillet", "salmon fillets", 208, 20, 140, ["salmon"]],
+  ["tuna", "can of tuna", "cans of tuna", 132, 28, 120, ["tuna"]],
+  ["steak", "steak", "steaks", 250, 26, 200, ["steak", "beef"]],
+  ["pasta", "plate of pasta", "plates of pasta", 158, 5.8, 220, ["pasta", "spaghetti", "penne"]],
+  ["pizza", "slice of pizza", "slices of pizza", 266, 11, 107, ["pizza"]],
+  ["burger", "burger", "burgers", 254, 13, 220, ["burger", "burgers", "hamburger"]],
+  ["fries", "portion of fries", "portions of fries", 312, 3.4, 120, ["fries", "chips"]],
+  ["salad", "side salad", "side salads", 20, 1.5, 150, ["salad"]],
+  ["tofu", "portion of tofu", "portions of tofu", 144, 15, 150, ["tofu"]],
+  ["lentils", "bowl of lentils", "bowls of lentils", 116, 9, 200, ["lentils", "dal", "dhal"]],
+  ["cheese", "slice of cheese", "slices of cheese", 402, 25, 30, ["cheese"]],
+  ["almonds", "handful of almonds", "handfuls of almonds", 579, 21, 30, ["almonds", "nuts"]],
+  ["pb", "spoon of peanut butter", "spoons of peanut butter", 588, 25, 16, ["peanut butter"]],
+  ["cola", "can of cola", "cans of cola", 42, 0, 330, ["coke", "cola", "soda"]],
+  ["beer", "beer", "beers", 43, .5, 330, ["beer", "beers"]],
+  ["croissant", "croissant", "croissants", 406, 8, 60, ["croissant", "croissants"]],
+  ["bagel", "bagel", "bagels", 250, 10, 105, ["bagel", "bagels"]],
+  ["pancake", "pancake", "pancakes", 227, 6.4, 75, ["pancake", "pancakes"]],
+  ["bacon", "slice of bacon", "slices of bacon", 541, 37, 10, ["bacon"]],
+  ["sushi", "piece of sushi", "pieces of sushi", 150, 6, 30, ["sushi", "maki", "nigiri"]],
+  ["shake", "protein shake", "protein shakes", 400, 80, 30, ["protein shake", "shake"]],
+  ["ramen", "bowl of ramen", "bowls of ramen", 90, 4, 500, ["ramen"]],
+  ["burrito", "burrito", "burritos", 200, 8, 300, ["burrito", "burritos"]],
+  ["hummus", "portion of hummus", "portions of hummus", 166, 7.9, 60, ["hummus"]],
+  ["potato", "potato", "potatoes", 93, 2.5, 170, ["potato", "potatoes"]],
+].map(([key, one, many, k, p, unit, al]) => ({ key, one, many, k, p, unit, al: al.sort((a, b) => b.length - a.length) }));
+const ALIASES = FOODS.flatMap(f => f.al.map(a => [a, f])).sort((a, b) => b[0].length - a[0].length);
+const WORDN = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, half: .5, couple: 2, few: 3 };
+const qtyWord = q => q === .5 ? "Half a" : q === 1 ? "1" : String(q);
+function findFood(seg) {
+  for (const [a, f] of ALIASES) { if (new RegExp(`\\b${a}\\b`).test(seg)) return f; }
+  return null;
+}
+function parseQty(seg) {
+  const g = seg.match(/(\d+(?:[.,]\d+)?)\s*(g|gr|grams?|ml)\b/);
+  const rest = g ? seg.replace(g[0], " ") : seg;
+  let q = null;
+  const d = rest.match(/(?:^|\s)(\d+(?:[.,]\d+)?)\s*(?:x\b)?/) || rest.match(/\bx\s*(\d+)\b/);
+  if (d) q = parseFloat(d[1].replace(",", "."));
+  else { const w = rest.match(/\b(half|a couple|couple|a few|few|an|a|one|two|three|four|five|six|seven|eight|nine|ten)\b/); if (w) q = WORDN[w[1].replace(/^a /, "")]; }
+  return { grams: g ? parseFloat(g[1].replace(",", ".")) : null, q };
+}
+function makeItem(f, grams, q) {
+  const gr = Math.round(grams ?? (q ?? 1) * f.unit);
+  let label;
+  if (grams) label = f.many.replace(/^(slices|bowls|plates|glasses|cans|portions|handfuls|spoons|pieces) of /, "").replace(/^./, c => c.toUpperCase());
+  else { const qq = q ?? 1; label = qq === .5 ? `Half a ${f.one}` : `${qq} ${qq === 1 ? f.one : f.many}`; }
+  if (f.key === "egg" && !grams) label = `${q ?? 1} fried ${(q ?? 1) === 1 ? "egg" : "eggs"}`;
+  return { key: f.key, label, grams: gr, kcal: Math.round(gr * f.k / 100), protein: Math.round(gr * f.p / 10) / 10, q: q ?? 1, food: f };
+}
+function demoReply(raw) {
+  const t = raw.toLowerCase().trim().replace(/[.!]+$/, "");
+  const base = { from: "b", demo: true, t: nowT() };
+  // question about the journal
+  if (/\b(how much|how many|total|so far|today|this week)\b/.test(t) && /(protein|calorie|kcal|eat|ate)/.test(t)) {
+    const all = journal.flatMap(m => m.items);
+    const kc = Math.round(sum(all, "kcal")), pr = sum(all, "protein");
+    return { ...base, kind: "note", text: `Today so far: ${kc} kcal and ${f1(pr)} g protein, against goals of 2,200 kcal and 140 g. The real Agent answers this from your database, including past weeks.` };
+  }
+  // correction
+  if (/^(that was|it was|actually|make that|no,|sorry,|correction)/.test(t)) {
+    const f = findFood(t); const { q } = parseQty(t.replace(/\bnot\s+\w+.*$/, ""));
+    const meal = f && [...journal].reverse().find(m => m.items.some(i => i.key === f.key));
+    if (meal && q) {
+      const idx = meal.items.findIndex(i => i.key === f.key);
+      meal.items[idx] = makeItem(f, null, q);
+      return { ...base, kind: "meal", head: `Updated. ${meal.name} now has ${meal.items[idx].label.toLowerCase()}.`, items: [meal.items[idx]], allItems: meal.items.slice(), confidence: "medium", update: true };
+    }
+    return { ...base, kind: "note", text: "This demo can fix a food it already logged, like \"that was 1 egg\". The real Agent reads the reply and edits the saved meal." };
+  }
+  const cleaned = t.replace(/^(i (just )?(had|ate)|just had|ate|had|for (breakfast|lunch|dinner)( i had)?)\s*/, "").replace(/\s+for (breakfast|lunch|dinner|a snack)$/, "");
+  const segs = cleaned.split(/,|\band\b|\bwith\b|\bplus\b|\+|&|;|\n/).map(s => s.trim()).filter(Boolean);
+  const items = [], unknown = [];
+  for (const s of segs) {
+    const f = findFood(s);
+    if (!f) { if (s.replace(/\b(some|a|an|the|of|bit|little)\b/g, "").trim()) unknown.push(s); continue; }
+    const { grams, q } = parseQty(s);
+    items.push(makeItem(f, grams, q));
+  }
+  if (!items.length) return { ...base, kind: "note", text: `"${esc(raw.slice(0, 60))}" isn't in this page's small food table. Try eggs, toast, rice, chicken, pizza, or a latte. The real Agent asks the model instead.` };
+  const name = /breakfast|lunch|dinner|snack/.exec(t)?.[0] || "Meal";
+  journal.push({ name: name[0].toUpperCase() + name.slice(1), items: items.slice() });
+  const confidence = unknown.length ? "low" : items.every(i => i.grams && /\d\s*(g|ml)/.test(t)) ? "high" : "medium";
+  return { ...base, kind: "meal", head: "Demo estimate.", items, confidence, note: unknown.length ? `Not in the demo table: ${esc(unknown.join(", "))}.` : "" };
+}
+function nowT() { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; }
+
+$("#compose").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = cin.value.trim(); if (!v) return;
+  userTouched = true; stopTour(); started = true;
+  if (shown < SCRIPT.length) { clearTimers(); shown = SCRIPT.length; typing = false; }
+  const um = { id: "d" + (++seq), from: "u", kind: "text", t: nowT(), text: v };
+  const reply = demoReply(v); reply.id = "d" + (++seq);
+  msgs = msgs.slice(0, shown).concat(um); shown = msgs.length; renderLog();
+  cin.value = "";
+  const el = log.querySelector(`[data-id="${um.id}"]`); if (el && !reduce) el.classList.add("enter");
+  typing = true; renderLog();
+  setTimeout(() => { msgs.push(reply); typing = false; appendNext(); log.setAttribute("aria-live", "polite"); }, reduce ? 0 : 750);
+});
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => {
+  const out = b.closest(".ctas, .term")?.parentElement.querySelector(".copied") || b.parentElement.querySelector(".copied");
+  try { await navigator.clipboard.writeText(b.dataset.copy); if (out) out.textContent = "Copied"; }
+  catch { if (out) out.textContent = "Copy failed, select the text instead"; }
+  setTimeout(() => { if (out) out.textContent = ""; }, 2200);
+}));
+
+/* ---------- presets ---------- */
+const PRESETS = {
+  node: ["node", "<b>Your machine, a VPS, or a container.</b> Meals go into a SQLite file and photos into files on a disk you own."],
+  cloudflare: ["cloudflare", "<b>Cloudflare Workers.</b> Meals go into D1 and photos into R2. The template ships configured this way."],
+  vercel: ["vercel", "<b>Vercel.</b> Meals go into libSQL or D1 over HTTP, and photos into Vercel Blob."],
+  netlify: ["netlify", "<b>Netlify.</b> Meals go into a remote database and photos into Netlify Blobs."],
+  deno: ["deno", "<b>Deno.</b> The same app on the Deno runtime. Check the support matrix for which database and storage to pair with it."],
+};
+const nuxt = $("#nuxtcode"), pout = $("#presetout");
+function renderPreset(p, flash) {
+  nuxt.innerHTML = `<span class="ln dim"><span class="tk-k">export default</span> defineNuxtConfig({</span><span class="ln dim">  modules: [<span class="tk-s">"@nuxt/ui"</span>, <span class="tk-s">"vite-hub/nuxt"</span>],</span><span class="ln hot${flash ? " flash" : ""}">  vitehub: { preset: <span class="tk-s">"${p}"</span>, agent: <span class="tk-k">true</span> },</span><span class="ln dim">});</span>`;
+  pout.innerHTML = PRESETS[p][1];
+}
+$("#presets").addEventListener("change", e => renderPreset(e.target.value, true));
+renderPreset("node");
+
+/* ---------- go ---------- */
+render(false);
+if (reduce) { started = true; play(); }
+})();
+</script>
+</body>
+</html>

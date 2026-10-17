@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calories: every meal gets a receipt. A ViteHub Agent template</title>
+<meta name="description" content="Send a meal to your own Telegram bot as a photo, voice note, or text. It itemizes grams, calories, and protein, saves the meal, and tells you what the reply cost. An MIT ViteHub template you clone and host anywhere.">
+<!--
+  DESIGN PLAN, 04-receipt
+
+  Color
+    Celadon tile    #A6C2AE  page surface, glazed kitchen tile, canvas-generated with per-tile tone drift
+    Grout           #8BA995  tile joints
+    Bottle ink      #0F271D  headlines and notes on the tile (AA: ~8:1 on tile)
+    Thermal paper   #FBFBF6  receipt stock, cool white with curled-edge shading
+    Thermal black   #25272B  printed text, never pure black
+    Thermal red     #B0302A  second print color of two-color thermal paper, used only for TOTAL and SUBTOTAL
+    Graphite        #2D3331  the printer body and the one solid button
+
+  Type
+    Martian Mono (variable width 75-112.5)  ONLY on the receipt. Condensed 87.5% for body lines,
+      112.5% heavy for the double-width store header, like a thermal printer's double-wide mode.
+    Young Serif  headlines and margin notes on the tile. Chunky, warm, deli-menu-board, the opposite of the receipt.
+
+  Layout
+    Desktop 1440: three columns. Centre: printer bolted at the top, one continuous receipt hanging under it
+    for the whole page. Left: the hero, later the three section headings. Right: short margin notes, each
+    with a hairline that points to the receipt line it explains (positioned at the line's static position).
+
+      [hero h1      ]  [ PRINTER ]  [            ]
+      [sub, CTA     ]  [ receipt ]  [ note: items]
+      [             ]  [ receipt ]  [ note: saved]
+      [h2 itemized  ]  [ receipt ]  [ note: caps ]
+      [h2 exchanges ]  [ receipt ]  [ note: node ]
+      [h2 take copy ]  [ tear-off]  [            ]
+
+    Mobile 390: hero, then printer, then the receipt full width; margin notes become pale celadon
+    stickers stuck onto the paper so the receipt never breaks.
+    Text is left aligned on the tile; receipt lines follow receipt conventions (centred header, right-aligned figures).
+
+  The one memorable thing
+    The receipt prints line by line on load (stepper-motor feed, LED, thermal burn-in from grey to black,
+    barcode printed row by row), and then the paper keeps feeding as you scroll: the paper's leading edge
+    rides just above the bottom of the viewport and every line darkens as the edge passes it. When the feed
+    reaches the end the edge tears into a zigzag stub that carries the clone command.
+
+  Review against the generic defaults
+    - First pass used stainless steel + near-black printer + red accent: too close to "dark + one accent".
+      Revised to a celadon glazed tile so the surface is warm and coloured, and red lives only on the paper.
+    - First pass had a mono clone command in the hero. Moved it onto the receipt (store address line and the stub)
+      so mono stays the subject, never a label style.
+    - No eyebrows, no cards, no numbered markers, no pill buttons: the only button shape is a hardware key.
+    - Notes reveal only because the paper feed reaches them; there is no per-section fade-up.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wdth,wght@75..112.5,100..800&family=Young+Serif&display=swap" rel="stylesheet">
+<style>
+:root{
+  --tile:#A6C2AE; --grout:#8BA995; --ink-tile:#0F271D;
+  --paper:#FBFBF6; --ink:#25272B; --ink-faint:#9a9b95; --red:#B0302A; --graphite:#2D3331;
+  --pw:400px; --gap:clamp(44px, 4.4vw, 64px); --pad:40px;
+  --maxw:1360px;
+  --inner: calc(min(100vw, var(--maxw)) - 2*var(--pad) - var(--pw) - 2*var(--gap));
+  --colL: calc(var(--inner) * .56);
+  --colR: calc(var(--inner) * .44);
+  --serif:"Young Serif", "Iowan Old Style", Georgia, serif;
+  --mono:"Martian Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; color:var(--ink-tile); font-family:var(--serif); font-size:17px; line-height:1.55;
+  background-color:var(--tile);
+  background-image:
+    var(--tile-img, linear-gradient(transparent 0 0)),
+    linear-gradient(90deg, var(--grout) 0 3px, transparent 3px),
+    linear-gradient(var(--grout) 0 3px, transparent 3px);
+  background-size: var(--tile-size, 112px 112px), 112px 112px, 112px 112px;
+  overflow-x:hidden;
+}
+body::before{ /* overhead light falling on the counter under the printer */
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(255,255,255,.22), rgba(255,255,255,0) 60%),
+    radial-gradient(140% 100% at 50% 120%, rgba(15,39,29,.16), rgba(15,39,29,0) 60%);
+}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--ink-tile); outline-offset:3px; border-radius:3px}
+
+/* playground tab */
+.tab{position:fixed; top:16px; right:16px; z-index:20; display:flex; align-items:center; gap:10px;
+  background:var(--graphite); color:#E9EEEA; padding:7px 12px 8px; border-radius:7px; font-size:14px; line-height:1;
+  box-shadow:0 8px 18px -10px rgba(15,39,29,.7), inset 0 1px 0 rgba(255,255,255,.1)}
+.tab a{text-decoration:none; border-bottom:1px solid rgba(233,238,234,.45)}
+.tab a:hover{border-bottom-color:#E9EEEA}
+.tab a:focus-visible{outline-color:#E9EEEA}
+.tab span{color:#AEB9B3}
+
+.counter{position:relative; z-index:1; max-width:var(--maxw); margin:0 auto; padding:0 var(--pad);
+  display:grid; grid-template-columns:minmax(0,1.27fr) var(--pw) minmax(0,1fr); column-gap:var(--gap)}
+.hero{grid-column:1; grid-row:1; align-self:start; padding-top:132px; position:relative; z-index:2}
+.machine{grid-column:2; grid-row:1; position:relative; z-index:1}
+
+h1{font-weight:400; font-size:clamp(46px, 4.7vw, 70px); line-height:.98; letter-spacing:-.018em; margin:0 0 30px; text-wrap:balance}
+.lede{font-size:19.5px; line-height:1.5; margin:0 0 14px; max-width:31em; text-wrap:pretty}
+.lede + .lede{font-size:17px; margin-bottom:30px}
+.ctas{display:flex; flex-wrap:wrap; align-items:center; gap:14px 26px}
+.key{display:inline-flex; align-items:center; justify-content:center; text-decoration:none; color:#F1F4F1;
+  background:linear-gradient(#3A423F, var(--graphite)); padding:14px 22px 15px; border-radius:8px; font-size:18px; line-height:1;
+  box-shadow:0 2px 0 #1A1F1D, 0 10px 18px -10px rgba(15,39,29,.8), inset 0 1px 0 rgba(255,255,255,.14);
+  transition:transform .12s ease, box-shadow .12s ease}
+.key:hover{background:linear-gradient(#434C49, #333A37)}
+.key:active{transform:translateY(2px); box-shadow:0 0 0 #1A1F1D, 0 4px 10px -8px rgba(15,39,29,.8), inset 0 1px 0 rgba(255,255,255,.1)}
+.textlink{font-size:17px; text-decoration-thickness:1px; text-underline-offset:4px}
+.textlink:hover{text-decoration-thickness:2px}
+
+/* ---------- printer ---------- */
+.printer{position:relative; z-index:4; height:96px; margin:22px -22px 0; border-radius:16px 16px 10px 10px;
+  background:linear-gradient(#414946 0, #323936 46%, #2A302E 100%);
+  box-shadow:0 22px 34px -22px rgba(12,30,22,.75), inset 0 1px 0 rgba(255,255,255,.14), inset 0 -2px 0 rgba(0,0,0,.25)}
+.printer::before{ /* top lid seam */
+  content:""; position:absolute; left:16px; right:16px; top:30px; height:1px; background:rgba(0,0,0,.35); box-shadow:0 1px 0 rgba(255,255,255,.07)}
+.face{position:absolute; left:22px; right:22px; top:44px; display:flex; align-items:center; gap:12px}
+.brand{color:#A3AEA8; font-size:15px; letter-spacing:.01em}
+.led{width:8px; height:8px; border-radius:50%; background:#6A5A33; margin-left:auto; box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)}
+.busy .led{background:#F2B544; box-shadow:0 0 10px 2px rgba(242,181,68,.55); animation:blink .5s steps(2,end) infinite}
+@keyframes blink{50%{opacity:.35}}
+.feed{font:inherit; font-size:13px; color:#E3E9E5; background:linear-gradient(#4A524F,#3B4340); border:0; border-radius:5px;
+  padding:6px 11px 7px; cursor:pointer; box-shadow:0 2px 0 #171B1A, inset 0 1px 0 rgba(255,255,255,.14)}
+.feed:active{transform:translateY(2px); box-shadow:0 0 0 #171B1A}
+.feed:focus-visible{outline-color:#F2B544}
+.slot{position:absolute; left:14px; right:14px; bottom:9px; height:9px; border-radius:5px;
+  background:linear-gradient(#0B0E0D, #1C2120); box-shadow:inset 0 2px 3px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.08)}
+.busy .printer{animation:hum .09s linear infinite}
+@keyframes hum{50%{transform:translateY(.4px)}}
+
+/* ---------- paper ---------- */
+.paper{position:relative; margin-top:-14px; z-index:3; min-height:40px}
+.sheetwrap{position:absolute; inset:0 0 auto 0; height:0; pointer-events:none; z-index:0}
+.sheet,.grain{position:absolute; left:0; right:0; top:0; height:var(--feed, 100%)}
+.sheet{
+  background:
+    linear-gradient(rgba(22,32,27,.32), rgba(22,32,27,0) 26px),
+    linear-gradient(90deg, #E4E5DD 0, #F6F6F0 3.5%, var(--paper) 9%, var(--paper) 91%, #F4F4EE 96.5%, #E1E2DA 100%);
+  box-shadow:0 1px 1px rgba(15,39,29,.22), 0 22px 36px -22px rgba(15,39,29,.55);
+}
+.sheet::after{ /* the curl of the leading edge */
+  content:""; position:absolute; left:0; right:0; bottom:0; height:18px;
+  background:linear-gradient(rgba(255,255,255,0), rgba(255,255,255,.7) 55%, rgba(205,207,198,.9));
+  border-radius:0 0 40% 40% / 0 0 6px 6px}
+.sheet::before{
+  content:""; position:absolute; left:4%; right:4%; bottom:-14px; height:14px;
+  background:radial-gradient(50% 100% at 50% 0, rgba(15,39,29,.32), rgba(15,39,29,0))}
+.grain{z-index:2; pointer-events:none;
+  background-image:var(--grain-img, none), repeating-linear-gradient(0deg, rgba(255,255,255,.13) 0 1px, rgba(255,255,255,0) 1px 3px);
+  background-size:180px 180px, auto}
+.done .sheetwrap{filter:drop-shadow(0 16px 18px rgba(15,39,29,.28)) drop-shadow(0 1px 1px rgba(15,39,29,.25))}
+.done .sheet{box-shadow:none;
+  -webkit-mask: linear-gradient(#000 0 0) top/100% calc(100% - 8px) no-repeat, conic-gradient(from -45deg at 50% 100%, #000 90deg, #0000 0) bottom/16px 8px repeat-x;
+          mask: linear-gradient(#000 0 0) top/100% calc(100% - 8px) no-repeat, conic-gradient(from -45deg at 50% 100%, #000 90deg, #0000 0) bottom/16px 8px repeat-x}
+.done .sheet::after,.done .sheet::before{display:none}
+.done .grain{-webkit-mask:linear-gradient(#000 0 0) top/100% calc(100% - 8px) no-repeat; mask:linear-gradient(#000 0 0) top/100% calc(100% - 8px) no-repeat}
+
+.rc{position:relative; z-index:1; padding:30px 26px 40px; font-family:var(--mono); font-stretch:87.5%; font-weight:430;
+  font-size:13.5px; line-height:1.62; color:var(--ink); letter-spacing:0; text-shadow:0 0 .4px rgba(37,39,43,.55)}
+.ln{color:var(--ink)}
+.c{text-align:center}
+.big{font-size:31px; line-height:1.15; font-weight:800; font-stretch:112.5%; letter-spacing:-.01em; filter:url(#rough); margin:2px 0 6px}
+.b{font-weight:700}
+.kv{display:flex; justify-content:space-between; gap:12px}
+.kv > :last-child{text-align:right}
+.kv > .copy{text-align:center}
+.kv.ind{padding-left:2ch}
+.dim{color:#5C5E62}
+.ln.dim, .ln .dim{color:#55575b}
+.sm{font-size:12px; line-height:1.55}
+.red{color:var(--red)}
+.tot{font-size:17.5px; font-weight:750; font-stretch:100%; line-height:1.5}
+.p{text-wrap:pretty}
+.sub{padding-left:5ch; color:#4A4C50}
+.qty{display:grid; grid-template-columns:4.2ch 1fr auto; gap:0 8px}
+.rule{height:1.62em; position:relative}
+.rule::before{content:""; position:absolute; left:0; right:0; top:50%; border-top:1.5px dashed currentColor; opacity:.85}
+.rule.dbl::before{border-top:1.5px solid currentColor; box-shadow:0 3px 0 -0px var(--paper), 0 4.5px 0 0 currentColor; top:42%}
+.gap{height:1.62em}
+.gap2{height:3.2em}
+table.items{width:100%; border-collapse:collapse; font:inherit}
+.items th,.items td{padding:0; font-weight:inherit; text-align:right; vertical-align:top}
+.items th:first-child,.items td:first-child{text-align:left; padding-right:8px}
+.items thead th{font-weight:700}
+.items td:nth-child(2), .items th:nth-child(2){width:5ch}
+.items td:nth-child(3), .items th:nth-child(3){width:6ch}
+.items td:nth-child(4), .items th:nth-child(4){width:6ch}
+.barcode{padding:10px 6px 2px}
+.barcode svg{display:block; width:100%; height:58px}
+.barcode .fallback{height:58px; background:repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 4px, var(--ink) 4px 5px, transparent 5px 9px, var(--ink) 9px 12px, transparent 12px 13px)}
+.code{white-space:pre-wrap; overflow-wrap:anywhere}
+.tear{display:flex; align-items:center; gap:10px; margin:14px -26px 10px; color:#6E7074; font-size:11px; font-stretch:100%}
+.tear::before,.tear::after{content:""; flex:1; border-top:1.5px dashed #8E9094}
+.tear svg{width:16px; height:16px; flex:none}
+.stub{padding-top:2px}
+.cmdhead{align-items:center; margin-bottom:4px}
+.cmd{font-weight:650; font-size:14px; line-height:1.45; overflow-wrap:normal}
+.nw{white-space:nowrap}
+.copy{font:inherit; font-weight:700; font-stretch:100%; font-size:12px; color:var(--ink); background:transparent; cursor:pointer;
+  border:1.5px solid currentColor; border-radius:2px; padding:3px 9px; flex:none; min-width:9ch; text-align:center}
+.copy:hover{background:#EDEEE7}
+.copy.ok{color:var(--red)}
+.copy:focus-visible{outline:2px solid var(--red); outline-offset:2px}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+
+/* print states (only when animating) */
+.anim .ln{opacity:0; color:var(--ink-faint)}
+.anim .ln.on{opacity:1; color:var(--ink); transition:color .45s cubic-bezier(.2,.7,.2,1), opacity .06s linear}
+.anim .ln.red.on{color:var(--red)}
+.anim .ln.sub.on{color:#4A4C50}
+.anim .ln.dim.on{color:#55575b}
+.anim .barcode.on svg{animation:rows .7s steps(16,end) both}
+@keyframes rows{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+.anim .note{opacity:0; transition:opacity .5s ease}
+.anim .note.on{opacity:1}
+
+/* ---------- margin notes ---------- */
+.note{position:absolute; font-family:var(--serif); font-size:16.5px; line-height:1.5; color:var(--ink-tile); text-shadow:none;
+  letter-spacing:0; font-weight:400; font-stretch:100%; margin-top:-.35em; z-index:3; text-wrap:pretty}
+.note p{margin:0 0 .6em} .note p:last-child{margin-bottom:0}
+.note.r{left:calc(100% + var(--gap)); width:min(var(--colR), 330px)}
+.note.l{right:calc(100% + var(--gap)); width:min(var(--colL), 470px)}
+.note.r::before,.note.l::before{content:""; position:absolute; top:.85em; width:calc(var(--gap) - 14px); height:1px; background:rgba(15,39,29,.55)}
+.note.r::before{right:calc(100% + 8px)}
+.note.l::before{left:calc(100% + 8px)}
+.note h2{font-weight:400; font-size:38px; line-height:1.04; letter-spacing:-.012em; margin:0 0 14px; text-wrap:balance}
+.note.l p{font-size:17.5px; max-width:27em}
+.note .ctas{margin-top:18px}
+.note q{quotes:"\201C" "\201D"}
+
+/* ---------- footer ---------- */
+footer{position:relative; z-index:1; max-width:var(--maxw); margin:0 auto; padding:84px var(--pad) 120px; display:grid; grid-template-columns:minmax(0,1.27fr) var(--pw) minmax(0,1fr); column-gap:var(--gap)}
+footer .in{grid-column:2; text-align:center}
+footer .ctas{justify-content:center; margin-bottom:22px}
+footer p{font-size:15px; margin:0 auto; max-width:30em}
+
+/* ---------- tablet and phone ---------- */
+@media (max-width:1179px){
+  :root{--pw:min(440px, calc(100vw - 30px)); --pad:15px}
+  .counter, footer{grid-template-columns:minmax(0,1fr)}
+  .hero{grid-column:1; grid-row:1; padding-top:52px; max-width:560px; justify-self:center; width:100%}
+  .hero .textlink{display:none}
+  .machine{grid-column:1; grid-row:2; width:var(--pw); justify-self:center; margin-top:26px}
+  .printer{margin:0 -10px; height:86px}
+  .face{top:38px; left:18px; right:18px}
+  h1{font-size:clamp(40px, 11vw, 60px); margin-bottom:18px}
+  .lede{font-size:17px; margin-bottom:10px}
+  .lede + .lede{font-size:15.5px; margin-bottom:22px}
+  .note, .note.l, .note.r{position:relative; left:auto; right:auto; width:auto; margin:16px -6px 18px; padding:14px 16px 15px;
+    background:#DCE8DF; border-radius:4px; box-shadow:0 1px 0 rgba(15,39,29,.18), 0 6px 12px -8px rgba(15,39,29,.4); transform:rotate(-.5deg); font-size:15.5px}
+  .note.r:nth-of-type(even){transform:rotate(.45deg)}
+  .note::before{display:none}
+  .note h2{font-size:29px}
+  .note.l p{font-size:16px}
+  footer .in{grid-column:1}
+  .tab{top:auto; bottom:10px; right:10px; font-size:12.5px; padding:6px 9px 7px; gap:8px}
+}
+@media (max-width:420px){
+  .rc{padding:26px 17px 38px; font-size:12.4px}
+  .big{font-size:27px}
+  .tot{font-size:15.5px}
+  .tear{margin-left:-17px; margin-right:-17px}
+  .sub{padding-left:3ch}
+  .qty{grid-template-columns:3.2ch 1fr auto; gap:0 6px}
+}
+@media (prefers-reduced-motion:reduce){
+  .busy .led,.busy .printer{animation:none}
+  .key,.feed{transition:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="rough" x="-2%" y="-10%" width="104%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="1" seed="4" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="1.3" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<nav class="tab" aria-label="Playground"><a href="../">All designs</a><span>4 of 10</span></nav>
+
+<main class="counter" id="top">
+  <header class="hero">
+    <h1>Every meal gets a receipt.</h1>
+    <p class="lede">Send a meal to your own Telegram bot as a photo, a voice note, or a line of text. It names each item, estimates grams, calories, and protein, saves the meal, and tells you what the reply cost.</p>
+    <p class="lede">Calories is an MIT-licensed ViteHub template. Fork it, then run it on Cloudflare, Vercel, Netlify, Deno, or a server you own.</p>
+    <div class="ctas">
+      <a class="key" href="https://github.com/vite-hub/calories">Clone the template</a>
+      <a class="textlink" href="https://vitehub.dev">Read the ViteHub docs</a>
+    </div>
+  </header>
+
+  <div class="machine" id="machine">
+    <div class="printer" id="printer">
+      <div class="face">
+        <span class="brand">calories</span>
+        <span class="led" aria-hidden="true"></span>
+        <button class="feed" id="reprint" type="button" aria-label="Print the receipt again">Reprint</button>
+      </div>
+      <div class="slot" aria-hidden="true"></div>
+    </div>
+
+    <div class="paper" id="paper">
+      <div class="sheetwrap" id="sheetwrap" aria-hidden="true"><div class="sheet"></div><div class="grain"></div></div>
+
+      <div class="rc" id="rc" role="region" aria-label="Receipt: one example breakfast, then the template itemized">
+        <div class="ln c big" data-d="170">CALORIES</div>
+        <div class="ln c">a ViteHub Agent template</div>
+        <div class="ln c dim">github.com/vite-hub/calories</div>
+        <div class="ln rule" aria-hidden="true"></div>
+        <div class="ln kv"><span>REGISTER</span><span>Telegram, private</span></div>
+        <div class="ln kv"><span>CASHIER</span><span>glm-5.3-flashx</span></div>
+        <div class="ln kv"><span>SAT 17 OCT 2026</span><span>08:42</span></div>
+        <div class="ln kv"><span>INPUT</span><span>1 photo, breakfast</span></div>
+        <div class="ln rule" aria-hidden="true"></div>
+        <table class="items">
+          <caption class="sr">Items in this meal</caption>
+          <thead><tr class="ln"><th scope="col">ITEM</th><th scope="col">G</th><th scope="col">KCAL</th><th scope="col">PROT</th></tr></thead>
+          <tbody>
+            <tr class="ln"><td>2 fried eggs</td><td>100</td><td>196</td><td>13.6</td></tr>
+            <tr class="ln"><td>sourdough toast</td><td>60</td><td>150</td><td>5.4</td></tr>
+            <tr class="ln"><td>avocado, half</td><td>70</td><td>112</td><td>1.4</td></tr>
+          </tbody>
+        </table>
+        <div class="ln rule" aria-hidden="true"></div>
+        <aside class="note r" aria-label="Note on the items">
+          <p>It names each item and estimates the edible grams, then calories and protein for each one.</p>
+          <p>The meal also gets a confidence rating, because a photo of a sandwich can’t show what’s inside it.</p>
+        </aside>
+        <div class="ln kv red tot" data-d="150"><span>TOTAL</span><span>458 kcal</span></div>
+        <div class="ln kv b"><span>PROTEIN</span><span>20.4 g</span></div>
+        <div class="ln kv"><span>CONFIDENCE</span><span>medium</span></div>
+        <div class="ln rule" aria-hidden="true"></div>
+        <div class="ln kv"><span>STATUS</span><span>saved, read back</span></div>
+        <div class="ln kv"><span>TODAY</span><span>458 / 2,200 kcal</span></div>
+        <div class="ln kv"><span></span><span>20.4 / 140 g protein</span></div>
+        <div class="ln kv"><span>DASHBOARD</span><span>calories.example.com</span></div>
+        <aside class="note r" aria-label="Note on saving and the dashboard">
+          <p>The bot says a meal is saved only after the database write succeeds and reads back.</p>
+          <p>The dashboard is read-only: two rings for today’s calories and protein against your goals, and a meal history. Photo previews are resized to 768&nbsp;px and stripped of camera metadata. Originals stay private.</p>
+        </aside>
+        <div class="ln kv b"><span>MODEL COST</span><span>$0.0021</span></div>
+        <div class="ln sm dim">from the usage() Capability, example value</div>
+        <div class="ln rule" aria-hidden="true"></div>
+        <div class="ln barcode" data-d="620" id="barcode" role="img" aria-label="Barcode for meal MEAL-1042"><div class="fallback"></div></div>
+        <div class="ln c">MEAL-1042</div>
+        <div class="ln c dim">Reply to this meal to correct it.</div>
+        <aside class="note r" aria-label="Note on corrections and questions">
+          <p>Got it wrong? Reply to the meal with <q>that was 3 eggs, not 2</q>, or remove it. You can also ask the journal <q>how much protein this week?</q></p>
+        </aside>
+        <div class="ln gap" aria-hidden="true"></div>
+        <div class="ln c b" data-d="140">SEE YOU AT LUNCH</div>
+        <div class="ln gap2" aria-hidden="true" id="loadstop"></div>
+
+        <aside class="note l" aria-labelledby="h-itemized">
+          <h2 id="h-itemized">The template, itemized</h2>
+          <p>Calories is a working example meant to be forked. The whole Agent is one file of about 100 lines and a 28-line prompt, so you can read all of it before lunch.</p>
+        </aside>
+        <div class="ln rule dbl" aria-hidden="true"></div>
+        <div class="ln c b">THE TEMPLATE</div>
+        <div class="ln c dim">vite-hub/calories, branch main</div>
+        <div class="ln rule dbl" aria-hidden="true"></div>
+        <div class="ln qty b"><span>QTY</span><span>ITEM</span><span></span></div>
+        <div class="ln qty"><span>1x</span><span>agent.ts</span><span>~100 lines</span></div>
+        <div class="ln sub sm">server/agents/calories/</div>
+        <div class="ln qty"><span>1x</span><span>instructions.md</span><span>28 lines</span></div>
+        <div class="ln qty"><span>4x</span><span>Capabilities</span><span></span></div>
+        <div class="ln sub">blob, db, transcribe, usage</div>
+        <aside class="note r" aria-label="Note on Capabilities">
+          <p>The Agent gets the four Capabilities it lists and nothing else. Blob files hold photos, the database holds meals, transcribe turns voice notes into text with Voxtral, and usage reports the cost of each reply.</p>
+        </aside>
+        <div class="ln qty"><span>1x</span><span>Channel (Telegram)</span><span></span></div>
+        <div class="ln sub">swap any time</div>
+        <div class="ln qty"><span>1x</span><span>Model (GLM, OpenRouter)</span><span></span></div>
+        <div class="ln sub">any AI SDK model</div>
+        <div class="ln qty"><span>1x</span><span>Dashboard (Nuxt)</span><span></span></div>
+        <div class="ln sub">read-only</div>
+        <div class="ln qty"><span>1x</span><span>Console at /_vitehub</span><span></span></div>
+        <div class="ln sub">recent sessions, read-only</div>
+        <aside class="note r" aria-label="Note on channels and models">
+          <p>Swap Telegram for Discord, Slack, Teams, GitHub, HTTP, web chat, or your own adapter. Swap GLM for GPT, Claude, Gemini, or any other AI SDK model.</p>
+        </aside>
+        <div class="ln rule" aria-hidden="true"></div>
+
+        <aside class="note l" aria-labelledby="h-exchange">
+          <h2 id="h-exchange">Exchanges take one line</h2>
+          <p>ViteHub gives the Agent the same database, Blob storage, and env API on every host. Moving from Cloudflare to your own server is one edit in <span style="white-space:nowrap">nuxt.config.ts.</span></p>
+          <p>The same API covers KV, auth, queues, workflows, schedules, and email when the fork needs them.</p>
+        </aside>
+        <div class="ln kv b"><span>HOST</span><span>your choice of 5</span></div>
+        <div class="ln kv ind"><span>cloudflare</span><span>D1 + R2</span></div>
+        <div class="ln kv ind"><span>vercel</span><span>libSQL + Blob</span></div>
+        <div class="ln kv ind"><span>netlify</span><span>remote DB + Blobs</span></div>
+        <div class="ln kv ind"><span>deno</span><span></span></div>
+        <div class="ln kv ind"><span>node</span><span>SQLite + your disk</span></div>
+        <div class="ln kv b"><span>SELF-HOST</span><span>node preset</span></div>
+        <div class="ln sub">SQLite file you own</div>
+        <aside class="note r" aria-label="Note on self-hosting">
+          <p>On the node preset your meals live in a SQLite file on a disk you own. Run it on a VPS, a box under the desk, or in a container.</p>
+        </aside>
+        <div class="ln rule" aria-hidden="true"></div>
+        <div class="ln kv red tot" data-d="150"><span>SUBTOTAL</span><span>one git clone</span></div>
+        <div class="ln kv"><span>LICENSE</span><span>MIT</span></div>
+        <div class="ln rule" aria-hidden="true"></div>
+        <div class="ln c b">EXCHANGE POLICY</div>
+        <div class="ln p c">Hosts, channels, and models may be exchanged at any time. Keep this receipt.</div>
+        <div class="ln gap" aria-hidden="true"></div>
+        <div class="ln kv"><span>RETURN</span><span>preset: "cloudflare"</span></div>
+        <div class="ln kv"><span>EXCHANGE</span><span>preset: "node"</span></div>
+        <div class="ln kv b"><span>DIFFERENCE</span><span>1 line</span></div>
+        <div class="ln sm dim code">vitehub: { preset: "node" }</div>
+        <div class="ln rule" aria-hidden="true"></div>
+        <div class="ln c b">FINE PRINT</div>
+        <div class="ln p sm">Estimates can be wrong. This is an experiment, not medical or dietary advice. Only one allowed Telegram user ID can talk to the bot.</div>
+        <div class="ln gap" aria-hidden="true"></div>
+        <div class="ln p sm dim">Built with ViteHub, Nuxt, Vue, VueUse, Nuxt UI, AI SDK, OpenRouter, Drizzle, and Nitro.</div>
+
+        <aside class="note l" aria-labelledby="h-copy">
+          <h2 id="h-copy">Take your copy</h2>
+          <p>Needs Node.js 24.15+ and pnpm 10. Put your OpenRouter key, Telegram bot token, and Telegram user ID in .env, migrate, and start the dev server.</p>
+          <div class="ctas"><a class="key" href="https://github.com/vite-hub/calories">Clone the template</a></div>
+        </aside>
+        <div class="ln tear" aria-hidden="true">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="4" r="2.2"/><circle cx="4" cy="12" r="2.2"/><path d="M5.8 5.3 14 11.5M5.8 10.7 14 4.5"/></svg>
+          TEAR HERE
+        </div>
+        <div class="stub">
+          <div class="ln kv cmdhead"><span class="b">CLONE</span><button class="copy" id="copy" type="button" aria-label="Copy the clone command">COPY</button></div>
+          <div class="ln code cmd" id="cmd">git clone https://github.com/<wbr><span class="nw">vite-hub/calories.git</span></div>
+          <div class="ln gap" aria-hidden="true"></div>
+          <div class="ln code sm">cd calories &amp;&amp; pnpm install</div>
+          <div class="ln code sm">cp .env.example .env</div>
+          <div class="ln code sm dim"># OPENROUTER_API_KEY, TELEGRAM_TOKEN,</div>
+          <div class="ln code sm dim"># TELEGRAM_ALLOWED_USER_ID</div>
+          <div class="ln code sm">pnpm db:migrate &amp;&amp; pnpm dev</div>
+          <span class="sr" aria-live="polite" id="live"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="in">
+    <div class="ctas">
+      <a class="key" href="https://github.com/vite-hub/calories">Clone the template</a>
+      <a class="textlink" href="https://vitehub.dev">Read the ViteHub docs</a>
+      <a class="textlink" href="https://vitehub.dev/docs/frameworks-hosts/support-matrix">See the host support matrix</a>
+    </div>
+    <p>Calories is an MIT-licensed example of a ViteHub Agent. Calorie and protein figures on this page are example values.</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/barcodes/JsBarcode.code128.min.js" defer></script>
+<script>
+(() => {
+  const root = document.documentElement;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const desktopMQ = matchMedia("(min-width: 1180px)");
+  const $ = (s) => document.querySelector(s);
+  const paper = $('#paper'), sheetwrap = $('#sheetwrap'), machine = $('#machine'), rc = $('#rc');
+  const animate = !reduce.matches;
+  if (animate) root.classList.add('anim');
+
+  /* ---------- generated textures ---------- */
+  function rand(seed){ return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+  function makeTiles(){
+    const T = 112, N = 5, g = 3, dpr = Math.min(2, devicePixelRatio || 1);
+    const c = document.createElement('canvas'); c.width = c.height = T * N * dpr;
+    const x = c.getContext('2d'); x.scale(dpr, dpr);
+    const r = rand(7);
+    x.fillStyle = '#8BA995'; x.fillRect(0, 0, T * N, T * N);
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const X = i * T + g, Y = j * T + g, S = T - g;
+      const l = 70.5 + (r() - .5) * 4.2, h = 139 + (r() - .5) * 6;
+      x.fillStyle = `hsl(${h} 17% ${l}%)`; x.fillRect(X, Y, S, S);
+      let gr = x.createLinearGradient(X, Y, X + S, Y + S);
+      gr.addColorStop(0, 'rgba(255,255,255,.20)'); gr.addColorStop(.45, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(15,39,29,.07)');
+      x.fillStyle = gr; x.fillRect(X, Y, S, S);
+      const gx = X + S * (.2 + r() * .3), gy = Y + S * (.15 + r() * .2);
+      gr = x.createRadialGradient(gx, gy, 0, gx, gy, S * .45);
+      gr.addColorStop(0, 'rgba(255,255,255,.13)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = gr; x.fillRect(X, Y, S, S);
+      x.fillStyle = 'rgba(255,255,255,.28)'; x.fillRect(X, Y, S, 1); x.fillRect(X, Y, 1, S);
+      x.fillStyle = 'rgba(15,39,29,.12)'; x.fillRect(X, Y + S - 1, S, 1); x.fillRect(X + S - 1, Y, 1, S);
+    }
+    c.toBlob((b) => { if (!b) return;
+      root.style.setProperty('--tile-img', `url(${URL.createObjectURL(b)})`);
+      root.style.setProperty('--tile-size', `${T * N}px ${T * N}px`);
+    });
+  }
+  function makeGrain(){
+    const S = 180, c = document.createElement('canvas'); c.width = c.height = S;
+    const x = c.getContext('2d'), r = rand(31), img = x.createImageData(S, S), d = img.data;
+    for (let i = 0; i < S * S; i++) {
+      const v = r(), k = i * 4;
+      if (v < .055) { d[k] = d[k+1] = d[k+2] = 255; d[k+3] = 120 + r() * 120; }      // thermal dropouts
+      else if (v < .085) { d[k] = 150; d[k+1] = 152; d[k+2] = 145; d[k+3] = 10 + r() * 14; } // paper fibre
+    }
+    x.putImageData(img, 0, 0);
+    c.toBlob((b) => b && root.style.setProperty('--grain-img', `url(${URL.createObjectURL(b)})`));
+  }
+  try { makeTiles(); makeGrain(); } catch (e) {}
+
+  /* ---------- barcode ---------- */
+  function drawBarcode(){
+    const host = $('#barcode');
+    if (!window.JsBarcode || host.querySelector('svg')) return;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    try {
+      JsBarcode(svg, 'MEAL-1042', { format: 'CODE128', displayValue: false, height: 58, width: 2, margin: 0, background: 'transparent', lineColor: '#25272B' });
+      const w = svg.getAttribute('width'), h = svg.getAttribute('height');
+      svg.setAttribute('viewBox', `0 0 ${parseFloat(w)} ${parseFloat(h)}`);
+      svg.removeAttribute('width'); svg.removeAttribute('height'); svg.removeAttribute('style');
+      svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('aria-hidden', 'true');
+      host.replaceChildren(svg);
+    } catch (e) {}
+  }
+
+  /* ---------- copy ---------- */
+  const copyBtn = $('#copy'), live = $('#live');
+  let copyTimer;
+  copyBtn.addEventListener('click', async () => {
+    const text = $('#cmd').textContent.trim();
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+      const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); try { ok = document.execCommand('copy'); } catch (_) {} ta.remove();
+    }
+    if (!ok) { const sel = getSelection(), range = document.createRange(); range.selectNodeContents($('#cmd')); sel.removeAllRanges(); sel.addRange(range); }
+    copyBtn.textContent = ok ? 'COPIED' : 'SELECTED';
+    copyBtn.classList.toggle('ok', ok);
+    live.textContent = ok ? 'Copied the clone command.' : 'The browser blocked copying. The command is selected; copy it with your keyboard.';
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => { copyBtn.textContent = 'COPY'; copyBtn.classList.remove('ok'); }, 3200);
+  });
+
+  /* ---------- feed machinery ---------- */
+  let lines = [], notes = [], full = 0, paperTop = 0, loadStop = 0;
+  let cur = 0, loadT = 0, li = 0, raf = 0, printing = false, done = false;
+
+  function relTop(el, base){ return el.getBoundingClientRect().top - base; }
+  function layoutNotes(){
+    const ns = [...paper.querySelectorAll('.note')];
+    ns.forEach((n) => (n.style.transform = ''));
+    if (!desktopMQ.matches) return;
+    const pr = paper.getBoundingClientRect().top;
+    const heroBottom = $('.hero').getBoundingClientRect().bottom - pr;
+    const prev = { l: heroBottom + 56, r: -Infinity };
+    ns.forEach((n) => {
+      const side = n.classList.contains('l') ? 'l' : 'r';
+      const top = relTop(n, pr), h = n.offsetHeight;
+      const push = Math.max(0, prev[side] + 30 - top);
+      if (push) n.style.transform = `translateY(${push}px)`;
+      prev[side] = top + push + h;
+    });
+  }
+  function measure(){
+    layoutNotes();
+    const pr = paper.getBoundingClientRect();
+    paperTop = pr.top + scrollY;
+    full = paper.offsetHeight;
+    lines = [...rc.querySelectorAll('.ln')].map((el) => { const r = el.getBoundingClientRect(); return { el, b: r.bottom - pr.top, d: +el.dataset.d || 0 }; });
+    notes = [...paper.querySelectorAll('.note')].map((el) => { const r = el.getBoundingClientRect(); return { el, t: r.top - pr.top + (desktopMQ.matches ? 0 : Math.min(r.height * .5, 70)) }; });
+    loadStop = $('#loadstop').getBoundingClientRect().bottom - pr.top;
+    li = 0; while (li < lines.length && lines[li].el.classList.contains('on')) li++;
+    sheetwrap.style.height = full + 'px';
+  }
+  function scrollTarget(){
+    const max = document.documentElement.scrollHeight - innerHeight;
+    if (scrollY >= max - 4 && scrollY > 10) return full;
+    if (scrollY < 6) return 0;
+    return scrollY + innerHeight * .9 - paperTop;
+  }
+  function apply(){
+    sheetwrap.style.setProperty('--feed', done ? '100%' : Math.max(0, cur) + 'px');
+    while (li < lines.length && lines[li].b <= cur + 3) { lines[li].el.classList.add('on'); li++; }
+    for (const n of notes) if (!n.el.classList.contains('on') && n.t <= cur) n.el.classList.add('on');
+    if (!done && cur >= full - 1) { done = true; paper.classList.add('done'); sheetwrap.style.setProperty('--feed', '100%'); }
+  }
+  function tick(){
+    raf = 0;
+    const target = Math.min(full, Math.max(loadT, scrollTarget()));
+    if (target > cur) {
+      const step = (target - cur) * .3;
+      cur = target - cur < .6 ? target : cur + Math.max(step, .6);
+    }
+    apply();
+    const moving = cur < Math.min(full, Math.max(loadT, scrollTarget())) - .1;
+    machine.classList.toggle('busy', moving || printing);
+    if (moving) raf = requestAnimationFrame(tick);
+  }
+  const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  let runId = 0;
+  async function printMeal(){
+    const id = ++runId;
+    printing = true; machine.classList.add('busy');
+    await sleep(380);
+    for (const L of lines) {
+      if (id !== runId) return;
+      if (L.b > loadStop + 1) break;
+      if (L.b <= cur) continue;
+      loadT = L.b + 6; kick();
+      if (paper.animate) paper.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(1.4px)' }, { transform: 'translateY(0)' }], { duration: 110, easing: 'ease-out' });
+      const isRule = L.el.classList.contains('rule') || L.el.classList.contains('gap');
+      await sleep(L.d || (isRule ? 45 : 78));
+    }
+    loadT = Math.max(loadT, loadStop);
+    printing = false; kick();
+  }
+
+  function showAll(){
+    measure();
+    lines.forEach((l) => l.el.classList.add('on'));
+    notes.forEach((n) => n.el.classList.add('on'));
+    cur = full; done = true; paper.classList.add('done');
+    sheetwrap.style.setProperty('--feed', '100%');
+  }
+
+  $('#reprint').addEventListener('click', () => {
+    if (!animate) return;
+    runId++;
+    lines.forEach((l) => l.el.classList.remove('on'));
+    notes.forEach((n) => n.el.classList.remove('on'));
+    paper.classList.remove('done'); done = false;
+    cur = 0; loadT = 0; li = 0; apply();
+    printMeal();
+  });
+
+  let resizeT;
+  addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { measure(); if (done) sheetwrap.style.setProperty('--feed', '100%'); kick(); }, 120); });
+
+  const fontsReady = Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), sleep(1500)]);
+  const start = () => {
+    drawBarcode();
+    if (!animate) { showAll(); return; }
+    measure(); apply();
+    addEventListener('scroll', kick, { passive: true });
+    printMeal();
+    kick();
+  };
+  fontsReady.then(() => {
+    if (window.JsBarcode) start();
+    else { addEventListener('load', () => { drawBarcode(); }, { once: true }); start(); }
+  });
+  addEventListener('load', () => { drawBarcode(); if (animate) { measure(); kick(); } else showAll(); }, { once: true });
+})();
+</script>
+</body>
+</html>
