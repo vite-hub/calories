@@ -14,9 +14,9 @@ function save(value: DailyGoals) {
 <template>
   <header class="sticky top-0 z-10 h-(--ui-header-height) bg-(--cobalt) text-(--paper) shadow-[0_4px_0_var(--ink)]">
     <div class="mx-auto flex h-full max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
-      <NuxtLink to="/" class="flex items-center gap-2.5 rounded-md font-display text-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--yolk)">
-        <span class="size-4 rounded-full bg-(--yolk) shadow-[0_3px_0_var(--ink)]" aria-hidden="true" />
-        Calories
+      <NuxtLink to="/" class="flex min-w-0 items-center gap-2.5 rounded-md font-display text-xl leading-[.95] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--yolk) sm:text-2xl sm:whitespace-nowrap">
+        <span class="size-4 shrink-0 rounded-full bg-(--yolk) shadow-[0_3px_0_var(--ink)]" aria-hidden="true" />
+        ViteHub Calories
       </NuxtLink>
 
       <div class="flex items-center gap-1.5">
