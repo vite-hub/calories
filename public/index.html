@@ -111,12 +111,12 @@ h1 span{display:block;white-space:nowrap}
 .leader{stroke:var(--paper);stroke-width:2;fill:none}
 .reticle{stroke:var(--paper);stroke-width:3;fill:none;stroke-linecap:round}
 .reticle-dot{fill:var(--paper)}
-.callout{position:absolute;left:0;top:0;width:226px;padding:14px 16px 13px;background:var(--paper);color:var(--ink);border-radius:16px;
+.callout{position:absolute;left:0;top:0;width:max-content;min-width:226px;padding:14px 16px 13px;background:var(--paper);color:var(--ink);border-radius:16px;
   box-shadow:0 6px 0 var(--ink);pointer-events:none;opacity:0;transition:opacity .25s;will-change:transform}
 .callout.on{opacity:1}
 .callout h3{font-size:21px;line-height:1.05;margin:0 0 9px}
 .callout dl{display:grid;grid-template-columns:repeat(3,auto);gap:0 16px;margin:0;justify-content:start}
-.callout dd{margin:0;grid-row:1;font:400 23px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.callout dd{margin:0;grid-row:1;font:400 23px/1.1 var(--display);font-variant-numeric:tabular-nums;white-space:nowrap}
 .callout dt{grid-row:2;font-size:13px;font-weight:600;color:var(--muted)}
 .callout .dens{margin:9px 0 0;font-size:13.5px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:8px}
 .callout .swatch{width:13px;height:13px;border-radius:4px;flex:none;box-shadow:inset 0 0 0 1.5px rgba(11,27,107,.35)}
@@ -588,14 +588,16 @@ footer .caveat{margin-left:auto}
           <g id="wake" clip-path="url(#wakeclip)" opacity="0"><use href="#heat"/></g>
           <g id="beam" opacity="0"><rect x="-1.2" y="-.045" width="2.4" height=".09" fill="#FBF6EC" opacity=".22" filter="url(#heatglow)"/><rect x="-1.2" y="-.007" width="2.4" height=".014" rx=".007" fill="#FBF6EC"/></g>
           <g id="lens" opacity="0">
-            <circle id="lensshadow" r="0" fill="#0B1B6B"/>
+            <circle id="lensshadow" r="0" fill="#000B3D"/>
+            <circle id="lensbezel" r="0" fill="none" stroke="#0B1B6B"/>
             <g clip-path="url(#lensclip)">
               <rect x="-2" y="-2" width="4" height="4" fill="#0B1B6B"/>
               <g id="heatmag"><use href="#heat"/></g>
               <rect x="-2" y="-2" width="4" height="4" fill="url(#scanlines)"/>
             </g>
-            <circle id="lensring" r="0" fill="none" stroke="#FBF6EC" stroke-width=".014"/>
-            <circle id="lensticks" r="0" fill="none" stroke="#FBF6EC" stroke-width=".024" opacity=".8"/>
+            <circle id="lensring" r="0" fill="none" stroke="#FBF6EC" stroke-width=".012"/>
+            <circle id="lensticks" r="0" fill="none" stroke="#FBF6EC" stroke-width=".026" opacity=".75"/>
+            <circle id="lensedge" r="0" fill="none" stroke="#FBF6EC" stroke-width=".01"/>
             <path id="lenscross" d="" fill="none" stroke="#FBF6EC" stroke-width=".009" stroke-linecap="round"/>
           </g>
         </svg>
@@ -836,7 +838,7 @@ footer .caveat{margin-left:auto}
   }
 
   const el = (id) => document.getElementById(id);
-  const lensG = el("lens"), lensC = el("lensc"), lensShadow = el("lensshadow"), lensRing = el("lensring"), lensTicks = el("lensticks"), lensCross = el("lenscross");
+  const lensG = el("lens"), lensC = el("lensc"), lensShadow = el("lensshadow"), lensRing = el("lensring"), lensTicks = el("lensticks"), lensCross = el("lenscross"), lensBezel = el("lensbezel"), lensEdge = el("lensedge");
   const heatMag = el("heatmag"), scanlines = el("scanlines"), wake = el("wake"), waker = el("waker"), beam = el("beam");
 
   function resize() {
@@ -861,12 +863,14 @@ footer .caveat{margin-left:auto}
     // lens: the thermal twin, magnified, clipped to a circle
     lensG.setAttribute("opacity", lens.on.toFixed(3));
     if (lens.on < 0.002) return;
-    const cx = (lens.x - S / 2) / R, cy = (lens.y - S / 2) / R, r = lensR() / R, rt = r + 0.036;
-    for (const c of [lensC, lensRing, lensTicks]) { c.setAttribute("cx", n4(cx)); c.setAttribute("cy", n4(cy)); }
+    // An even bezel band around the glass, ticks centered in it, a cream outer edge and a hard drop shadow.
+    const cx = (lens.x - S / 2) / R, cy = (lens.y - S / 2) / R, r = lensR() / R, band = 0.07, rt = r + band / 2, ro = r + band;
+    for (const c of [lensC, lensRing, lensTicks, lensBezel, lensEdge]) { c.setAttribute("cx", n4(cx)); c.setAttribute("cy", n4(cy)); }
     lensC.setAttribute("r", n4(r)); lensRing.setAttribute("r", n4(r)); lensTicks.setAttribute("r", n4(rt));
+    lensBezel.setAttribute("r", n4(rt)); lensBezel.setAttribute("stroke-width", n4(band)); lensEdge.setAttribute("r", n4(ro));
     const tick = (2 * Math.PI * rt) / 72;
     lensTicks.setAttribute("stroke-dasharray", `${n4(tick * 0.16)} ${n4(tick * 0.84)}`);
-    lensShadow.setAttribute("cx", n4(cx)); lensShadow.setAttribute("cy", n4(cy + 0.04)); lensShadow.setAttribute("r", n4(rt + 0.012));
+    lensShadow.setAttribute("cx", n4(cx)); lensShadow.setAttribute("cy", n4(cy + 0.03)); lensShadow.setAttribute("r", n4(ro + 0.005));
     heatMag.setAttribute("transform", `translate(${n4(cx)} ${n4(cy)}) scale(1.12) translate(${n4(-cx)} ${n4(-cy)})`);
     const a = 0.022, b = 0.065;
     lensCross.setAttribute("d", `M${n4(cx - b)} ${n4(cy)}H${n4(cx - a)}M${n4(cx + a)} ${n4(cy)}H${n4(cx + b)}M${n4(cx)} ${n4(cy - b)}V${n4(cy - a)}M${n4(cx)} ${n4(cy + a)}V${n4(cy + b)}`);
