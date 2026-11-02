@@ -1,6 +1,7 @@
 import { vitehubServerEnv } from "./vitehub.env.ts";
 
-const domain = "calories.onmax.me";
+// Custom domain of the Cloudflare Worker. Without one, the Worker deploys to workers.dev.
+const domain = process.env.CLOUDFLARE_WORKER_DOMAIN;
 
 export default defineNuxtConfig({
   buildDir: ".nuxt",
@@ -74,10 +75,10 @@ export default defineNuxtConfig({
       wrangler: {
         observability: { enabled: true },
         preview_urls: false,
-        routes: [{ pattern: domain, custom_domain: true }],
+        routes: domain ? [{ pattern: domain, custom_domain: true }] : undefined,
         // Telegram replies link to the dashboard from Workflows, where no request URL exists.
-        vars: { VITEHUB_DEPLOYMENT_URL: `https://${domain}` },
-        workers_dev: false,
+        vars: domain ? { VITEHUB_DEPLOYMENT_URL: `https://${domain}` } : undefined,
+        workers_dev: !domain,
       },
     },
   },
