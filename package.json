@@ -1,5 +1,6 @@
 {
   "name": "vitehub-calories",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "imports": {
@@ -31,6 +32,8 @@
     "@cf-wasm/photon": "0.4.0",
     "@nuxt/ui": "4.11.3",
     "@openrouter/ai-sdk-provider": "3.1.0",
+    "@vite-hub/agent": "https://pkg.pr.new/vite-hub/vitehub/@vite-hub/agent@52e6aba01356ffd6c5f1d0d6e8dafc3d63788b82",
+    "@vite-hub/database": "https://pkg.pr.new/vite-hub/vitehub/@vite-hub/database@52e6aba01356ffd6c5f1d0d6e8dafc3d63788b82",
     "@vueuse/core": "15.0.0",
     "@vueuse/nuxt": "15.0.0",
     "ai": "7.0.130",
@@ -38,7 +41,7 @@
     "image-meta": "0.3.0",
     "nuxt": "npm:nuxt-nightly@5.0.0-2610071710-0296ca4",
     "tailwindcss": "4.3.3",
-    "vite-hub": "https://pkg.pr.new/vite-hub/vitehub/vite-hub@02e38c1094c7531aea62f7961f105e16009b346f",
+    "vite-hub": "https://pkg.pr.new/vite-hub/vitehub/vite-hub@52e6aba01356ffd6c5f1d0d6e8dafc3d63788b82",
     "vue-router": "5.3.1",
     "zod": "4.4.3"
   },
