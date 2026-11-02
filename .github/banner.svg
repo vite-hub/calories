@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-labelledby="t">
+<title id="t">ViteHub Calories: send a meal by photo, voice, or text and get calories and protein back</title>
+<defs>
+<pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#0B1B6B" fill-opacity=".08"/></pattern>
+<clipPath id="frame"><rect width="1280" height="400" rx="24"/></clipPath>
+</defs>
+<g clip-path="url(#frame)">
+<rect width="1280" height="400" fill="#FBF6EC"/>
+<rect width="1280" height="400" fill="url(#dots)"/>
+<circle cx="1120" cy="420" r="260" fill="#FFC83D" fill-opacity=".22"/>
+<g transform="translate(80 72) scale(1.25)">
+<rect width="64" height="64" rx="14" fill="#2340D8"/>
+<circle cx="32" cy="32" r="19" fill="#FBF6EC"/>
+<circle cx="32" cy="32" r="12" fill="none" stroke="#CBD3FF" stroke-width="2"/>
+<circle cx="27" cy="29" r="5" fill="#FF5B45"/>
+<circle cx="37" cy="31" r="4.5" fill="#B6E06A"/>
+<circle cx="31" cy="38" r="4" fill="#FFC83D"/>
+</g>
+<g font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<text x="188" y="140" fill="#0B1B6B" font-size="76" font-weight="800" letter-spacing="-3">Calories</text>
+<text x="80" y="214" fill="#4A5590" font-size="28">Send a meal. Get calories and protein back.</text>
+<text x="80" y="306" fill="#0B1B6B" font-size="56" font-weight="800" letter-spacing="-2">3</text>
+<text x="80" y="340" fill="#4A5590" font-size="20">photo, voice, or text</text>
+<text x="330" y="306" fill="#0B1B6B" font-size="56" font-weight="800" letter-spacing="-2">1<tspan fill="#FF5B45"> file</tspan></text>
+<text x="330" y="340" fill="#4A5590" font-size="20">defines the Agent</text>
+<text x="580" y="306" fill="#0B1B6B" font-size="56" font-weight="800" letter-spacing="-2">5</text>
+<text x="580" y="340" fill="#4A5590" font-size="20">host presets</text>
+</g>
+<g font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18">
+<rect x="800" y="64" width="410" height="272" rx="20" fill="#fff" stroke="#CBD3FF" stroke-width="2"/>
+<rect x="958" y="92" width="228" height="44" rx="16" fill="#2340D8"/>
+<text x="976" y="120" fill="#fff">📷 lunch: chicken bowl</text>
+<rect x="824" y="152" width="362" height="160" rx="16" fill="#FBF6EC"/>
+<text x="844" y="186" fill="#0B1B6B" font-weight="700">Chicken rice bowl</text>
+<text x="844" y="216" fill="#4A5590" font-size="16">Rice 180 g · Chicken 120 g · Avocado ½</text>
+<text x="844" y="268" fill="#FF5B45" font-size="40" font-weight="800" letter-spacing="-1">640</text>
+<text x="928" y="268" fill="#4A5590" font-size="16">kcal</text>
+<text x="988" y="268" fill="#2340D8" font-size="40" font-weight="800" letter-spacing="-1">42</text>
+<text x="1040" y="268" fill="#4A5590" font-size="16">g protein</text>
+<text x="844" y="296" fill="#4A5590" font-size="14">Saved to your journal</text>
+</g>
+</g>
+</svg>
