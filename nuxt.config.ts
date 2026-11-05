@@ -25,7 +25,8 @@ export default defineNuxtConfig({
   vitehub: {
     preset: "cloudflare",
     agent: true,
-    console: process.env.NODE_ENV === "development",
+    console: process.env.NODE_ENV === "development" ? { auth: false } : false,
+    comments: false,
     blob: {
       serve: false,
     },
@@ -55,10 +56,6 @@ export default defineNuxtConfig({
     },
   },
   $development: {
-    experimental: {
-      // Nuxt 5's Vite dev runner currently evaluates Vue's CommonJS entry as ESM.
-      nitroViteEnvironment: false,
-    },
     vitehub: {
       preset: "node",
       database: { driver: "sqlite" },
