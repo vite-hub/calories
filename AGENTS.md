@@ -10,7 +10,7 @@ Calories is a runnable ViteHub Agent template, not a prescribed application arch
 
 ## Change contract
 
-- Keep the channel, AI provider, models, Capabilities, storage, UI, and deployment preset explicit at their current configuration points. Prefer replacing or deleting one choice over abstracting for hypothetical variants.
+- Keep the channel, AI provider, models, Capabilities, storage, UI, and deployment host explicit at their current configuration points. Prefer replacing or deleting one choice over abstracting for hypothetical variants.
 - Keep meal logic portable and isolate provider-specific bindings, migrations, and deployment commands.
 - Keep secret values in the environment; source and examples may name variables only.
 - Treat production deploys, webhook changes, and remote data migrations as separate mutations that require an explicit request.

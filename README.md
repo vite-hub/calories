@@ -37,17 +37,17 @@ Open <http://localhost:3000> for the landing page and <http://localhost:3000/das
 | --- | --- |
 | Channel, models, Capabilities, and reply hooks | [`server/agents/calories/agent.ts`](./server/agents/calories/agent.ts) |
 | How meals are estimated and checked | [`server/agents/calories/instructions.md`](./server/agents/calories/instructions.md) |
-| Database schema | [`server/databases/config.ts`](./server/databases/config.ts) |
+| Database schema | [`server/databases/default/index.ts`](./server/databases/default/index.ts) |
 | Dashboard and its data | [`app/pages/dashboard.vue`](./app/pages/dashboard.vue), [`server/collections/meals.ts`](./server/collections/meals.ts) |
 | Public photo previews | [`server/api/meals/[id]/photo.get.ts`](./server/api/meals/%5Bid%5D/photo.get.ts) |
 | Landing page | [`public/index.html`](./public/index.html) |
 | Host, storage, and Nuxt modules | [`nuxt.config.ts`](./nuxt.config.ts) |
 
-The Agent saves a meal first and confirms it only after checking the items and totals in the database. Run history goes to the same database, so a failed history write never loses a meal. The dashboard shows photo previews resized to 768 pixels and stripped of camera metadata. Originals stay private.
+The Agent saves a meal first and confirms it only after checking the items and totals in the database. Run history goes to the same database, so a failed history write never loses a meal. The dashboard shows photo previews that ViteHub Blob resizes to 768 pixels with Photon and strips of camera metadata. Originals stay private. Photon reads photos up to 4 megapixels, which covers the photos Telegram sends to bots.
 
 ## Deploy
 
-The template ships with the Cloudflare preset (Workers, D1, and R2). ViteHub also has `vercel`, `netlify`, `deno`, and `node` presets. Switch in `nuxt.config.ts` and check the [host support matrix](https://vitehub.dev/docs/frameworks-hosts/support-matrix).
+The template ships with the Cloudflare host (Workers, D1, and R2). ViteHub also has `vercel`, `netlify`, `deno`, and `node` hosts. Switch in `nuxt.config.ts` and check the [host support matrix](https://vitehub.dev/docs/frameworks-hosts/support-matrix).
 
 For Cloudflare, add your Cloudflare credentials, `TELEGRAM_WEBHOOK_SECRET`, and optionally `CLOUDFLARE_WORKER_DOMAIN` to `.env`. Without a domain, the Worker deploys to `workers.dev`. Then provision the stores, or set `CLOUDFLARE_D1_DATABASE_ID` to use an existing database:
 
@@ -58,6 +58,8 @@ pnpm run deploy
 pnpm telegram:webhook --url https://your-app.example        # preview
 pnpm telegram:webhook:apply --url https://your-app.example --confirm-origin https://your-app.example
 ```
+
+To open the deployed app in the [ViteHub Console](https://console.vitehub.dev), link it there with its URL, set the `VITEHUB_CONSOLE_KEY_CONSOLE_<ID>` line it shows with `wrangler secret put`, and select **Check connection**.
 
 ## Export data
 
@@ -74,7 +76,7 @@ The full export needs the production Telegram values and `VITEHUB_DEPLOYMENT_URL
 pnpm run doctor && pnpm typecheck && pnpm test && pnpm build
 ```
 
-CI runs the same checks. The template pins a Nuxt 5 nightly and ViteHub preview builds from `pkg.pr.new`, locked in `pnpm-lock.yaml`.
+CI runs the same checks. The template pins a Nuxt 5 nightly and ViteHub preview builds from `pkg.pr.new`, locked in `pnpm-lock.yaml`. Each patch in `patches/` names the ViteHub pull request that replaces it.
 
 ## License
 
