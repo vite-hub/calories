@@ -1,8 +1,3 @@
 overrides:
   # Nuxt and UI components must share one Vue rendering instance.
   vue: 3.5.45
-patchedDependencies:
-  # `images.transformer: "photon"` under Nuxt: https://github.com/vite-hub/vitehub/pull/4342
-  '@vite-hub/blob@0.0.0-preview-a6a5653': patches/@vite-hub__blob@0.0.0-preview-a6a5653.patch
-  # Cloudflare Workflow bundle of a Nuxt Agent: https://github.com/vite-hub/vitehub/pull/4343
-  '@vite-hub/workflow@0.0.0-preview-a6a5653': patches/@vite-hub__workflow@0.0.0-preview-a6a5653.patch
