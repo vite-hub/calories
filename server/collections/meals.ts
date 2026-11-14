@@ -1,6 +1,7 @@
-import { useDatabase } from "vite-hub/database/drizzle";
-import { defineCollection, table } from "vite-hub/source";
-import database from "../databases/config.ts";
+import { useDatabase } from "vite-hub/database";
+import { defineCollection } from "vite-hub/source";
+import { table } from "vite-hub/source/drizzle";
+import database from "../databases/default/index.ts";
 
 const { db } = useDatabase("default");
 const { schema } = database;

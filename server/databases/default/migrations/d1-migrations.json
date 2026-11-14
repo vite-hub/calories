@@ -1,0 +1,4 @@
+{
+  "20260822064325_create_meals": "0000_create_meals.sql",
+  "20261014130745_add_meal_photo_file_id": "0001_add_meal_photo_file_id.sql"
+}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire, findPackageJSON } from "node:module";
-import { test } from "node:test";
+import { test } from "vitest";
 
 const require = createRequire(import.meta.url);
 const nuxtRequire = createRequire(require.resolve("nuxt/package.json"));

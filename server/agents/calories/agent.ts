@@ -9,7 +9,7 @@ import {
   usage,
 } from "vite-hub/agent/capabilities";
 import { telegram } from "vite-hub/agent/channels";
-import { useServerEnv } from "#vitehub/env/server";
+import { useServerEnv } from "vite-hub/env";
 
 // Models sometimes copy the message headers and reply lines they receive.
 function withoutMessageMetadata(text: string) {
@@ -25,7 +25,8 @@ function dashboardUrl() {
 
 export default defineAgent({
   // Run history for the Console and CLI. A failed history write does not stop a meal.
-  invocations: "database",
+  // The D1 primary is in another region, so one store write can take longer than the 1 s default.
+  invocations: { store: "database", storeTimeoutMs: 10_000 },
   capabilities: [
     blob({ mode: "write" }),
     databaseCapability({ mode: "write" }),

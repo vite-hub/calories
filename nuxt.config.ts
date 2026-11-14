@@ -23,16 +23,22 @@ export default defineNuxtConfig({
     targets: ["codex"],
   },
   vitehub: {
-    preset: "cloudflare",
+    host: "cloudflare",
     agent: true,
-    console: process.env.NODE_ENV === "development",
+    // Production links to console.vitehub.dev, which signs each request.
+    console: true,
     blob: {
       serve: false,
+      // Meal photo previews. Photon runs on Workers without the paid Images binding.
+      images: { transformer: "photon", sizes: [768] },
     },
     database: {
       driver: "d1",
       databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID,
       databaseName: "vitehub-calories",
+    },
+    env: {
+      server: vitehubServerEnv,
     },
   },
   css: ["~/assets/main.css"],
@@ -50,9 +56,6 @@ export default defineNuxtConfig({
   },
   vite: {
     root: import.meta.dirname,
-    env: {
-      server: vitehubServerEnv,
-    },
   },
   $development: {
     experimental: {
@@ -60,7 +63,7 @@ export default defineNuxtConfig({
       nitroViteEnvironment: false,
     },
     vitehub: {
-      preset: "node",
+      host: "node",
       database: { driver: "sqlite" },
     },
     nitro: {
@@ -69,7 +72,7 @@ export default defineNuxtConfig({
   },
   devtools: { enabled: false },
   nitro: {
-    // Photon initializes synchronously and needs the compiled WebAssembly module.
+    // ViteHub's Photon loader needs the compiled WebAssembly module on Workers.
     wasm: { lazy: false },
     cloudflare: {
       wrangler: {

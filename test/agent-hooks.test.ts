@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test, { after, before } from "node:test";
+import { afterAll, beforeAll, test } from "vitest";
 
 import agent from "../server/agents/calories/agent.ts";
 
@@ -11,8 +11,8 @@ const fixtureEnv = {
   VITEHUB_TELEGRAM_BOT_TOKEN: "test-token",
 };
 const previousEnv = Object.fromEntries(Object.keys(fixtureEnv).map(key => [key, process.env[key]]));
-before(() => Object.assign(process.env, fixtureEnv));
-after(() => {
+beforeAll(() => Object.assign(process.env, fixtureEnv));
+afterAll(() => {
   for (const [key, value] of Object.entries(previousEnv)) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;

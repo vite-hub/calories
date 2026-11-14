@@ -1,0 +1,12 @@
+diff --git a/dist/vite.js b/dist/vite.js
+index f7626f3f8ba9b4f78b0701143ff08b0f4ece2ea6..623131501b742847a10a3ed0093f11768386d65d 100644
+--- a/dist/vite.js
++++ b/dist/vite.js
+@@ -437,6 +437,7 @@ function createResolvedAliasPlugin(aliases, aliasResolveDir, resolveEntryPackage
+ 							alias.specifier,
+ 							alias.prefix,
+ 							resolutionScope,
++							normalizedSpecifier,
+ 							args.importer,
+ 							args.resolveDir,
+ 							args.kind,

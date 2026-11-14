@@ -1,9 +1,8 @@
 import { eq } from "drizzle-orm";
 import { defineHandler, getValidatedRouterParams, HTTPError } from "nitro/h3";
 import { blob } from "vite-hub/blob";
-import { useDatabase } from "vite-hub/database/drizzle";
+import { useDatabase } from "vite-hub/database";
 import { z } from "zod";
-import { createMealPhotoPreview } from "../../../utils/meal-photo.ts";
 
 export default defineHandler(async (event) => {
   const { id } = await getValidatedRouterParams(event, z.object({
@@ -13,17 +12,9 @@ export default defineHandler(async (event) => {
   const [meal] = await db.select({ photoPath: schema.meals.photoPath }).from(schema.meals).where(eq(schema.meals.id, id)).limit(1);
   if (!meal?.photoPath) throw HTTPError.status(404, "Meal photo not found");
 
-  const [error, response] = await blob.serve(event, meal.photoPath, {
+  // A resized upright JPEG without the camera metadata. The original stays private.
+  return blob.serve(event.req, meal.photoPath, {
     cacheControl: "public, max-age=300, must-revalidate",
-    transform: {
-      key: "meal-preview-v1",
-      run: createMealPhotoPreview,
-    },
+    variant: { width: 768, height: 768, fit: "inside", format: "jpeg", quality: 80 },
   });
-  if (error) {
-    if (error.code === "BLOB_NOT_FOUND") throw HTTPError.status(404, "Meal photo not found");
-    console.error("[calories] Meal photo preview failed", error);
-    throw HTTPError.status(422, "Meal photo preview unavailable");
-  }
-  return response;
 });

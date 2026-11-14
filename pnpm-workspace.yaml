@@ -1,11 +1,8 @@
 overrides:
-  # blob.serve preview transforms: https://github.com/vite-hub/vitehub/pull/1939
-  '@vite-hub/blob': https://pkg.pr.new/vite-hub/vitehub/@vite-hub/blob@d1c7bc53593edd8f9eea5f4095ec6214f5ff156b
   # Nuxt and UI components must share one Vue rendering instance.
-  vue: 3.5.43
+  vue: 3.5.45
 patchedDependencies:
-  # Message headers, history photos, burst grouping, and native replies for Telegram input.
-  # Also: 10 s journal store timeout (vite-hub/vitehub#2406), best-effort journal failures (#2409), short invocations types (#2414).
-  '@vite-hub/agent@0.0.4': patches/@vite-hub__agent@0.0.4.patch
-  # Per-Agent `invocations: "database"` (vite-hub/vitehub#2414).
-  vite-hub@0.0.4: patches/vite-hub@0.0.4.patch
+  # `images.transformer: "photon"` under Nuxt: https://github.com/vite-hub/vitehub/pull/4342
+  '@vite-hub/blob@0.0.0-preview-a6a5653': patches/@vite-hub__blob@0.0.0-preview-a6a5653.patch
+  # Cloudflare Workflow bundle of a Nuxt Agent: https://github.com/vite-hub/vitehub/pull/4343
+  '@vite-hub/workflow@0.0.0-preview-a6a5653': patches/@vite-hub__workflow@0.0.0-preview-a6a5653.patch
