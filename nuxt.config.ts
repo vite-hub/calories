@@ -72,8 +72,6 @@ export default defineNuxtConfig({
   },
   devtools: { enabled: false },
   nitro: {
-    // ViteHub's Photon loader needs the compiled WebAssembly module on Workers.
-    wasm: { lazy: false },
     cloudflare: {
       wrangler: {
         observability: { enabled: true },

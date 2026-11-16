@@ -29,7 +29,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Open <http://localhost:3000> for the landing page and <http://localhost:3000/dashboard> for the dashboard. The ViteHub Console, with recent Agent sessions, is at <http://127.0.0.1:3000/_vitehub>.
+Open <http://localhost:3000> for the landing page and <http://localhost:3000/dashboard> for the dashboard. During development, the [`vitehub` CLI](https://vitehub.dev/docs/development/cli) shows recent Agent runs. The [ViteHub Console](https://console.vitehub.dev) opens the deployed app (see [Deploy](#deploy)).
 
 ## Customize
 
