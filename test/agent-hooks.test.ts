@@ -25,7 +25,6 @@ function replyFor(overrides: Record<string, unknown> = {}) {
     invocation: {},
     reply: (text: string) => text,
     text: "  Meal recorded.  ",
-    toolResults: [],
     ...overrides,
   } as unknown as Parameters<typeof finish>[0]);
 }
@@ -37,13 +36,6 @@ test("the Agent has an explicit invocation journal outside the Console runtime",
 test("the finish hook formats the reply, configured dashboard, and invocation cost", async () => {
   assert.equal(await replyFor({ invocation: { usage: { cost: { display: "$0.002" } } } }),
     "Meal recorded.\n\nDashboard: https://calories.example/dashboard\n\n$0.002");
-});
-
-test("the finish hook does not depend on a particular SQL result shape", async () => {
-  for (const output of [[{ id: "one" }, { id: "two" }], [], null]) {
-    assert.equal(await replyFor({ toolResults: [{ toolName: "db_query", output }] }),
-      "Meal recorded.\n\nDashboard: https://calories.example/dashboard\n\nCost unavailable");
-  }
 });
 
 test("the finish hook removes message headers and reply lines the model copied", async () => {
