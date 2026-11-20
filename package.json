@@ -53,7 +53,7 @@
     "tsx": "4.23.15",
     "typescript": "6.0.3",
     "vite": "8.3.3",
-    "vite-doctor": "https://pkg.pr.new/onmax/vite-doctor/vite-doctor@3189acdd03ad09466b7efa4d1b813f580f9c6cdb",
+    "vite-doctor": "^0.1.4",
     "vitest": "4.1.12",
     "vue-tsc": "3.3.12",
     "wrangler": "4.148.0"
