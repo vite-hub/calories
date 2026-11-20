@@ -33,7 +33,7 @@ export default defineNuxtConfig({
       images: { transformer: "photon", sizes: [768] },
     },
     database: {
-      driver: "d1",
+      driver: "cloudflare",
       databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID,
       databaseName: "vitehub-calories",
     },
@@ -64,7 +64,6 @@ export default defineNuxtConfig({
     },
     vitehub: {
       host: "node",
-      database: { driver: "sqlite" },
     },
     nitro: {
       preset: "node-server",

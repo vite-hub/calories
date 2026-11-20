@@ -76,7 +76,7 @@ The full export needs the production Telegram values and `VITEHUB_DEPLOYMENT_URL
 pnpm run doctor && pnpm typecheck && pnpm test && pnpm build
 ```
 
-CI runs the same checks. The template pins a Nuxt 5 nightly and ViteHub preview builds from `pkg.pr.new`, locked in `pnpm-lock.yaml`.
+CI runs the same checks. The template pins a Nuxt 5 nightly and ViteHub 0.3.1 from npm, locked in `pnpm-lock.yaml`.
 
 ## License
 
