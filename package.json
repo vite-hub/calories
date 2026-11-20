@@ -37,7 +37,7 @@
     "nuxt": "npm:nuxt-nightly@5.0.0-2611052317-a04317f",
     "tailwindcss": "4.3.3",
     "vite-hub": "https://pkg.pr.new/vite-hub/vitehub/vite-hub@8724a59e6864f59c269361ad7325d52cf63f4106",
-    "vue-router": "5.3.1",
+    "vue-router": "5.5.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -52,8 +52,8 @@
     "nuxt-skill-hub": "0.1.1",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.3",
-    "vite-doctor": "https://pkg.pr.new/onmax/vite-doctor/vite-doctor@3189acdd03ad09466b7efa4d1b813f580f9c6cdb",
+    "vite": "8.3.8",
+    "vite-doctor": "^0.1.4",
     "vitest": "4.1.12",
     "vue-tsc": "3.3.12",
     "wrangler": "4.148.0"
