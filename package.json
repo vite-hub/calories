@@ -12,7 +12,7 @@
     "db:migrate": "mkdir -p .vitehub/data/database && node --env-file-if-exists=.env node_modules/vite-hub/dist/bin.js database migrate",
     "db:migrate:remote": "pnpm run build && wrangler d1 migrations apply DB --remote --config .output/server/wrangler.json",
     "dev": "node --env-file-if-exists=.env node_modules/nuxt/bin/nuxt.mjs dev --host 127.0.0.1 --port 3000",
-    "postinstall": "vitehub types prepare && nuxt prepare --envName development",
+    "postinstall": "vitehub types prepare && VITEHUB_HOST=node nuxt prepare --envName development",
     "preview": "node --env-file-if-exists=.env node_modules/nuxt/bin/nuxt.mjs preview",
     "provision:cloudflare": "node --env-file=.env node_modules/vite-hub/dist/bin.js provision run --provider cloudflare",
     "telegram:history": "node --env-file=.env node_modules/vite-hub/dist/bin.js channels history --agent calories --channel telegram --stage production --output .backups/telegram-history",
