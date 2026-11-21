@@ -7,6 +7,8 @@ const { db } = useDatabase("default");
 const { schema } = database;
 
 export const meals = defineCollection({
+  // The dashboard is a public live demo. `transform` keeps the photo path private.
+  access: "public",
   source: table({
     db,
     defaultLimit: 24,

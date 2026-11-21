@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
-@source "../../node_modules/vite-hub/dist/console/runtime";
 
 /* The landing page palette and type: cobalt, ink, paper, Bagel Fat One and Figtree. */
 @theme static {

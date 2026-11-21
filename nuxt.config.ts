@@ -33,7 +33,7 @@ export default defineNuxtConfig({
       images: { transformer: "photon", sizes: [768] },
     },
     database: {
-      driver: "d1",
+      driver: "cloudflare",
       databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID,
       databaseName: "vitehub-calories",
     },
@@ -64,7 +64,6 @@ export default defineNuxtConfig({
     },
     vitehub: {
       host: "node",
-      database: { driver: "sqlite" },
     },
     nitro: {
       preset: "node-server",
@@ -72,8 +71,6 @@ export default defineNuxtConfig({
   },
   devtools: { enabled: false },
   nitro: {
-    // ViteHub's Photon loader needs the compiled WebAssembly module on Workers.
-    wasm: { lazy: false },
     cloudflare: {
       wrangler: {
         observability: { enabled: true },
